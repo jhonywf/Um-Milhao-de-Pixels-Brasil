@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Um Milhão de Pixels Brasil"
+description = "Uma experiência web visual para explorar e futuramente comprar espaço em uma parede digital de um milhão de pixels, com arte em pixel art e interação por Canvas."
+version = "1.0.0"
+id = "artifacts/um-milhao-pixels-brasil"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20413
+
+[services.development]
+run = "pnpm --filter @workspace/um-milhao-pixels-brasil run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/um-milhao-pixels-brasil", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/um-milhao-pixels-brasil/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20413"
+BASE_PATH = "/"
