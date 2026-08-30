@@ -269,8 +269,23 @@ function WallCanvas() {
   const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
   const [selected, setSelected] = useState<PixelBlock | { x: number; y: number; width: number; height: number; free: true } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef({ startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
+  const cameraRef = useRef(camera);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
+  const gestureRef = useRef({ multiTouch: false });
+  const pinchRef = useRef<{
+    distance: number;
+    midpoint: { x: number; y: number };
+    worldAtMidpoint: { x: number; y: number };
+    camera: { x: number; y: number; scale: number };
+  } | null>(null);
   const deviceScaleRef = useRef(1);
+  const minZoom = 0.36;
+  const maxZoom = 2.4;
+
+  useEffect(() => {
+    cameraRef.current = camera;
+  }, [camera]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -359,36 +374,166 @@ function WallCanvas() {
   };
 
   const zoomAt = (nextScale: number, clientX?: number, clientY?: number) => {
-    const bounded = Math.min(2.4, Math.max(0.36, nextScale));
-    if (clientX === undefined || clientY === undefined) { setCamera((current) => ({ ...current, scale: bounded })); return; }
+    const bounded = Math.min(maxZoom, Math.max(minZoom, nextScale));
+    if (clientX === undefined || clientY === undefined) {
+      const nextCamera = { ...cameraRef.current, scale: bounded };
+      cameraRef.current = nextCamera;
+      setCamera(nextCamera);
+      return;
+    }
     const before = screenToWorld(clientX, clientY);
     setCamera((current) => {
       const stage = stageRef.current;
-      if (!stage) return { ...current, scale: bounded };
+      if (!stage) {
+        const nextCamera = { ...current, scale: bounded };
+        cameraRef.current = nextCamera;
+        return nextCamera;
+      }
       const rect = stage.getBoundingClientRect();
       const nextX = clientX - rect.left - rect.width / 2 - (before.x - 500) * bounded;
       const nextY = clientY - rect.top - rect.height / 2 - (before.y - 500) * bounded;
-      return { x: nextX, y: nextY, scale: bounded };
+      const nextCamera = { x: nextX, y: nextY, scale: bounded };
+      cameraRef.current = nextCamera;
+      return nextCamera;
     });
+  };
+
+  const getPinchGeometry = () => {
+    const points = Array.from(pointersRef.current.values()).slice(0, 2);
+    if (points.length < 2) return null;
+    const [first, second] = points;
+    return {
+      distance: Math.max(1, Math.hypot(second.x - first.x, second.y - first.y)),
+      midpoint: { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 },
+    };
+  };
+
+  const startPinch = () => {
+    const geometry = getPinchGeometry();
+    const stage = stageRef.current;
+    if (!geometry || !stage) return;
+    const currentCamera = cameraRef.current;
+    const rect = stage.getBoundingClientRect();
+    pinchRef.current = {
+      ...geometry,
+      worldAtMidpoint: {
+        x: (geometry.midpoint.x - rect.left - rect.width / 2 - currentCamera.x) / currentCamera.scale + 500,
+        y: (geometry.midpoint.y - rect.top - rect.height / 2 - currentCamera.y) / currentCamera.scale + 500,
+      },
+      camera: currentCamera,
+    };
+  };
+
+  const applyPinch = () => {
+    const pinch = pinchRef.current;
+    const geometry = getPinchGeometry();
+    const stage = stageRef.current;
+    if (!pinch || !geometry || !stage) return;
+    const rect = stage.getBoundingClientRect();
+    const nextScale = Math.min(maxZoom, Math.max(minZoom, pinch.camera.scale * geometry.distance / pinch.distance));
+    const nextCamera = {
+      x: geometry.midpoint.x - rect.left - rect.width / 2 - (pinch.worldAtMidpoint.x - 500) * nextScale,
+      y: geometry.midpoint.y - rect.top - rect.height / 2 - (pinch.worldAtMidpoint.y - 500) * nextScale,
+      scale: nextScale,
+    };
+    cameraRef.current = nextCamera;
+    setCamera(nextCamera);
   };
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = { startX: event.clientX, startY: event.clientY, originX: camera.x, originY: camera.y, moved: false };
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointersRef.current.size === 1) {
+      const currentCamera = cameraRef.current;
+      dragRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        originX: currentCamera.x,
+        originY: currentCamera.y,
+        moved: false,
+      };
+      gestureRef.current.multiTouch = false;
+    } else if (pointersRef.current.size === 2) {
+      gestureRef.current.multiTouch = true;
+      startPinch();
+    }
     setIsDragging(true);
   };
+
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
-    if (!isDragging) return;
+    if (!pointersRef.current.has(event.pointerId)) return;
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointersRef.current.size >= 2) {
+      gestureRef.current.multiTouch = true;
+      applyPinch();
+      return;
+    }
+    if (dragRef.current.pointerId !== event.pointerId) return;
     const deltaX = event.clientX - dragRef.current.startX;
     const deltaY = event.clientY - dragRef.current.startY;
     if (Math.abs(deltaX) + Math.abs(deltaY) > 4) dragRef.current.moved = true;
-    setCamera((current) => ({ ...current, x: dragRef.current.originX + deltaX, y: dragRef.current.originY + deltaY }));
+    const nextCamera = { ...cameraRef.current, x: dragRef.current.originX + deltaX, y: dragRef.current.originY + deltaY };
+    cameraRef.current = nextCamera;
+    setCamera(nextCamera);
   };
+
   const onPointerUp = (event: PointerEvent<HTMLCanvasElement>) => {
-    if (!dragRef.current.moved) selectAt(event.clientX, event.clientY);
+    const wasActive = pointersRef.current.has(event.pointerId);
+    if (!wasActive) return;
+    const pointersBeforeRelease = pointersRef.current.size;
+    pointersRef.current.delete(event.pointerId);
+    if (pointersBeforeRelease >= 2) {
+      if (pointersRef.current.size >= 2) {
+        startPinch();
+      } else if (pointersRef.current.size === 1) {
+        const [remainingId, remainingPoint] = Array.from(pointersRef.current.entries())[0];
+        const currentCamera = cameraRef.current;
+        dragRef.current = {
+          pointerId: remainingId,
+          startX: remainingPoint.x,
+          startY: remainingPoint.y,
+          originX: currentCamera.x,
+          originY: currentCamera.y,
+          moved: true,
+        };
+        pinchRef.current = null;
+      } else {
+        pinchRef.current = null;
+      }
+    } else if (pointersRef.current.size === 0) {
+      if (!gestureRef.current.multiTouch && !dragRef.current.moved) selectAt(event.clientX, event.clientY);
+      gestureRef.current.multiTouch = false;
+    }
+    if (pointersRef.current.size === 0) pinchRef.current = null;
     setIsDragging(false);
   };
-  const resetView = () => { setCamera({ x: 0, y: 0, scale: 1 }); setSelected(null); };
+
+  const onPointerCancel = (event: PointerEvent<HTMLCanvasElement>) => {
+    pointersRef.current.delete(event.pointerId);
+    pinchRef.current = null;
+    if (pointersRef.current.size === 1) {
+      const [remainingId, remainingPoint] = Array.from(pointersRef.current.entries())[0];
+      const currentCamera = cameraRef.current;
+      dragRef.current = {
+        pointerId: remainingId,
+        startX: remainingPoint.x,
+        startY: remainingPoint.y,
+        originX: currentCamera.x,
+        originY: currentCamera.y,
+        moved: true,
+      };
+    }
+    if (pointersRef.current.size === 0) gestureRef.current.multiTouch = false;
+    setIsDragging(false);
+  };
+
+  const resetView = () => {
+    const nextCamera = { x: 0, y: 0, scale: 1 };
+    cameraRef.current = nextCamera;
+    setCamera(nextCamera);
+    setSelected(null);
+  };
 
   const selectionLabel = selected && 'free' in selected ? 'área livre' : selected ? 'área ocupada · demo' : 'nada selecionado';
   const coordinateText = selected ? `${String(Math.round(selected.x)).padStart(3, '0')}, ${String(Math.round(selected.y)).padStart(3, '0')}` : '—';
@@ -422,7 +567,7 @@ function WallCanvas() {
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
-                onPointerCancel={() => setIsDragging(false)}
+                onPointerCancel={onPointerCancel}
                 onWheel={(event) => { event.preventDefault(); zoomAt(camera.scale + (event.deltaY > 0 ? -0.1 : 0.1), event.clientX, event.clientY); }}
                 data-testid="canvas-pixel-wall"
                 aria-label="Parede interativa de um milhão de pixels"
