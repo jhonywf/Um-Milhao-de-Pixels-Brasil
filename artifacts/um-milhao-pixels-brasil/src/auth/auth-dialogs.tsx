@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Check, Eye, EyeOff, LogOut, Mail, UserRound, X } from 'lucide-react';
+import { useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
+import { Check, Eye, EyeOff, ImagePlus, LogOut, Mail, UserRound, X } from 'lucide-react';
 import { useAuth } from './auth-context';
+import { supabasePublicStorageUrl, uploadProfileAvatar } from './auth-service';
 
 function DialogShell({
   children,
@@ -146,33 +147,62 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
 }
 
 function ProfileDialog({ onClose }: { onClose: () => void }) {
-  const { user, profile, updateProfile, logout, error, clearError } = useAuth();
+  const { user, profile, session, updateProfile, logout, error, clearError } = useAuth();
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [avatarEmoji, setAvatarEmoji] = useState('✦');
-  const [instagram, setInstagram] = useState('');
+  const [avatarPath, setAvatarPath] = useState('');
+  const [socialNetwork, setSocialNetwork] = useState<'instagram' | 'tiktok' | 'youtube' | ''>('');
+  const [socialHandle, setSocialHandle] = useState('');
   const [website, setWebsite] = useState('');
   const [city, setCity] = useState('');
   const [bio, setBio] = useState('');
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
   const [marketing, setMarketing] = useState(false);
+  const [publicProfile, setPublicProfile] = useState(false);
+  const [publicSocial, setPublicSocial] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     setUsername(profile?.username ?? '');
     setDisplayName(profile?.display_name ?? '');
     setAvatarEmoji(profile?.avatar_emoji ?? '✦');
-    setInstagram(profile?.instagram ?? '');
+    setAvatarPath(profile?.avatar_path ?? '');
+    setSocialNetwork(profile?.social_network ?? '');
+    setSocialHandle(profile?.social_handle ?? '');
     setWebsite(profile?.website ?? '');
     setCity(profile?.city ?? '');
     setBio(profile?.bio ?? '');
     setTerms(profile?.consent_terms ?? false);
     setPrivacy(profile?.consent_privacy ?? false);
     setMarketing(profile?.consent_marketing ?? false);
+    setPublicProfile(profile?.consent_public_profile ?? false);
+    setPublicSocial(profile?.consent_public_social ?? false);
     setFormError(null);
   }, [profile]);
+
+  const chooseAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !user || !session) return;
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+      setFormError('Escolha uma imagem de até 5 MB.');
+      return;
+    }
+    setAvatarBusy(true);
+    setFormError(null);
+    try {
+      const path = await uploadProfileAvatar(user.id, session.access_token, file);
+      setAvatarPath(path);
+    } catch (caught) {
+      setFormError(caught instanceof Error ? caught.message : 'Não foi possível enviar a imagem.');
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -186,19 +216,31 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
       setFormError('Você precisa aceitar os termos e a política de privacidade.');
       return;
     }
+    if (socialNetwork && !socialHandle.trim()) {
+      setFormError('Informe o handle da rede social escolhida.');
+      return;
+    }
+    if (publicSocial && (!socialNetwork || !socialHandle.trim())) {
+      setFormError('Escolha uma rede e informe o handle para exibir sua rede social.');
+      return;
+    }
     setBusy(true);
     try {
       await updateProfile({
         username,
         display_name: displayName,
         avatar_emoji: avatarEmoji,
-        instagram,
+        avatar_path: avatarPath,
+        social_network: socialNetwork || null,
+        social_handle: socialHandle,
         website,
         city,
         bio,
         consent_terms: terms,
         consent_privacy: privacy,
         consent_marketing: marketing,
+        consent_public_profile: publicProfile,
+        consent_public_social: publicSocial,
       });
     } catch {
       // The provider error is rendered below the form.
@@ -214,7 +256,9 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
       <p className="account-dialog-intro">Monte seu perfil público. O e-mail abaixo fica privado e só serve para sua conta.</p>
       <form className="account-form profile-form" onSubmit={submit}>
         <div className="profile-identity-row">
-          <div className="profile-avatar">{avatarEmoji}</div>
+          <div className="profile-avatar">
+            {avatarPath ? <img src={supabasePublicStorageUrl(avatarPath)} alt="" /> : avatarEmoji}
+          </div>
           <label className="profile-username">
             Username
             <span className="account-input-wrap"><span className="input-prefix">@</span><input value={username} onChange={(event) => setUsername(event.target.value.replace(/\s/g, '').toLowerCase())} required placeholder="seunome" /></span>
@@ -224,14 +268,23 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
             <input className="emoji-input" value={avatarEmoji} onChange={(event) => setAvatarEmoji(event.target.value.slice(0, 2) || '✦')} aria-label="Emoji do avatar" />
           </label>
         </div>
+        <label className="profile-avatar-upload">
+          <span><ImagePlus size={14} /> Foto de perfil (opcional)</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => void chooseAvatar(event)} disabled={avatarBusy} />
+          <small>{avatarBusy ? 'enviando…' : 'JPG, PNG, WEBP ou GIF · até 5 MB'}</small>
+        </label>
         <label>
           Nome para aparecer
           <span className="account-input-wrap"><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Seu nome ou projeto" /></span>
         </label>
         <div className="profile-two-columns">
           <label>
-            Instagram
-            <span className="account-input-wrap"><span className="input-prefix">@</span><input value={instagram} onChange={(event) => setInstagram(event.target.value.replace(/^@/, ''))} placeholder="seuinstagram" /></span>
+            Rede social
+            <span className="account-input-wrap"><select value={socialNetwork} onChange={(event) => { const next = event.target.value as typeof socialNetwork; setSocialNetwork(next); if (!next) { setSocialHandle(''); setPublicSocial(false); } }}><option value="">Nenhuma</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="youtube">YouTube</option></select></span>
+          </label>
+          <label>
+            Handle
+            <span className="account-input-wrap"><span className="input-prefix">@</span><input value={socialHandle} onChange={(event) => setSocialHandle(event.target.value.replace(/^@/, ''))} placeholder="seuhandle" disabled={!socialNetwork} /></span>
           </label>
           <label>
             Cidade
@@ -249,7 +302,9 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
         <div className="profile-private-email"><Mail size={14} /><span><b>{user?.email}</b><small>e-mail privado</small></span></div>
         <label className="consent-row"><input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} /><span>Li e aceito os <u>termos de uso</u>.</span></label>
         <label className="consent-row"><input type="checkbox" checked={privacy} onChange={(event) => setPrivacy(event.target.checked)} /><span>Li e aceito a <u>política de privacidade</u>.</span></label>
-        <label className="consent-row"><input type="checkbox" checked={marketing} onChange={(event) => setMarketing(event.target.checked)} /><span>Quero receber novidades do projeto <small>(opcional)</small>.</span></label>
+        <label className="consent-row"><input type="checkbox" checked={publicProfile} onChange={(event) => { const next = event.target.checked; setPublicProfile(next); if (!next) setPublicSocial(false); }} /><span>Quero que meu perfil apareça publicamente no projeto.</span></label>
+        <label className="consent-row"><input type="checkbox" checked={publicSocial} onChange={(event) => setPublicSocial(event.target.checked)} disabled={!socialNetwork || !publicProfile} /><span>Quero que minha rede social apareça publicamente no projeto.</span></label>
+        <label className="consent-row"><input type="checkbox" checked={marketing} onChange={(event) => setMarketing(event.target.checked)} /><span>Quero receber novidades, recordes e oportunidades do Um Milhão de Pixels Brasil por e-mail <small>(opcional)</small>.</span></label>
         {(formError || error) && <p className="account-error" role="alert">{formError || error}</p>}
         <button className="account-submit" type="submit" disabled={busy}>{busy ? 'salvando…' : 'Salvar meu perfil'} <Check size={16} /></button>
       </form>

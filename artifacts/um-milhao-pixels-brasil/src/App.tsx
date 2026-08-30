@@ -30,6 +30,7 @@ import { getPixelBlocks } from '@/data/pixel-block-service';
 import type { PixelBlock, PixelSelection, WallSelection } from '@/data/pixel-blocks';
 import { AuthProvider, useAuth } from '@/auth/auth-context';
 import { AuthDialogs } from '@/auth/auth-dialogs';
+import { supabasePublicStorageUrl } from '@/auth/auth-service';
 
 const queryClient = new QueryClient();
 
@@ -58,7 +59,9 @@ function Header() {
       </nav>
       {user ? (
         <button className="header-account" type="button" onClick={openProfile} data-testid="button-account">
-          <span className="header-account-avatar">{profile?.avatar_emoji ?? <UserRound size={14} />}</span>
+          <span className="header-account-avatar">
+            {profile?.avatar_path ? <img src={supabasePublicStorageUrl(profile.avatar_path)} alt="" /> : profile?.avatar_emoji ?? <UserRound size={14} />}
+          </span>
           <span className="header-account-name">{profile?.username ? `@${profile.username}` : 'seu perfil'}</span>
         </button>
       ) : (

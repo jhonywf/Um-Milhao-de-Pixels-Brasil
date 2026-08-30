@@ -3,7 +3,9 @@ export type PublicProfile = {
   username: string;
   display_name: string | null;
   avatar_emoji: string;
-  instagram: string | null;
+  avatar_path: string | null;
+  social_network: 'instagram' | 'tiktok' | 'youtube' | null;
+  social_handle: string | null;
   website: string | null;
   bio: string | null;
   city: string | null;

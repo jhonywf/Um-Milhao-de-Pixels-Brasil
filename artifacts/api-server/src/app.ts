@@ -26,6 +26,10 @@ app.use(
   }),
 );
 app.use(cors());
+app.use(express.raw({
+  type: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+  limit: "5mb",
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

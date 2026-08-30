@@ -5,6 +5,14 @@ export type SupabaseUser = {
   created_at?: string;
 };
 
+export type SupabaseRequestOptions = {
+  method?: string;
+  body?: unknown;
+  rawBody?: BodyInit;
+  accessToken?: string;
+  headers?: Record<string, string>;
+};
+
 export type AuthSession = {
   access_token: string;
   refresh_token: string;
@@ -42,16 +50,22 @@ export function storeSession(session: AuthSession | null) {
 
 export async function supabaseRequest<T>(
   path: string,
-  options: { method?: string; body?: unknown; accessToken?: string; headers?: Record<string, string> } = {},
+  options: SupabaseRequestOptions = {},
 ): Promise<T> {
+  const hasRawBody = options.rawBody !== undefined;
   const response = await fetch(`${apiBasePath}${path}`, {
     method: options.method ?? 'GET',
     headers: {
       Accept: 'application/json',
       ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
       ...(options.headers ?? {}),
+      ...(!hasRawBody && options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     },
-    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+    ...(hasRawBody
+      ? { body: options.rawBody }
+      : options.body === undefined
+        ? {}
+        : { body: JSON.stringify(options.body) }),
   });
 
   const contentType = response.headers.get('content-type') ?? '';
@@ -61,7 +75,9 @@ export async function supabaseRequest<T>(
 
   if (!response.ok) {
     const message =
-      typeof payload === 'object' && payload && 'msg' in payload
+      typeof payload === 'object' && payload && 'code' in payload && payload.code === '23505'
+        ? 'Esse username já está em uso.'
+        : typeof payload === 'object' && payload && 'msg' in payload
         ? String(payload.msg)
         : typeof payload === 'object' && payload && 'message' in payload
           ? String(payload.message)
@@ -132,6 +148,32 @@ export async function startGoogleSignIn() {
   const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`;
   const path = `/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
   window.location.assign(`${apiBasePath}${path}`);
+}
+
+export function supabasePublicStorageUrl(path: string) {
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  return `${apiBasePath}/storage/v1/object/public/profile-avatars/${encodedPath}`;
+}
+
+export async function uploadProfileAvatar(userId: string, accessToken: string, file: File) {
+  const extensionByMimeType: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+  };
+  const safeExtension = extensionByMimeType[file.type] ?? 'jpg';
+  const path = `${userId}/${crypto.randomUUID()}.${safeExtension}`;
+  await supabaseRequest(`/storage/v1/object/profile-avatars/${path}`, {
+    method: 'POST',
+    accessToken,
+    rawBody: file,
+    headers: {
+      'Content-Type': file.type,
+      'x-upsert': 'true',
+    },
+  });
+  return path;
 }
 
 export function readOAuthSessionFromUrl() {

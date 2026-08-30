@@ -29,7 +29,7 @@ router.use(async (req: Request, res: Response) => {
     const response = await connectors.proxy("supabase", getSupabasePath(req), {
       method: req.method,
       headers,
-      ...(["GET", "HEAD"].includes(req.method) ? {} : { body: req.body }),
+      ...(req.body === undefined || ["GET", "HEAD"].includes(req.method) ? {} : { body: req.body }),
     });
 
     for (const header of ["content-type", "content-range", "cache-control", "location"]) {
