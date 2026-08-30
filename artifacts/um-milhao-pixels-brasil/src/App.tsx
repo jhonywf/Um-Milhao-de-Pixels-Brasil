@@ -1,4 +1,4 @@
-import { type PointerEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { type PointerEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   ArrowDownRight,
@@ -25,34 +25,10 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import { getPixelBlocks } from '@/data/pixel-block-service';
+import type { PixelBlock, PixelSelection, WallSelection } from '@/data/pixel-blocks';
 
 const queryClient = new QueryClient();
-
-type PixelBlock = {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  color: string;
-  name: string;
-  detail: string;
-  initials: string;
-};
-
-const mockBlocks: PixelBlock[] = [
-  { id: 'banco-amarelo', x: 82, y: 112, width: 168, height: 98, color: '#ffcf33', name: 'Banco Amarelo', detail: 'A primeira ideia também conta.', initials: 'BA' },
-  { id: 'casa-nuvem', x: 328, y: 62, width: 112, height: 160, color: '#ef6b50', name: 'Casa Nuvem', detail: 'Um pedacinho de céu.', initials: 'CN' },
-  { id: 'radio-livre', x: 522, y: 124, width: 214, height: 88, color: '#5ac8b0', name: 'Rádio Livre', detail: 'Som para atravessar a tela.', initials: 'RL' },
-  { id: 'clube-1999', x: 800, y: 72, width: 128, height: 182, color: '#9367d8', name: 'Clube 1999', detail: 'Nostalgia em baixa resolução.', initials: 'C9' },
-  { id: 'salgadinho', x: 120, y: 342, width: 216, height: 120, color: '#f18b42', name: 'Salgadinho Cósmico', detail: 'Demo de bloco ocupado.', initials: 'SC' },
-  { id: 'meu-quarto', x: 398, y: 302, width: 106, height: 190, color: '#a7d84c', name: 'Meu Quarto', detail: 'Plantas, pôsteres e pixels.', initials: 'MQ' },
-  { id: 'onda-curta', x: 586, y: 342, width: 182, height: 124, color: '#58a7e8', name: 'Onda Curta', detail: 'Sinal encontrado.', initials: 'OC' },
-  { id: 'ponto-final', x: 826, y: 382, width: 108, height: 112, color: '#ef5669', name: 'Ponto Final', detail: 'Ainda não é o fim.', initials: 'PF' },
-  { id: 'janela-aberta', x: 248, y: 610, width: 198, height: 102, color: '#d9b7f0', name: 'Janela Aberta', detail: 'A internet é feita de frestas.', initials: 'JA' },
-  { id: 'sinal-verde', x: 512, y: 594, width: 142, height: 146, color: '#36b86d', name: 'Sinal Verde', detail: 'Pode chegar.', initials: 'SV' },
-  { id: 'pixel-pipoca', x: 742, y: 638, width: 190, height: 80, color: '#f4a8c7', name: 'Pixel Pipoca', detail: 'Demo de bloco ocupado.', initials: 'PP' },
-];
 
 const previewBlocks = [
   [0, 2, 3, 2, '#ffcf33'], [4, 0, 2, 4, '#ef6b50'], [7, 1, 4, 2, '#5ac8b0'],
@@ -263,16 +239,21 @@ function Footer() {
   );
 }
 
-function WallCanvas() {
+function WallPage() {
+  return <WallCanvas blocks={getPixelBlocks()} />;
+}
+
+function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
-  const [selected, setSelected] = useState<PixelBlock | { x: number; y: number; width: number; height: number; free: true } | null>(null);
+  const [selected, setSelected] = useState<WallSelection | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const cameraRef = useRef(camera);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
   const gestureRef = useRef({ multiTouch: false });
+  const selectionDragRef = useRef<{ pointerId: number; anchorX: number; anchorY: number; moved: boolean } | null>(null);
   const pinchRef = useRef<{
     distance: number;
     midpoint: { x: number; y: number };
@@ -280,8 +261,9 @@ function WallCanvas() {
     camera: { x: number; y: number; scale: number };
   } | null>(null);
   const deviceScaleRef = useRef(1);
-  const minZoom = 0.36;
-  const maxZoom = 2.4;
+  const minZoom = 0.24;
+  const maxZoom = 8;
+  const hasFittedInitialViewRef = useRef(false);
 
   useEffect(() => {
     cameraRef.current = camera;
@@ -305,15 +287,23 @@ function WallCanvas() {
     ctx.fillRect(0, 0, rect.width, rect.height);
     const originX = rect.width / 2 - 500 * camera.scale + camera.x;
     const originY = rect.height / 2 - 500 * camera.scale + camera.y;
-    const gridStep = camera.scale > 0.72 ? 10 * camera.scale : camera.scale > 0.38 ? 20 * camera.scale : 50 * camera.scale;
-    ctx.strokeStyle = 'rgba(255,244,201,0.09)';
-    ctx.lineWidth = 1;
-    for (let x = originX % gridStep; x < rect.width; x += gridStep) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, rect.height); ctx.stroke(); }
-    for (let y = originY % gridStep; y < rect.height; y += gridStep) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(rect.width, y); ctx.stroke(); }
+    const wallSize = 1000 * camera.scale;
+    ctx.fillStyle = '#fff4d9';
+    ctx.fillRect(originX, originY, wallSize, wallSize);
+    const gridStep = camera.scale >= 2.5 ? camera.scale : camera.scale > 0.72 ? 10 * camera.scale : camera.scale > 0.38 ? 20 * camera.scale : 50 * camera.scale;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(originX, originY, wallSize, wallSize);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(115, 112, 104, 0.28)';
+    ctx.lineWidth = camera.scale >= 2.5 ? 0.75 : 1;
+    for (let x = originX; x <= originX + wallSize; x += gridStep) { ctx.beginPath(); ctx.moveTo(x, originY); ctx.lineTo(x, originY + wallSize); ctx.stroke(); }
+    for (let y = originY; y <= originY + wallSize; y += gridStep) { ctx.beginPath(); ctx.moveTo(originX, y); ctx.lineTo(originX + wallSize, y); ctx.stroke(); }
+    ctx.restore();
     ctx.strokeStyle = 'rgba(255,207,51,0.75)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(originX, originY, 1000 * camera.scale, 1000 * camera.scale);
-    mockBlocks.forEach((block) => {
+    ctx.strokeRect(originX, originY, wallSize, wallSize);
+    blocks.forEach((block) => {
       const x = originX + block.x * camera.scale;
       const y = originY + block.y * camera.scale;
       const w = block.width * camera.scale;
@@ -334,13 +324,33 @@ function WallCanvas() {
       const sw = selected.width * camera.scale;
       const sh = selected.height * camera.scale;
       ctx.save();
+      if ('free' in selected) {
+        ctx.fillStyle = 'rgba(255, 207, 51, 0.22)';
+        ctx.fillRect(sx, sy, sw, sh);
+      }
       ctx.strokeStyle = '#fff4c9';
       ctx.lineWidth = 3;
       ctx.setLineDash([8, 6]);
       ctx.strokeRect(sx - 3, sy - 3, sw + 6, sh + 6);
       ctx.restore();
     }
-  }, [camera, selected]);
+  }, [blocks, camera, selected]);
+
+  const fitInitialView = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage || hasFittedInitialViewRef.current) return;
+    const rect = stage.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const fittedScale = Math.min(maxZoom, Math.max(minZoom, Math.min(rect.width, rect.height) / 1000 * 0.92));
+    const nextCamera = { x: 0, y: 0, scale: fittedScale };
+    hasFittedInitialViewRef.current = true;
+    cameraRef.current = nextCamera;
+    setCamera(nextCamera);
+  }, [maxZoom, minZoom]);
+
+  useLayoutEffect(() => {
+    fitInitialView();
+  }, [fitInitialView]);
 
   useEffect(() => {
     draw();
@@ -359,15 +369,39 @@ function WallCanvas() {
     };
   };
 
+  const makePixelSelection = (anchorX: number, anchorY: number, currentX = anchorX, currentY = anchorY): PixelSelection => {
+    const startX = Math.min(anchorX, currentX);
+    const startY = Math.min(anchorY, currentY);
+    const endX = Math.max(anchorX, currentX);
+    const endY = Math.max(anchorY, currentY);
+    const width = endX - startX + 1;
+    const height = endY - startY + 1;
+    return { x: startX, y: startY, width, height, pixelCount: width * height, free: true, status: 'available' };
+  };
+
+  const overlapsOccupiedBlock = (selection: PixelSelection) => blocks.some((block) => (
+    block.status !== 'available'
+    && selection.x < block.x + block.width
+    && selection.x + selection.width > block.x
+    && selection.y < block.y + block.height
+    && selection.y + selection.height > block.y
+  ));
+
   const selectAt = (clientX: number, clientY: number) => {
     const world = screenToWorld(clientX, clientY);
-    const block = mockBlocks.find((item) => world.x >= item.x && world.x <= item.x + item.width && world.y >= item.y && world.y <= item.y + item.height);
+    const block = blocks.find((item) => (
+      item.status !== 'available'
+      && world.x >= item.x
+      && world.x < item.x + item.width
+      && world.y >= item.y
+      && world.y < item.y + item.height
+    ));
     if (block) {
       setSelected(block);
       return;
     }
-    if (world.x >= 0 && world.x <= 1000 && world.y >= 0 && world.y <= 1000) {
-      setSelected({ x: Math.max(0, Math.floor(world.x / 10) * 10), y: Math.max(0, Math.floor(world.y / 10) * 10), width: 40, height: 40, free: true });
+    if (world.x >= 0 && world.x < 1000 && world.y >= 0 && world.y < 1000) {
+      setSelected(makePixelSelection(Math.floor(world.x), Math.floor(world.y)));
     } else {
       setSelected(null);
     }
@@ -445,6 +479,13 @@ function WallCanvas() {
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size === 1) {
       const currentCamera = cameraRef.current;
+      const world = screenToWorld(event.clientX, event.clientY);
+      const canExpandSelection = !!selected
+        && 'free' in selected
+        && world.x >= selected.x
+        && world.x < selected.x + selected.width
+        && world.y >= selected.y
+        && world.y < selected.y + selected.height;
       dragRef.current = {
         pointerId: event.pointerId,
         startX: event.clientX,
@@ -453,9 +494,13 @@ function WallCanvas() {
         originY: currentCamera.y,
         moved: false,
       };
+      selectionDragRef.current = canExpandSelection
+        ? { pointerId: event.pointerId, anchorX: selected.x, anchorY: selected.y, moved: false }
+        : null;
       gestureRef.current.multiTouch = false;
     } else if (pointersRef.current.size === 2) {
       gestureRef.current.multiTouch = true;
+      selectionDragRef.current = null;
       startPinch();
     }
     setIsDragging(true);
@@ -470,6 +515,17 @@ function WallCanvas() {
       return;
     }
     if (dragRef.current.pointerId !== event.pointerId) return;
+    if (selectionDragRef.current?.pointerId === event.pointerId) {
+      const deltaX = event.clientX - dragRef.current.startX;
+      const deltaY = event.clientY - dragRef.current.startY;
+      if (Math.abs(deltaX) + Math.abs(deltaY) > 4) selectionDragRef.current.moved = true;
+      const world = screenToWorld(event.clientX, event.clientY);
+      const currentX = Math.min(999, Math.max(0, Math.floor(world.x)));
+      const currentY = Math.min(999, Math.max(0, Math.floor(world.y)));
+      const nextSelection = makePixelSelection(selectionDragRef.current.anchorX, selectionDragRef.current.anchorY, currentX, currentY);
+      if (!overlapsOccupiedBlock(nextSelection)) setSelected(nextSelection);
+      return;
+    }
     const deltaX = event.clientX - dragRef.current.startX;
     const deltaY = event.clientY - dragRef.current.startY;
     if (Math.abs(deltaX) + Math.abs(deltaY) > 4) dragRef.current.moved = true;
@@ -482,8 +538,11 @@ function WallCanvas() {
     const wasActive = pointersRef.current.has(event.pointerId);
     if (!wasActive) return;
     const pointersBeforeRelease = pointersRef.current.size;
+    const wasSelectionDrag = selectionDragRef.current?.pointerId === event.pointerId;
+    const selectionWasMoved = selectionDragRef.current?.moved ?? false;
     pointersRef.current.delete(event.pointerId);
     if (pointersBeforeRelease >= 2) {
+      selectionDragRef.current = null;
       if (pointersRef.current.size >= 2) {
         startPinch();
       } else if (pointersRef.current.size === 1) {
@@ -502,7 +561,10 @@ function WallCanvas() {
         pinchRef.current = null;
       }
     } else if (pointersRef.current.size === 0) {
-      if (!gestureRef.current.multiTouch && !dragRef.current.moved) selectAt(event.clientX, event.clientY);
+      if (!gestureRef.current.multiTouch && !dragRef.current.moved && (!wasSelectionDrag || !selectionWasMoved)) {
+        selectAt(event.clientX, event.clientY);
+      }
+      selectionDragRef.current = null;
       gestureRef.current.multiTouch = false;
     }
     if (pointersRef.current.size === 0) pinchRef.current = null;
@@ -512,6 +574,7 @@ function WallCanvas() {
   const onPointerCancel = (event: PointerEvent<HTMLCanvasElement>) => {
     pointersRef.current.delete(event.pointerId);
     pinchRef.current = null;
+    selectionDragRef.current = null;
     if (pointersRef.current.size === 1) {
       const [remainingId, remainingPoint] = Array.from(pointersRef.current.entries())[0];
       const currentCamera = cameraRef.current;
@@ -572,7 +635,7 @@ function WallCanvas() {
                 data-testid="canvas-pixel-wall"
                 aria-label="Parede interativa de um milhão de pixels"
               />
-              <div className="canvas-hint"><MousePointer2 size={14} /> clique para selecionar <span>·</span> arraste para mover</div>
+              <div className="canvas-hint"><MousePointer2 size={14} /> toque: 1 pixel <span>·</span> arraste a seleção para expandir</div>
             </div>
             <div className="canvas-footer"><span><i className="legend-free" /> espaço livre</span><span><i className="legend-used" /> área ocupada (demo)</span><span className="canvas-foot-note">escala: 1 px = 1 unidade</span></div>
           </section>
@@ -584,7 +647,7 @@ function WallCanvas() {
   );
 }
 
-function SelectionPanel({ selected, label, coordinateText }: { selected: WallCanvasProps['selected']; label: string; coordinateText: string }) {
+function SelectionPanel({ selected, label, coordinateText }: { selected: WallSelection | null; label: string; coordinateText: string }) {
   const [notice, setNotice] = useState(false);
   const isFree = !!selected && 'free' in selected;
   return (
@@ -598,6 +661,8 @@ function SelectionPanel({ selected, label, coordinateText }: { selected: WallCan
           <span className="selection-type">área livre</span>
           <h2>Este espaço<br />pode ser seu.</h2>
           <p>Coordenadas prontas para receber uma ideia. O valor de cada pixel será R$1 quando a parede abrir.</p>
+          <div className="selection-detail"><span>pixels selecionados</span><b>{(selected as PixelSelection).pixelCount}</b></div>
+          <div className="selection-detail"><span>tamanho</span><b>{(selected as PixelSelection).width} × {(selected as PixelSelection).height} px</b></div>
           <div className="selection-detail"><span>coordenada inicial</span><b>{coordinateText}</b></div>
           <button className="selection-button" onClick={() => setNotice(true)} data-testid="button-register-interest">Quero marcar interesse <ArrowRight size={17} /></button>
           {notice && <div className="demo-notice" role="status"><Check size={15} /> Demo: o interesse foi anotado apenas nesta tela.</div>}
@@ -619,16 +684,12 @@ function SelectionPanel({ selected, label, coordinateText }: { selected: WallCan
   );
 }
 
-type WallCanvasProps = {
-  selected: PixelBlock | { x: number; y: number; width: number; height: number; free: true } | null;
-};
-
 function Router() {
   return (
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={Home} />
-        <Route path="/parede" component={WallCanvas} />
+        <Route path="/parede" component={WallPage} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>
