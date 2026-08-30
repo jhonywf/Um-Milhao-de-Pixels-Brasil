@@ -1,0 +1,1 @@
+- [Conectores no navegador](connector-browser-boundary.md) — chamadas de conectores devem ficar no backend; o SDK atual importa módulos Node incompatíveis com bundles web.

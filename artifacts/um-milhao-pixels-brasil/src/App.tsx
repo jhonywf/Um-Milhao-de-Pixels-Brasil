@@ -18,6 +18,7 @@ import {
   Sparkles,
   Star,
   Trophy,
+  UserRound,
   Zap,
 } from 'lucide-react';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
@@ -27,6 +28,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { getPixelBlocks } from '@/data/pixel-block-service';
 import type { PixelBlock, PixelSelection, WallSelection } from '@/data/pixel-blocks';
+import { AuthProvider, useAuth } from '@/auth/auth-context';
+import { AuthDialogs } from '@/auth/auth-dialogs';
 
 const queryClient = new QueryClient();
 
@@ -40,6 +43,7 @@ const previewBlocks = [
 function Header() {
   const [location] = useLocation();
   const isWall = location === '/parede';
+  const { user, profile, openAuth, openProfile } = useAuth();
   return (
     <header className="site-header" data-testid="header-site">
       <Link href="/" className="brand-lockup" data-testid="link-home">
@@ -52,6 +56,16 @@ function Header() {
         <a href="/#ranking" data-testid="link-ranking">Ranking</a>
         <a href="/#empresas" data-testid="link-empresas">Empresas</a>
       </nav>
+      {user ? (
+        <button className="header-account" type="button" onClick={openProfile} data-testid="button-account">
+          <span className="header-account-avatar">{profile?.avatar_emoji ?? <UserRound size={14} />}</span>
+          <span className="header-account-name">{profile?.username ? `@${profile.username}` : 'seu perfil'}</span>
+        </button>
+      ) : (
+        <button className="header-login" type="button" onClick={openAuth} data-testid="button-login">
+          entrar
+        </button>
+      )}
       <Link href="/parede" className="header-cta" data-testid="link-header-cta">
         <span>Comprar pixels</span><ArrowRight size={17} />
       </Link>
@@ -649,7 +663,20 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
 function SelectionPanel({ selected, label, coordinateText }: { selected: WallSelection | null; label: string; coordinateText: string }) {
   const [notice, setNotice] = useState(false);
+  const { user, profile, openAuth, openProfile } = useAuth();
   const isFree = !!selected && 'free' in selected;
+  const handleInterest = () => {
+    setNotice(false);
+    if (!user) {
+      openAuth();
+      return;
+    }
+    if (!profile) {
+      openProfile();
+      return;
+    }
+    setNotice(true);
+  };
   return (
     <aside className={`selection-panel ${selected ? 'has-selection' : ''}`} data-testid="selection-panel">
       <div className="selection-head"><span>SELEÇÃO</span>{selected && <span className="selected-mark"><Check size={13} /> selecionado</span>}</div>
@@ -664,8 +691,8 @@ function SelectionPanel({ selected, label, coordinateText }: { selected: WallSel
           <div className="selection-detail"><span>pixels selecionados</span><b>{(selected as PixelSelection).pixelCount}</b></div>
           <div className="selection-detail"><span>tamanho</span><b>{(selected as PixelSelection).width} × {(selected as PixelSelection).height} px</b></div>
           <div className="selection-detail"><span>coordenada inicial</span><b>{coordinateText}</b></div>
-          <button className="selection-button" onClick={() => setNotice(true)} data-testid="button-register-interest">Quero marcar interesse <ArrowRight size={17} /></button>
-          {notice && <div className="demo-notice" role="status"><Check size={15} /> Demo: o interesse foi anotado apenas nesta tela.</div>}
+          <button className="selection-button" onClick={handleInterest} data-testid="button-register-interest">Quero marcar interesse <ArrowRight size={17} /></button>
+          {notice && <div className="demo-notice" role="status"><Check size={15} /> Perfil pronto. A reserva será liberada na próxima fase.</div>}
         </div>
       ) : (
         <div className="selection-content">
@@ -703,14 +730,17 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+          <AuthDialogs />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AuthProvider>
   );
 }
 
