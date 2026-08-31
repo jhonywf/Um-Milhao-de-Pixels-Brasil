@@ -83,9 +83,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const redirectResult = await readOAuthSessionFromUrl();
         let nextSession = redirectResult?.session ?? null;
         if (nextSession) {
-          const user = await getCurrentUser(nextSession.access_token);
-          nextSession = { ...nextSession, user };
+          // Persist the PKCE exchange immediately. If the follow-up /user request
+          // is temporarily unavailable, a valid OAuth login must not be lost.
           storeSession(nextSession);
+          try {
+            const user = await getCurrentUser(nextSession.access_token);
+            nextSession = { ...nextSession, user };
+            storeSession(nextSession);
+          } catch {
+            if (!nextSession.user?.id) throw new Error('Login concluído, mas não foi possível carregar sua conta. Atualize a página e tente novamente.');
+          }
         } else {
           nextSession = await restoreSession();
         }

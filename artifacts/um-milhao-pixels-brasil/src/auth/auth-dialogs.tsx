@@ -52,7 +52,7 @@ export function AuthDialogs() {
 
 function AuthDialog({ onClose }: { onClose: () => void }) {
   const { login, signup, loginWithGoogle, requestPasswordReset, error, clearError } = useAuth();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'choice' | 'login' | 'signup'>('choice');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -62,7 +62,7 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
   const [resetNotice, setResetNotice] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const switchMode = (nextMode: 'login' | 'signup') => {
+  const switchMode = (nextMode: 'choice' | 'login' | 'signup') => {
     setMode(nextMode);
     setFormError(null);
     clearError();
@@ -117,13 +117,27 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
   return (
     <DialogShell onClose={onClose} labelledBy="auth-dialog-title">
       <div className="account-dialog-kicker"><span className="eyebrow-dot" /> sua marca começa aqui</div>
-      <h2 id="auth-dialog-title">{mode === 'login' ? 'Entre na parede.' : 'Crie sua conta.'}</h2>
+      <h2 id="auth-dialog-title">
+        {mode === 'choice' ? 'Entre ou crie sua conta.' : mode === 'login' ? 'Entre na parede.' : 'Crie sua conta.'}
+      </h2>
       <p className="account-dialog-intro">
-        {mode === 'login'
-          ? 'Entre para guardar seu perfil e acompanhar suas próximas marcas.'
-          : 'Um perfil público para sua marca. Seu e-mail nunca aparece na parede.'}
+        {mode === 'choice'
+          ? 'Se você já tem uma conta, entre. Se é sua primeira vez, crie sua conta antes de continuar.'
+          : mode === 'login'
+            ? 'Use o mesmo método que você utilizou quando criou sua conta.'
+            : 'Escolha Google ou e-mail e senha. Depois você monta seu perfil público.'}
       </p>
-      {confirmationNotice || resetNotice ? (
+
+      {mode === 'choice' ? (
+        <div className="account-form">
+          <button className="account-submit" type="button" onClick={() => switchMode('login')}>
+            Entrar
+          </button>
+          <button className="google-button" type="button" onClick={() => switchMode('signup')}>
+            Criar conta
+          </button>
+        </div>
+      ) : confirmationNotice || resetNotice ? (
         <div className="account-success" role="status">
           <Check size={18} />
           <div>
@@ -134,9 +148,9 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
       ) : (
         <>
           <button className="google-button" type="button" onClick={() => void loginWithGoogle()} disabled={busy}>
-            <span className="google-mark">G</span> Continuar com Google
+            <span className="google-mark">G</span> {mode === 'login' ? 'Entrar com Google' : 'Continuar com Google'}
           </button>
-          <div className="account-divider"><span>ou use seu e-mail</span></div>
+          <div className="account-divider"><span>{mode === 'login' ? 'ou entre com seu e-mail' : 'ou crie com seu e-mail'}</span></div>
           <form className="account-form" onSubmit={submit}>
             <label>
               E-mail
@@ -164,12 +178,17 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
           </form>
         </>
       )}
-      <p className="account-switch">
-        {mode === 'login' ? 'Ainda não tem uma conta?' : 'Já tem uma conta?'}
-        <button type="button" onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}>
-          {mode === 'login' ? 'Criar agora' : 'Entrar'}
-        </button>
-      </p>
+
+      {mode !== 'choice' && (
+        <p className="account-switch">
+          <button type="button" onClick={() => switchMode('choice')}>← Voltar</button>
+          <span aria-hidden="true"> · </span>
+          {mode === 'login' ? 'Ainda não tem uma conta?' : 'Já tem uma conta?'}
+          <button type="button" onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}>
+            {mode === 'login' ? 'Criar agora' : 'Entrar'}
+          </button>
+        </p>
+      )}
       <small className="account-legal">Ao continuar, você concorda com os termos e a política de privacidade.</small>
     </DialogShell>
   );
@@ -311,10 +330,6 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
       setFormError('Informe o handle da rede social escolhida.');
       return;
     }
-    if (publicSocial && (!socialNetwork || !socialHandle.trim())) {
-      setFormError('Escolha uma rede e informe o handle para exibir sua rede social.');
-      return;
-    }
     setBusy(true);
     try {
       await updateProfile({
@@ -354,10 +369,6 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
             Username
             <span className="account-input-wrap"><span className="input-prefix">@</span><input value={username} onChange={(event) => setUsername(event.target.value.replace(/\s/g, '').toLowerCase())} required placeholder="seunome" /></span>
           </label>
-          <label className="profile-emoji">
-            Marca
-            <input className="emoji-input" value={avatarEmoji} onChange={(event) => setAvatarEmoji(event.target.value.slice(0, 2) || '✦')} aria-label="Emoji do avatar" />
-          </label>
         </div>
         <label className="profile-avatar-upload">
           <span><ImagePlus size={14} /> Foto de perfil (opcional)</span>
@@ -374,8 +385,8 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
             <span className="account-input-wrap"><select value={socialNetwork} onChange={(event) => { const next = event.target.value as typeof socialNetwork; setSocialNetwork(next); if (!next) { setSocialHandle(''); setPublicSocial(false); } }}><option value="">Nenhuma</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="youtube">YouTube</option></select></span>
           </label>
           <label>
-            Handle
-            <span className="account-input-wrap"><span className="input-prefix">@</span><input value={socialHandle} onChange={(event) => setSocialHandle(event.target.value.replace(/^@/, ''))} placeholder="seuhandle" disabled={!socialNetwork} /></span>
+            Usuário
+            <span className="account-input-wrap"><span className="input-prefix">@</span><input value={socialHandle} onChange={(event) => setSocialHandle(event.target.value.replace(/^@/, ''))} placeholder="usuario" disabled={!socialNetwork} /></span>
           </label>
           <label>
             Cidade
@@ -391,10 +402,8 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
           <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={160} placeholder="O que você quer deixar no mapa?" />
         </label>
         <div className="profile-private-email"><Mail size={14} /><span><b>{user?.email}</b><small>e-mail privado</small></span></div>
-        <label className="consent-row"><input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} /><span>Li e aceito os <u>termos de uso</u>.</span></label>
-        <label className="consent-row"><input type="checkbox" checked={privacy} onChange={(event) => setPrivacy(event.target.checked)} /><span>Li e aceito a <u>política de privacidade</u>.</span></label>
-        <label className="consent-row"><input type="checkbox" checked={publicProfile} onChange={(event) => { const next = event.target.checked; setPublicProfile(next); if (!next) setPublicSocial(false); }} /><span>Quero que meu perfil apareça publicamente no projeto.</span></label>
-        <label className="consent-row"><input type="checkbox" checked={publicSocial} onChange={(event) => setPublicSocial(event.target.checked)} disabled={!socialNetwork || !publicProfile} /><span>Quero que minha rede social apareça publicamente no projeto.</span></label>
+        <label className="consent-row"><input type="checkbox" checked={terms && privacy} onChange={(event) => { const next = event.target.checked; setTerms(next); setPrivacy(next); }} /><span>Li e aceito os <u>termos de uso</u> e a <u>política de privacidade</u>.</span></label>
+        <label className="consent-row"><input type="checkbox" checked={publicProfile && publicSocial} onChange={(event) => { const next = event.target.checked; setPublicProfile(next); setPublicSocial(next); }} /><span>Quero que meu perfil apareça publicamente no projeto e autorizo que eu seja mencionado nas redes sociais do Um Milhão de Pixels Brasil.</span></label>
         <label className="consent-row"><input type="checkbox" checked={marketing} onChange={(event) => setMarketing(event.target.checked)} /><span>Quero receber novidades, recordes e oportunidades do Um Milhão de Pixels Brasil por e-mail <small>(opcional)</small>.</span></label>
         {(formError || error) && <p className="account-error" role="alert">{formError || error}</p>}
         <button className="account-submit" type="submit" disabled={busy}>{busy ? 'salvando…' : 'Salvar meu perfil'} <Check size={16} /></button>
