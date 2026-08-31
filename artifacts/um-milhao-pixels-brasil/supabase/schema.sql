@@ -183,12 +183,12 @@ begin
     new.consent_terms_version = case when new.consent_terms then 'terms-v1' else null end;
     new.consent_privacy_at = case when new.consent_privacy then timezone('utc', now()) else null end;
     new.consent_privacy_version = case when new.consent_privacy then 'privacy-v1' else null end;
-    new.consent_marketing_at = timezone('utc', now());
-    new.consent_marketing_version = 'marketing-v1';
-    new.consent_public_profile_at = timezone('utc', now());
-    new.consent_public_profile_version = 'public-profile-v1';
-    new.consent_public_social_at = timezone('utc', now());
-    new.consent_public_social_version = 'public-social-v1';
+    new.consent_marketing_at = case when new.consent_marketing then timezone('utc', now()) else null end;
+    new.consent_marketing_version = case when new.consent_marketing then 'marketing-v1' else null end;
+    new.consent_public_profile_at = case when new.consent_public_profile then timezone('utc', now()) else null end;
+    new.consent_public_profile_version = case when new.consent_public_profile then 'public-profile-v1' else null end;
+    new.consent_public_social_at = case when new.consent_public_social then timezone('utc', now()) else null end;
+    new.consent_public_social_version = case when new.consent_public_social then 'public-social-v1' else null end;
   else
     if new.consent_terms is distinct from old.consent_terms then
       new.consent_terms_at = case when new.consent_terms then timezone('utc', now()) else null end;
@@ -199,16 +199,16 @@ begin
       new.consent_privacy_version = case when new.consent_privacy then 'privacy-v1' else null end;
     end if;
     if new.consent_marketing is distinct from old.consent_marketing then
-      new.consent_marketing_at = timezone('utc', now());
-      new.consent_marketing_version = 'marketing-v1';
+      new.consent_marketing_at = case when new.consent_marketing then timezone('utc', now()) else null end;
+      new.consent_marketing_version = case when new.consent_marketing then 'marketing-v1' else null end;
     end if;
     if new.consent_public_profile is distinct from old.consent_public_profile then
-      new.consent_public_profile_at = timezone('utc', now());
-      new.consent_public_profile_version = 'public-profile-v1';
+      new.consent_public_profile_at = case when new.consent_public_profile then timezone('utc', now()) else null end;
+      new.consent_public_profile_version = case when new.consent_public_profile then 'public-profile-v1' else null end;
     end if;
     if new.consent_public_social is distinct from old.consent_public_social then
-      new.consent_public_social_at = timezone('utc', now());
-      new.consent_public_social_version = 'public-social-v1';
+      new.consent_public_social_at = case when new.consent_public_social then timezone('utc', now()) else null end;
+      new.consent_public_social_version = case when new.consent_public_social then 'public-social-v1' else null end;
     end if;
   end if;
 

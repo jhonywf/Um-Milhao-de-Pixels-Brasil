@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
-import { Check, Eye, EyeOff, ImagePlus, LogOut, Mail, UserRound, X } from 'lucide-react';
+import { Check, Eye, EyeOff, ImagePlus, KeyRound, LogOut, Mail, UserRound, X } from 'lucide-react';
 import { useAuth } from './auth-context';
 import { supabasePublicStorageUrl, uploadProfileAvatar } from './auth-service';
 
@@ -36,18 +36,22 @@ export function AuthDialogs() {
     closeAuth,
     profileDialogOpen,
     closeProfile,
+    passwordRecoveryOpen,
+    closePasswordRecovery,
+    session,
     user,
   } = useAuth();
   return (
     <>
       {authDialogOpen && <AuthDialog onClose={closeAuth} />}
       {profileDialogOpen && user && <ProfileDialog onClose={closeProfile} />}
+      {passwordRecoveryOpen && session && <PasswordRecoveryDialog onClose={closePasswordRecovery} />}
     </>
   );
 }
 
 function AuthDialog({ onClose }: { onClose: () => void }) {
-  const { login, signup, loginWithGoogle, error, clearError } = useAuth();
+  const { login, signup, loginWithGoogle, requestPasswordReset, error, clearError } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,6 +59,7 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirmationNotice, setConfirmationNotice] = useState(false);
+  const [resetNotice, setResetNotice] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const switchMode = (nextMode: 'login' | 'signup') => {
@@ -62,6 +67,25 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
     setFormError(null);
     clearError();
     setConfirmationNotice(false);
+    setResetNotice(false);
+  };
+
+  const sendReset = async () => {
+    setFormError(null);
+    clearError();
+    if (!email.trim()) {
+      setFormError('Informe seu e-mail para receber o link de recuperação.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await requestPasswordReset(email.trim());
+      setResetNotice(true);
+    } catch {
+      // The provider error is rendered below the form.
+    } finally {
+      setBusy(false);
+    }
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -99,12 +123,12 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
           ? 'Entre para guardar seu perfil e acompanhar suas próximas marcas.'
           : 'Um perfil público para sua marca. Seu e-mail nunca aparece na parede.'}
       </p>
-      {confirmationNotice ? (
+      {confirmationNotice || resetNotice ? (
         <div className="account-success" role="status">
           <Check size={18} />
           <div>
             <strong>Confira seu e-mail.</strong>
-            <span>Enviamos um link de confirmação para você continuar.</span>
+            <span>{resetNotice ? 'Enviamos um link para redefinir sua senha.' : 'Enviamos um link de confirmação para você continuar.'}</span>
           </div>
         </div>
       ) : (
@@ -128,6 +152,11 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
                 <span className="account-input-wrap"><input type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required autoComplete="new-password" placeholder="repita sua senha" /></span>
               </label>
             )}
+            {mode === 'login' && (
+              <button className="account-link-button" type="button" onClick={() => void sendReset()} disabled={busy}>
+                Esqueci minha senha
+              </button>
+            )}
             {(formError || error) && <p className="account-error" role="alert">{formError || error}</p>}
             <button className="account-submit" type="submit" disabled={busy}>
               {busy ? 'aguarde…' : mode === 'login' ? 'Entrar na conta' : 'Criar minha conta'}
@@ -142,6 +171,67 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
         </button>
       </p>
       <small className="account-legal">Ao continuar, você concorda com os termos e a política de privacidade.</small>
+    </DialogShell>
+  );
+}
+
+function PasswordRecoveryDialog({ onClose }: { onClose: () => void }) {
+  const { updatePassword, error, clearError } = useAuth();
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFormError(null);
+    clearError();
+    if (password.length < 6) {
+      setFormError('Use pelo menos 6 caracteres na senha.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setFormError('As senhas precisam ser iguais.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await updatePassword(password);
+      onClose();
+    } catch {
+      // The provider error is rendered below the form.
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <DialogShell onClose={onClose} labelledBy="password-recovery-dialog-title">
+      <div className="account-dialog-kicker"><KeyRound size={14} /> acesso seguro</div>
+      <h2 id="password-recovery-dialog-title">Crie uma nova senha.</h2>
+      <p className="account-dialog-intro">Escolha uma senha nova para voltar à sua conta.</p>
+      <form className="account-form" onSubmit={submit}>
+        <label>
+          Nova senha
+          <span className="account-input-wrap">
+            <input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="new-password" placeholder="mínimo de 6 caracteres" />
+            <button type="button" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShowPassword((visible) => !visible)}>
+              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </span>
+        </label>
+        <label>
+          Repita a nova senha
+          <span className="account-input-wrap">
+            <input type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required autoComplete="new-password" placeholder="repita sua senha" />
+          </span>
+        </label>
+        {(formError || error) && <p className="account-error" role="alert">{formError || error}</p>}
+        <button className="account-submit" type="submit" disabled={busy}>
+          {busy ? 'salvando…' : 'Salvar nova senha'} <Check size={16} />
+        </button>
+      </form>
     </DialogShell>
   );
 }

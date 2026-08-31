@@ -10,6 +10,7 @@ import {
 import {
   getCurrentUser,
   readOAuthSessionFromUrl,
+  requestPasswordReset,
   refreshSession,
   restoreSession,
   signInWithPassword,
@@ -17,6 +18,7 @@ import {
   signUpWithPassword,
   startGoogleSignIn,
   storeSession,
+  updatePassword,
   type AuthSession,
   type SupabaseUser,
 } from './auth-service';
@@ -30,6 +32,7 @@ type AuthContextValue = {
   error: string | null;
   authDialogOpen: boolean;
   profileDialogOpen: boolean;
+  passwordRecoveryOpen: boolean;
   openAuth: () => void;
   closeAuth: () => void;
   openProfile: () => void;
@@ -38,8 +41,11 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>;
   loginWithGoogle: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (input: ProfileInput) => Promise<void>;
+  closePasswordRecovery: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -55,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [passwordRecoveryOpen, setPasswordRecoveryOpen] = useState(false);
 
   const hydrateProfile = useCallback(async (nextSession: AuthSession) => {
     try {
@@ -73,8 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const oauthSession = readOAuthSessionFromUrl();
-        let nextSession = oauthSession;
+        const redirectResult = await readOAuthSessionFromUrl();
+        let nextSession = redirectResult?.session ?? null;
         if (nextSession) {
           const user = await getCurrentUser(nextSession.access_token);
           nextSession = { ...nextSession, user };
@@ -85,8 +92,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setSession(nextSession);
         if (nextSession) {
-          const nextProfile = await hydrateProfile(nextSession);
-          if (!cancelled && !nextProfile) setProfileDialogOpen(true);
+          if (redirectResult?.kind === 'recovery') {
+            setPasswordRecoveryOpen(true);
+          } else {
+            const nextProfile = await hydrateProfile(nextSession);
+            if (!cancelled && !nextProfile) setProfileDialogOpen(true);
+          }
         }
       } catch (caught) {
         if (!cancelled) setError(readableError(caught));
@@ -159,6 +170,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const sendPasswordReset = useCallback(async (email: string) => {
+    setError(null);
+    try {
+      await requestPasswordReset(email);
+    } catch (caught) {
+      setError(readableError(caught));
+      throw caught;
+    }
+  }, []);
+
+  const changePassword = useCallback(async (password: string) => {
+    if (!session) throw new Error('Sua sessão de recuperação expirou. Solicite um novo link.');
+    setError(null);
+    try {
+      await updatePassword(session.access_token, password);
+      setPasswordRecoveryOpen(false);
+      storeSession(session);
+    } catch (caught) {
+      setError(readableError(caught));
+      throw caught;
+    }
+  }, [session]);
+
   const logout = useCallback(async () => {
     if (session) await signOut(session.access_token);
     setSession(null);
@@ -187,6 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error,
     authDialogOpen,
     profileDialogOpen,
+    passwordRecoveryOpen,
     openAuth: () => {
       setError(null);
       setAuthDialogOpen(true);
@@ -203,13 +238,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null);
       setProfileDialogOpen(false);
     },
+    closePasswordRecovery: () => {
+      setError(null);
+      setPasswordRecoveryOpen(false);
+    },
     clearError: () => setError(null),
     login,
     signup,
     loginWithGoogle,
+    requestPasswordReset: sendPasswordReset,
+    updatePassword: changePassword,
     logout,
     updateProfile,
-  }), [authDialogOpen, error, loading, login, loginWithGoogle, logout, profile, profileDialogOpen, session, signup, updateProfile]);
+  }), [authDialogOpen, changePassword, error, loading, login, loginWithGoogle, logout, passwordRecoveryOpen, profile, profileDialogOpen, sendPasswordReset, session, signup, updateProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
