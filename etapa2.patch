@@ -1,0 +1,377 @@
+diff -ruN projeto-final-original/ETAPA-2-ALTERACOES.md projeto-final-extracted/ETAPA-2-ALTERACOES.md
+--- projeto-final-original/ETAPA-2-ALTERACOES.md	1970-01-01 00:00:00.000000000 +0000
++++ projeto-final-extracted/ETAPA-2-ALTERACOES.md	2026-08-31 16:40:33.973206527 +0000
+@@ -0,0 +1,39 @@
++# Etapa 2 — correções de autenticação e perfil
++
++Base: `projeto-final.zip` extraído em 31/08/2026.
++
++## Alterações aplicadas
++
++- Google OAuth continua em PKCE, mas sem validação manual de `state` que podia rejeitar o retorno legítimo do Supabase.
++- O verificador PKCE passou de `sessionStorage` para `localStorage`, permitindo concluir retorno em nova aba no mesmo navegador.
++- Cadastro por e-mail agora usa redirect explícito para o app e PKCE quando há confirmação por e-mail.
++- Recuperação de senha usa PKCE e volta para o app; o callback diferencia recuperação de login comum.
++- Callback trata erros devolvidos pelo Supabase e remove parâmetros sensíveis da URL depois da troca do código.
++- Renovação de sessão passa a renovar também quando a sessão já está a menos de 60 segundos de expirar.
++- Respostas de autenticação no proxy recebem `Cache-Control: no-store`.
++- URLs públicas de avatar apontam direto para o bucket público do Supabase, reduzindo dependência do proxy do Replit.
++- Upload de avatar aceita somente JPG, PNG, WEBP e GIF, até 5 MB.
++- Políticas de update/delete do bucket usam a pasta do usuário em vez do campo `owner_id`, evitando incompatibilidade de tipo e mantendo isolamento por usuário.
++- Foi criado `supabase/stage-2-hardening.sql`, idempotente, para reaplicar apenas o hardening do bucket.
++- `VITE_SUPABASE_URL` pode ser usado futuramente para trocar o projeto Supabase sem editar o código; o projeto atual segue como fallback.
++
++## Verificações locais realizadas
++
++- Os quatro arquivos TypeScript/TSX alterados foram transpilados pelo TypeScript sem erros de sintaxe.
++- O diff foi conferido contra o ZIP original para garantir que apenas os pontos planejados foram alterados.
++- O build completo não pôde ser executado neste ambiente porque o ZIP correto não inclui `node_modules` e o ambiente não possui acesso ao npm para reinstalar as dependências.
++
++## Teste controlado necessário após publicar
++
++1. Login com e-mail e senha.
++2. Logout e login novamente.
++3. Criar conta nova e confirmar e-mail.
++4. Login com Google e retorno ao app.
++5. Esqueci minha senha, abrir e-mail e criar nova senha.
++6. Criar perfil com username válido.
++7. Tentar username duplicado.
++8. Alterar perfil e consentimentos opcionais.
++9. Enviar avatar JPG/PNG/WEBP/GIF menor que 5 MB.
++10. Confirmar que SVG e arquivos acima de 5 MB são recusados.
++11. Manter sessão aberta até ocorrer refresh automático.
++12. Confirmar que parede, pan, zoom, pinch e seleção continuam intactos.
+diff -ruN projeto-final-original/artifacts/api-server/src/routes/supabase.ts projeto-final-extracted/artifacts/api-server/src/routes/supabase.ts
+--- projeto-final-original/artifacts/api-server/src/routes/supabase.ts	2026-08-30 01:31:29.000000000 +0000
++++ projeto-final-extracted/artifacts/api-server/src/routes/supabase.ts	2026-08-31 16:10:29.396671540 +0000
+@@ -11,6 +11,7 @@
+   "prefer",
+   "range",
+   "range-unit",
++  "x-upsert",
+ ];
+ 
+ function getSupabasePath(req: Request) {
+@@ -37,6 +38,11 @@
+       if (value) res.setHeader(header, value);
+     }
+ 
++    if (getSupabasePath(req).startsWith("/auth/")) {
++      res.setHeader("Cache-Control", "no-store");
++      res.setHeader("Pragma", "no-cache");
++    }
++
+     const body = Buffer.from(await response.arrayBuffer());
+     res.status(response.status).send(body);
+   } catch (error) {
+diff -ruN projeto-final-original/artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx projeto-final-extracted/artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx
+--- projeto-final-original/artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx	2026-08-31 00:48:39.000000000 +0000
++++ projeto-final-extracted/artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx	2026-08-31 16:10:10.939717187 +0000
+@@ -112,20 +112,35 @@
+ 
+   useEffect(() => {
+     if (!session?.refresh_token || !session.expires_at) return;
++    let cancelled = false;
+     const secondsUntilExpiry = session.expires_at - Math.floor(Date.now() / 1000);
+-    if (secondsUntilExpiry <= 30) return;
+-    const timer = window.setTimeout(async () => {
++
++    const renew = async () => {
+       try {
+         const nextSession = await refreshSession(session.refresh_token);
++        if (cancelled) return;
+         setSession(nextSession);
+         await hydrateProfile(nextSession);
+       } catch {
++        if (cancelled) return;
+         setSession(null);
+         setProfile(null);
+         storeSession(null);
+       }
+-    }, Math.max(1000, (secondsUntilExpiry - 30) * 1000));
+-    return () => window.clearTimeout(timer);
++    };
++
++    if (secondsUntilExpiry <= 60) {
++      void renew();
++      return () => {
++        cancelled = true;
++      };
++    }
++
++    const timer = window.setTimeout(() => void renew(), Math.max(1000, (secondsUntilExpiry - 60) * 1000));
++    return () => {
++      cancelled = true;
++      window.clearTimeout(timer);
++    };
+   }, [hydrateProfile, session]);
+ 
+   const login = useCallback(async (email: string, password: string) => {
+diff -ruN projeto-final-original/artifacts/um-milhao-pixels-brasil/src/auth/auth-dialogs.tsx projeto-final-extracted/artifacts/um-milhao-pixels-brasil/src/auth/auth-dialogs.tsx
+--- projeto-final-original/artifacts/um-milhao-pixels-brasil/src/auth/auth-dialogs.tsx	2026-08-31 00:48:51.000000000 +0000
++++ projeto-final-extracted/artifacts/um-milhao-pixels-brasil/src/auth/auth-dialogs.tsx	2026-08-31 16:10:29.396261969 +0000
+@@ -278,8 +278,9 @@
+     const file = event.target.files?.[0];
+     event.target.value = '';
+     if (!file || !user || !session) return;
+-    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+-      setFormError('Escolha uma imagem de até 5 MB.');
++    const allowedAvatarTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
++    if (!allowedAvatarTypes.has(file.type) || file.size > 5 * 1024 * 1024) {
++      setFormError('Escolha uma imagem JPG, PNG, WEBP ou GIF de até 5 MB.');
+       return;
+     }
+     setAvatarBusy(true);
+diff -ruN projeto-final-original/artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts projeto-final-extracted/artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts
+--- projeto-final-original/artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts	2026-08-31 00:47:54.000000000 +0000
++++ projeto-final-extracted/artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts	2026-08-31 16:12:31.706390641 +0000
+@@ -31,10 +31,38 @@
+ const STORAGE_KEY = 'um-milhao-pixels.supabase-session';
+ const apiBasePath = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/api/supabase`;
+ const appBasePath = import.meta.env.BASE_URL;
+-const supabasePublicUrl = 'https://cnyjodkusuikivdwbwcg.supabase.co';
+-const oauthVerifierKey = 'um-milhao-pixels.oauth-verifier';
+-const oauthStateKey = 'um-milhao-pixels.oauth-state';
+-const oauthFlowKey = 'um-milhao-pixels.oauth-flow';
++const supabasePublicUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cnyjodkusuikivdwbwcg.supabase.co';
++const oauthFlowStorageKey = 'um-milhao-pixels.oauth-flow';
++
++type StoredPkceFlow = {
++  verifier: string;
++  kind: 'oauth' | 'recovery' | 'signup';
++  createdAt: number;
++};
++
++function storePkceFlow(flow: StoredPkceFlow | null) {
++  if (flow) {
++    window.localStorage.setItem(oauthFlowStorageKey, JSON.stringify(flow));
++  } else {
++    window.localStorage.removeItem(oauthFlowStorageKey);
++  }
++}
++
++function readPkceFlow(): StoredPkceFlow | null {
++  try {
++    const raw = window.localStorage.getItem(oauthFlowStorageKey);
++    if (!raw) return null;
++    const flow = JSON.parse(raw) as StoredPkceFlow;
++    if (!flow.verifier || !flow.createdAt || Date.now() - flow.createdAt > 24 * 60 * 60 * 1000) {
++      storePkceFlow(null);
++      return null;
++    }
++    return flow;
++  } catch {
++    storePkceFlow(null);
++    return null;
++  }
++}
+ 
+ export type AuthRedirectResult = {
+   session: AuthSession;
+@@ -134,12 +162,23 @@
+ }
+ 
+ export async function signUpWithPassword(email: string, password: string) {
+-  const response = await supabaseRequest<AuthResponse>('/auth/v1/signup', {
++  const { verifier, challenge } = await createPkcePair();
++  storePkceFlow({ verifier, kind: 'signup', createdAt: Date.now() });
++  const redirectTo = encodeURIComponent(appRedirectUrl());
++  const response = await supabaseRequest<AuthResponse>(`/auth/v1/signup?redirect_to=${redirectTo}`, {
+     method: 'POST',
+-    body: { email, password },
++    body: {
++      email,
++      password,
++      code_challenge: challenge,
++      code_challenge_method: 's256',
++    },
+   });
+   const session = response.session ? normalizeSession(response.session) : null;
+-  if (session) storeSession(session);
++  if (session) {
++    storePkceFlow(null);
++    storeSession(session);
++  }
+   return { ...response, session };
+ }
+ 
+@@ -193,27 +232,20 @@
+ 
+ export async function startGoogleSignIn() {
+   const { verifier, challenge } = await createPkcePair();
+-  const state = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(24)));
+-  sessionStorage.setItem(oauthVerifierKey, verifier);
+-  sessionStorage.setItem(oauthStateKey, state);
+-  sessionStorage.setItem(oauthFlowKey, 'oauth');
++  storePkceFlow({ verifier, kind: 'oauth', createdAt: Date.now() });
+ 
+   const authorizeUrl = new URL('/auth/v1/authorize', supabasePublicUrl);
+   authorizeUrl.searchParams.set('provider', 'google');
+   authorizeUrl.searchParams.set('redirect_to', appRedirectUrl());
+   authorizeUrl.searchParams.set('response_type', 'code');
+   authorizeUrl.searchParams.set('code_challenge', challenge);
+-  authorizeUrl.searchParams.set('code_challenge_method', 'S256');
+-  authorizeUrl.searchParams.set('state', state);
++  authorizeUrl.searchParams.set('code_challenge_method', 's256');
+   window.location.assign(authorizeUrl.toString());
+ }
+ 
+ export async function requestPasswordReset(email: string) {
+   const { verifier, challenge } = await createPkcePair();
+-  const state = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(24)));
+-  sessionStorage.setItem(oauthVerifierKey, verifier);
+-  sessionStorage.setItem(oauthStateKey, state);
+-  sessionStorage.setItem(oauthFlowKey, 'recovery');
++  storePkceFlow({ verifier, kind: 'recovery', createdAt: Date.now() });
+   await supabaseRequest('/auth/v1/recover', {
+     method: 'POST',
+     body: {
+@@ -235,7 +267,7 @@
+ 
+ export function supabasePublicStorageUrl(path: string) {
+   const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+-  return `${apiBasePath}/storage/v1/object/public/profile-avatars/${encodedPath}`;
++  return `${supabasePublicUrl}/storage/v1/object/public/profile-avatars/${encodedPath}`;
+ }
+ 
+ export async function uploadProfileAvatar(userId: string, accessToken: string, file: File) {
+@@ -253,7 +285,6 @@
+     rawBody: file,
+     headers: {
+       'Content-Type': file.type,
+-      'x-upsert': 'true',
+     },
+   });
+   return path;
+@@ -261,26 +292,32 @@
+ 
+ export async function readOAuthSessionFromUrl(): Promise<AuthRedirectResult | null> {
+   const url = new URL(window.location.href);
++  const authError = url.searchParams.get('error_description') || url.searchParams.get('error');
++  if (authError) {
++    url.searchParams.delete('error');
++    url.searchParams.delete('error_code');
++    url.searchParams.delete('error_description');
++    window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
++    throw new Error(authError);
++  }
++
+   const code = url.searchParams.get('code');
+   if (code) {
+-    const expectedState = sessionStorage.getItem(oauthStateKey);
+-    const returnedState = url.searchParams.get('state');
+-    if (expectedState && returnedState !== expectedState) {
+-      throw new Error('Não foi possível validar o retorno do login. Tente novamente.');
+-    }
+-    const verifier = sessionStorage.getItem(oauthVerifierKey);
+-    if (!verifier) {
+-      throw new Error('A sessão de login expirou. Inicie o processo novamente.');
++    const flow = readPkceFlow();
++    if (!flow?.verifier) {
++      throw new Error('A sessão de autenticação expirou. Inicie o processo novamente neste navegador.');
+     }
++
+     const session = normalizeSession(await supabaseRequest<AuthSession>('/auth/v1/token?grant_type=pkce', {
+       method: 'POST',
+-      body: { auth_code: code, code_verifier: verifier },
++      body: { auth_code: code, code_verifier: flow.verifier },
+     }));
+-    const kind = sessionStorage.getItem(oauthFlowKey) === 'recovery' ? 'recovery' : 'oauth';
+-    sessionStorage.removeItem(oauthVerifierKey);
+-    sessionStorage.removeItem(oauthStateKey);
+-    sessionStorage.removeItem(oauthFlowKey);
+-    window.history.replaceState({}, document.title, window.location.pathname);
++    const kind: AuthRedirectResult['kind'] = flow.kind === 'recovery' ? 'recovery' : 'oauth';
++    storePkceFlow(null);
++    url.searchParams.delete('code');
++    url.searchParams.delete('state');
++    url.searchParams.delete('sb_flow_id');
++    window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+     return { session, kind };
+   }
+ 
+@@ -299,9 +336,7 @@
+     user: { id: '' },
+   });
+   const kind = hash.get('type') === 'recovery' ? 'recovery' : 'oauth';
+-  sessionStorage.removeItem(oauthVerifierKey);
+-  sessionStorage.removeItem(oauthStateKey);
+-  sessionStorage.removeItem(oauthFlowKey);
++  storePkceFlow(null);
+   window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
+   return { session, kind };
+-}
+\ No newline at end of file
++}
+diff -ruN projeto-final-original/artifacts/um-milhao-pixels-brasil/supabase/schema.sql projeto-final-extracted/artifacts/um-milhao-pixels-brasil/supabase/schema.sql
+--- projeto-final-original/artifacts/um-milhao-pixels-brasil/supabase/schema.sql	2026-08-31 00:49:01.000000000 +0000
++++ projeto-final-extracted/artifacts/um-milhao-pixels-brasil/supabase/schema.sql	2026-08-31 16:10:29.396769459 +0000
+@@ -351,11 +351,11 @@
+   on storage.objects for update to authenticated
+   using (
+     bucket_id = 'profile-avatars'
+-    and owner_id = (select auth.uid())
++    and (storage.foldername(name))[1] = (select auth.uid()::text)
+   )
+   with check (
+     bucket_id = 'profile-avatars'
+-    and owner_id = (select auth.uid())
++    and (storage.foldername(name))[1] = (select auth.uid()::text)
+   );
+ 
+ drop policy if exists "users can delete their profile avatar" on storage.objects;
+@@ -363,5 +363,5 @@
+   on storage.objects for delete to authenticated
+   using (
+     bucket_id = 'profile-avatars'
+-    and owner_id = (select auth.uid())
++    and (storage.foldername(name))[1] = (select auth.uid()::text)
+   );
+\ No newline at end of file
+diff -ruN projeto-final-original/artifacts/um-milhao-pixels-brasil/supabase/stage-2-hardening.sql projeto-final-extracted/artifacts/um-milhao-pixels-brasil/supabase/stage-2-hardening.sql
+--- projeto-final-original/artifacts/um-milhao-pixels-brasil/supabase/stage-2-hardening.sql	1970-01-01 00:00:00.000000000 +0000
++++ projeto-final-extracted/artifacts/um-milhao-pixels-brasil/supabase/stage-2-hardening.sql	2026-08-31 16:13:03.252311407 +0000
+@@ -0,0 +1,43 @@
++-- Um Milhão de Pixels Brasil — Etapa 2 / hardening de autenticação e avatar
++-- Seguro para executar mais de uma vez no SQL Editor do Supabase.
++
++insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
++values (
++  'profile-avatars',
++  'profile-avatars',
++  true,
++  5242880,
++  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']::text[]
++)
++on conflict (id) do update
++set public = excluded.public,
++    file_size_limit = excluded.file_size_limit,
++    allowed_mime_types = excluded.allowed_mime_types;
++
++drop policy if exists "users can upload their profile avatar" on storage.objects;
++create policy "users can upload their profile avatar"
++  on storage.objects for insert to authenticated
++  with check (
++    bucket_id = 'profile-avatars'
++    and (storage.foldername(name))[1] = (select auth.uid()::text)
++  );
++
++drop policy if exists "users can update their profile avatar" on storage.objects;
++create policy "users can update their profile avatar"
++  on storage.objects for update to authenticated
++  using (
++    bucket_id = 'profile-avatars'
++    and (storage.foldername(name))[1] = (select auth.uid()::text)
++  )
++  with check (
++    bucket_id = 'profile-avatars'
++    and (storage.foldername(name))[1] = (select auth.uid()::text)
++  );
++
++drop policy if exists "users can delete their profile avatar" on storage.objects;
++create policy "users can delete their profile avatar"
++  on storage.objects for delete to authenticated
++  using (
++    bucket_id = 'profile-avatars'
++    and (storage.foldername(name))[1] = (select auth.uid()::text)
++  );
