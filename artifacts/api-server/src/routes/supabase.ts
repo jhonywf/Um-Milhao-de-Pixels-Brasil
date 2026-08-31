@@ -11,6 +11,7 @@ const forwardedRequestHeaders = [
   "prefer",
   "range",
   "range-unit",
+  "x-upsert",
 ];
 
 function getSupabasePath(req: Request) {
@@ -35,6 +36,11 @@ router.use(async (req: Request, res: Response) => {
     for (const header of ["content-type", "content-range", "cache-control", "location"]) {
       const value = response.headers.get(header);
       if (value) res.setHeader(header, value);
+    }
+
+    if (getSupabasePath(req).startsWith("/auth/")) {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Pragma", "no-cache");
     }
 
     const body = Buffer.from(await response.arrayBuffer());

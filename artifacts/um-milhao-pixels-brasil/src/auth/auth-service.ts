@@ -31,10 +31,38 @@ type AuthResponse = {
 const STORAGE_KEY = 'um-milhao-pixels.supabase-session';
 const apiBasePath = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/api/supabase`;
 const appBasePath = import.meta.env.BASE_URL;
-const supabasePublicUrl = 'https://cnyjodkusuikivdwbwcg.supabase.co';
-const oauthVerifierKey = 'um-milhao-pixels.oauth-verifier';
-const oauthStateKey = 'um-milhao-pixels.oauth-state';
-const oauthFlowKey = 'um-milhao-pixels.oauth-flow';
+const supabasePublicUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cnyjodkusuikivdwbwcg.supabase.co';
+const oauthFlowStorageKey = 'um-milhao-pixels.oauth-flow';
+
+type StoredPkceFlow = {
+  verifier: string;
+  kind: 'oauth' | 'recovery' | 'signup';
+  createdAt: number;
+};
+
+function storePkceFlow(flow: StoredPkceFlow | null) {
+  if (flow) {
+    window.localStorage.setItem(oauthFlowStorageKey, JSON.stringify(flow));
+  } else {
+    window.localStorage.removeItem(oauthFlowStorageKey);
+  }
+}
+
+function readPkceFlow(): StoredPkceFlow | null {
+  try {
+    const raw = window.localStorage.getItem(oauthFlowStorageKey);
+    if (!raw) return null;
+    const flow = JSON.parse(raw) as StoredPkceFlow;
+    if (!flow.verifier || !flow.createdAt || Date.now() - flow.createdAt > 24 * 60 * 60 * 1000) {
+      storePkceFlow(null);
+      return null;
+    }
+    return flow;
+  } catch {
+    storePkceFlow(null);
+    return null;
+  }
+}
 
 export type AuthRedirectResult = {
   session: AuthSession;
@@ -134,12 +162,23 @@ export async function signInWithPassword(email: string, password: string) {
 }
 
 export async function signUpWithPassword(email: string, password: string) {
-  const response = await supabaseRequest<AuthResponse>('/auth/v1/signup', {
+  const { verifier, challenge } = await createPkcePair();
+  storePkceFlow({ verifier, kind: 'signup', createdAt: Date.now() });
+  const redirectTo = encodeURIComponent(appRedirectUrl());
+  const response = await supabaseRequest<AuthResponse>(`/auth/v1/signup?redirect_to=${redirectTo}`, {
     method: 'POST',
-    body: { email, password },
+    body: {
+      email,
+      password,
+      code_challenge: challenge,
+      code_challenge_method: 's256',
+    },
   });
   const session = response.session ? normalizeSession(response.session) : null;
-  if (session) storeSession(session);
+  if (session) {
+    storePkceFlow(null);
+    storeSession(session);
+  }
   return { ...response, session };
 }
 
@@ -193,27 +232,20 @@ export async function signOut(accessToken: string) {
 
 export async function startGoogleSignIn() {
   const { verifier, challenge } = await createPkcePair();
-  const state = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(24)));
-  sessionStorage.setItem(oauthVerifierKey, verifier);
-  sessionStorage.setItem(oauthStateKey, state);
-  sessionStorage.setItem(oauthFlowKey, 'oauth');
+  storePkceFlow({ verifier, kind: 'oauth', createdAt: Date.now() });
 
   const authorizeUrl = new URL('/auth/v1/authorize', supabasePublicUrl);
   authorizeUrl.searchParams.set('provider', 'google');
   authorizeUrl.searchParams.set('redirect_to', appRedirectUrl());
   authorizeUrl.searchParams.set('response_type', 'code');
   authorizeUrl.searchParams.set('code_challenge', challenge);
-  authorizeUrl.searchParams.set('code_challenge_method', 'S256');
-  authorizeUrl.searchParams.set('state', state);
+  authorizeUrl.searchParams.set('code_challenge_method', 's256');
   window.location.assign(authorizeUrl.toString());
 }
 
 export async function requestPasswordReset(email: string) {
   const { verifier, challenge } = await createPkcePair();
-  const state = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(24)));
-  sessionStorage.setItem(oauthVerifierKey, verifier);
-  sessionStorage.setItem(oauthStateKey, state);
-  sessionStorage.setItem(oauthFlowKey, 'recovery');
+  storePkceFlow({ verifier, kind: 'recovery', createdAt: Date.now() });
   await supabaseRequest('/auth/v1/recover', {
     method: 'POST',
     body: {
@@ -235,7 +267,7 @@ export async function updatePassword(accessToken: string, password: string) {
 
 export function supabasePublicStorageUrl(path: string) {
   const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-  return `${apiBasePath}/storage/v1/object/public/profile-avatars/${encodedPath}`;
+  return `${supabasePublicUrl}/storage/v1/object/public/profile-avatars/${encodedPath}`;
 }
 
 export async function uploadProfileAvatar(userId: string, accessToken: string, file: File) {
@@ -253,7 +285,6 @@ export async function uploadProfileAvatar(userId: string, accessToken: string, f
     rawBody: file,
     headers: {
       'Content-Type': file.type,
-      'x-upsert': 'true',
     },
   });
   return path;
@@ -261,26 +292,32 @@ export async function uploadProfileAvatar(userId: string, accessToken: string, f
 
 export async function readOAuthSessionFromUrl(): Promise<AuthRedirectResult | null> {
   const url = new URL(window.location.href);
+  const authError = url.searchParams.get('error_description') || url.searchParams.get('error');
+  if (authError) {
+    url.searchParams.delete('error');
+    url.searchParams.delete('error_code');
+    url.searchParams.delete('error_description');
+    window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+    throw new Error(authError);
+  }
+
   const code = url.searchParams.get('code');
   if (code) {
-    const expectedState = sessionStorage.getItem(oauthStateKey);
-    const returnedState = url.searchParams.get('state');
-    if (expectedState && returnedState !== expectedState) {
-      throw new Error('Não foi possível validar o retorno do login. Tente novamente.');
+    const flow = readPkceFlow();
+    if (!flow?.verifier) {
+      throw new Error('A sessão de autenticação expirou. Inicie o processo novamente neste navegador.');
     }
-    const verifier = sessionStorage.getItem(oauthVerifierKey);
-    if (!verifier) {
-      throw new Error('A sessão de login expirou. Inicie o processo novamente.');
-    }
+
     const session = normalizeSession(await supabaseRequest<AuthSession>('/auth/v1/token?grant_type=pkce', {
       method: 'POST',
-      body: { auth_code: code, code_verifier: verifier },
+      body: { auth_code: code, code_verifier: flow.verifier },
     }));
-    const kind = sessionStorage.getItem(oauthFlowKey) === 'recovery' ? 'recovery' : 'oauth';
-    sessionStorage.removeItem(oauthVerifierKey);
-    sessionStorage.removeItem(oauthStateKey);
-    sessionStorage.removeItem(oauthFlowKey);
-    window.history.replaceState({}, document.title, window.location.pathname);
+    const kind: AuthRedirectResult['kind'] = flow.kind === 'recovery' ? 'recovery' : 'oauth';
+    storePkceFlow(null);
+    url.searchParams.delete('code');
+    url.searchParams.delete('state');
+    url.searchParams.delete('sb_flow_id');
+    window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
     return { session, kind };
   }
 
@@ -299,9 +336,7 @@ export async function readOAuthSessionFromUrl(): Promise<AuthRedirectResult | nu
     user: { id: '' },
   });
   const kind = hash.get('type') === 'recovery' ? 'recovery' : 'oauth';
-  sessionStorage.removeItem(oauthVerifierKey);
-  sessionStorage.removeItem(oauthStateKey);
-  sessionStorage.removeItem(oauthFlowKey);
+  storePkceFlow(null);
   window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
   return { session, kind };
 }

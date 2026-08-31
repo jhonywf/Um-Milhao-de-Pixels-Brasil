@@ -278,8 +278,9 @@ function ProfileDialog({ onClose }: { onClose: () => void }) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || !user || !session) return;
-    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
-      setFormError('Escolha uma imagem de até 5 MB.');
+    const allowedAvatarTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    if (!allowedAvatarTypes.has(file.type) || file.size > 5 * 1024 * 1024) {
+      setFormError('Escolha uma imagem JPG, PNG, WEBP ou GIF de até 5 MB.');
       return;
     }
     setAvatarBusy(true);

@@ -351,11 +351,11 @@ create policy "users can update their profile avatar"
   on storage.objects for update to authenticated
   using (
     bucket_id = 'profile-avatars'
-    and owner_id = (select auth.uid())
+    and (storage.foldername(name))[1] = (select auth.uid()::text)
   )
   with check (
     bucket_id = 'profile-avatars'
-    and owner_id = (select auth.uid())
+    and (storage.foldername(name))[1] = (select auth.uid()::text)
   );
 
 drop policy if exists "users can delete their profile avatar" on storage.objects;
@@ -363,5 +363,5 @@ create policy "users can delete their profile avatar"
   on storage.objects for delete to authenticated
   using (
     bucket_id = 'profile-avatars'
-    and owner_id = (select auth.uid())
+    and (storage.foldername(name))[1] = (select auth.uid()::text)
   );

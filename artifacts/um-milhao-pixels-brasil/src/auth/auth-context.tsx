@@ -112,20 +112,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!session?.refresh_token || !session.expires_at) return;
+    let cancelled = false;
     const secondsUntilExpiry = session.expires_at - Math.floor(Date.now() / 1000);
-    if (secondsUntilExpiry <= 30) return;
-    const timer = window.setTimeout(async () => {
+
+    const renew = async () => {
       try {
         const nextSession = await refreshSession(session.refresh_token);
+        if (cancelled) return;
         setSession(nextSession);
         await hydrateProfile(nextSession);
       } catch {
+        if (cancelled) return;
         setSession(null);
         setProfile(null);
         storeSession(null);
       }
-    }, Math.max(1000, (secondsUntilExpiry - 30) * 1000));
-    return () => window.clearTimeout(timer);
+    };
+
+    if (secondsUntilExpiry <= 60) {
+      void renew();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const timer = window.setTimeout(() => void renew(), Math.max(1000, (secondsUntilExpiry - 60) * 1000));
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [hydrateProfile, session]);
 
   const login = useCallback(async (email: string, password: string) => {
