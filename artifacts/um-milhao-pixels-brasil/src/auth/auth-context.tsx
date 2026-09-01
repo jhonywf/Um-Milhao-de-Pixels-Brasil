@@ -97,6 +97,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           nextSession = await restoreSession();
         }
         if (cancelled) return;
+
+        if (nextSession && redirectResult?.returnTo && redirectResult.kind === 'oauth') {
+          storeSession(nextSession);
+          window.location.replace(redirectResult.returnTo);
+          return;
+        }
+
         setSession(nextSession);
         if (nextSession) {
           if (redirectResult?.kind === 'recovery') {

@@ -34,6 +34,7 @@ const appBasePath = import.meta.env.BASE_URL;
 const supabasePublicUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cnyjodkusuikivdwbwcg.supabase.co';
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const oauthFlowStorageKey = 'um-milhao-pixels.oauth-flow';
+const oauthReturnStorageKey = 'um-milhao-pixels.oauth-return-to';
 
 type StoredPkceFlow = {
   verifier: string;
@@ -68,6 +69,7 @@ function readPkceFlow(): StoredPkceFlow | null {
 export type AuthRedirectResult = {
   session: AuthSession;
   kind: 'oauth' | 'recovery';
+  returnTo?: string;
 };
 
 function normalizeSession(session: AuthSession): AuthSession {
@@ -235,6 +237,9 @@ export async function startGoogleSignIn() {
   const { verifier, challenge } = await createPkcePair();
   storePkceFlow({ verifier, kind: 'oauth', createdAt: Date.now() });
 
+  const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  window.localStorage.setItem(oauthReturnStorageKey, returnTo);
+
   const authorizeUrl = new URL('/auth/v1/authorize', supabasePublicUrl);
   authorizeUrl.searchParams.set('provider', 'google');
   authorizeUrl.searchParams.set('redirect_to', appRedirectUrl());
@@ -332,11 +337,22 @@ export async function readOAuthSessionFromUrl(): Promise<AuthRedirectResult | nu
     }));
     const kind: AuthRedirectResult['kind'] = flow.kind === 'recovery' ? 'recovery' : 'oauth';
     storePkceFlow(null);
+
+    let returnTo: string | undefined;
+    if (kind === 'oauth') {
+      const storedReturnTo = window.localStorage.getItem(oauthReturnStorageKey);
+      window.localStorage.removeItem(oauthReturnStorageKey);
+
+      if (storedReturnTo && storedReturnTo.startsWith('/') && !storedReturnTo.startsWith('//')) {
+        returnTo = storedReturnTo;
+      }
+    }
+
     url.searchParams.delete('code');
     url.searchParams.delete('state');
     url.searchParams.delete('sb_flow_id');
     window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
-    return { session, kind };
+    return { session, kind, returnTo };
   }
 
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
