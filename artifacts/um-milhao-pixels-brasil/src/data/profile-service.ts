@@ -1,5 +1,7 @@
 import type { SupabaseUser } from '@/auth/auth-service';
-import { supabaseRequest } from '@/auth/auth-service';
+
+const supabasePublicUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cnyjodkusuikivdwbwcg.supabase.co';
+const supabasePublishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export type Profile = {
   id: string;
@@ -97,15 +99,41 @@ const PROFILE_COLUMNS = [
 
 async function profileRequest<T>(
   path: string,
-  accessToken: string,
+  accessToken?: string,
   options: { method?: string; body?: unknown; prefer?: string } = {},
-) {
-  return supabaseRequest<T>(path, {
-    method: options.method,
-    accessToken,
-    body: options.body,
-    headers: options.prefer ? { Prefer: options.prefer } : undefined,
+): Promise<T> {
+  if (!supabasePublishableKey) {
+    throw new Error('A chave pública do Supabase não está configurada.');
+  }
+
+  const response = await fetch(`${supabasePublicUrl}${path}`, {
+    method: options.method ?? 'GET',
+    headers: {
+      Accept: 'application/json',
+      apikey: supabasePublishableKey,
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...(options.prefer ? { Prefer: options.prefer } : {}),
+      ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    },
+    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
   });
+
+  const contentType = response.headers.get('content-type') ?? '';
+  const payload = contentType.includes('application/json')
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'object' && payload && 'code' in payload && payload.code === '23505'
+        ? 'Esse username já está em uso.'
+        : typeof payload === 'object' && payload && 'message' in payload
+          ? String(payload.message)
+          : 'Não foi possível salvar o perfil.';
+    throw new Error(message);
+  }
+
+  return payload as T;
 }
 
 export async function getProfile(userId: string, accessToken: string) {
@@ -117,7 +145,7 @@ export async function getProfile(userId: string, accessToken: string) {
 }
 
 export async function getPublicProfile(username: string) {
-  const rows = await supabaseRequest<PublicProfile[]>(
+  const rows = await profileRequest<PublicProfile[]>(
     `/rest/v1/public_profiles?select=id,username,display_name,avatar_emoji,avatar_path,social_network,social_handle,website,bio,city&username=eq.${encodeURIComponent(username.toLowerCase())}&limit=1`,
   );
   return rows[0] ?? null;

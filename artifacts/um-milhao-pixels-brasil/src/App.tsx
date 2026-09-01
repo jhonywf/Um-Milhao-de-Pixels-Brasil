@@ -272,6 +272,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
   const gestureRef = useRef({ multiTouch: false });
   const selectionDragRef = useRef<{ pointerId: number; anchorX: number; anchorY: number; moved: boolean } | null>(null);
+  const selectionAnchorRef = useRef<{ x: number; y: number } | null>(null);
   const pinchRef = useRef<{
     distance: number;
     midpoint: { x: number; y: number };
@@ -280,7 +281,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   } | null>(null);
   const deviceScaleRef = useRef(1);
   const minZoom = 0.24;
-  const maxZoom = 12;
+  const maxZoom = 16;
   const hasFittedInitialViewRef = useRef(false);
 
   useEffect(() => {
@@ -517,18 +518,13 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
         moved: false,
       };
       if (interactionMode === 'select' && insideWall && !occupiedBlock) {
-        const anchorX = selected && 'free' in selected
-          && world.x >= selected.x && world.x < selected.x + selected.width
-          && world.y >= selected.y && world.y < selected.y + selected.height
-          ? selected.x
-          : worldX;
-        const anchorY = selected && 'free' in selected
-          && world.x >= selected.x && world.x < selected.x + selected.width
-          && world.y >= selected.y && world.y < selected.y + selected.height
-          ? selected.y
-          : worldY;
+        const existingAnchor = selectionAnchorRef.current;
+        const anchorX = existingAnchor?.x ?? worldX;
+        const anchorY = existingAnchor?.y ?? worldY;
+        if (!existingAnchor) selectionAnchorRef.current = { x: worldX, y: worldY };
         selectionDragRef.current = { pointerId: event.pointerId, anchorX, anchorY, moved: false };
-        setSelected(makePixelSelection(anchorX, anchorY, worldX, worldY));
+        const nextSelection = makePixelSelection(anchorX, anchorY, worldX, worldY);
+        if (!overlapsOccupiedBlock(nextSelection)) setSelected(nextSelection);
       } else {
         selectionDragRef.current = null;
         if (occupiedBlock) setSelected(occupiedBlock);
@@ -632,6 +628,14 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     cameraRef.current = nextCamera;
     setCamera(nextCamera);
     setSelected(null);
+    selectionAnchorRef.current = null;
+  };
+
+  const startNewSelection = () => {
+    setSelected(null);
+    selectionAnchorRef.current = null;
+    selectionDragRef.current = null;
+    setInteractionMode('select');
   };
 
   const selectionLabel = selected && 'free' in selected ? 'área livre' : selected ? 'área ocupada' : 'nada selecionado';
@@ -663,6 +667,15 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 {interactionMode === 'select' ? <MousePointer2 size={14} /> : <Hand size={14} />}
                 {interactionMode === 'select' ? 'selecionar' : 'navegar'}
               </button>
+              <button
+                type="button"
+                className="interaction-mode-button"
+                onClick={startNewSelection}
+                data-testid="button-new-selection"
+                aria-label="Começar uma nova seleção"
+              >
+                <Plus size={14} /> nova seleção
+              </button>
               <div className="zoom-controls">
                 <button onClick={() => zoomAt(camera.scale - 0.18)} aria-label="Diminuir zoom" data-testid="button-zoom-out"><Minus size={16} /></button>
                 <span>{Math.round(camera.scale * 100)}%</span>
@@ -681,9 +694,9 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 data-testid="canvas-pixel-wall"
                 aria-label="Parede interativa de um milhão de pixels"
               />
-              <div className="canvas-hint"><MousePointer2 size={14} /> modo selecionar: toque = 1 pixel <span>·</span> arraste = vários pixels</div>
+              <div className="canvas-hint"><MousePointer2 size={14} /> modo selecionar: 1º toque = início <span>·</span> 2º toque = expandir <span>·</span> arraste = vários pixels</div>
             </div>
-            <div className="canvas-footer"><span><i className="legend-free" /> espaço livre</span><span className="canvas-foot-note">escala: 1 px = 1 unidade · zoom máximo 1.200%</span></div>
+            <div className="canvas-footer"><span><i className="legend-free" /> espaço livre</span><span className="canvas-foot-note">escala: 1 px = 1 unidade · zoom máximo 1.600%</span></div>
           </section>
           <SelectionPanel selected={selected} label={selectionLabel} coordinateText={coordinateText} />
         </div>
@@ -713,7 +726,7 @@ function SelectionPanel({ selected, label, coordinateText }: { selected: WallSel
     <aside className={`selection-panel ${selected ? 'has-selection' : ''}`} data-testid="selection-panel">
       <div className="selection-head"><span>SELEÇÃO</span>{selected && <span className="selected-mark"><Check size={13} /> selecionado</span>}</div>
       {!selected ? (
-        <div className="selection-empty"><div className="empty-cross"><Crosshair size={27} /></div><h2>Escolha um ponto<br />na parede.</h2><p>Toque em um pixel para selecionar 1 unidade ou arraste para escolher uma área maior.</p></div>
+        <div className="selection-empty"><div className="empty-cross"><Crosshair size={27} /></div><h2>Escolha um ponto<br />na parede.</h2><p>Toque uma vez para marcar o início e toque em outro pixel para expandir a área. Você também pode arrastar.</p></div>
       ) : isFree ? (
         <div className="selection-content">
           <div className="selection-color free-color"><Plus size={28} /></div>
