@@ -1014,3 +1014,30 @@ button:focus-visible, a:focus-visible, canvas:focus-visible {
   .wall-main { padding-top: 10px; }
   .first-pixel-hint { display: block; }
 }
+
+
+/* V10 — acabamento visual da parede (somente cores) */
+.wall-canvas,
+.pixel-canvas,
+.canvas-surface,
+.wall-stage canvas {
+  background: #fffdf7;
+}
+
+.wall-editor,
+.selection-toolbar,
+.selection-controls,
+.pixel-toolbar,
+.editor-toolbar {
+  background: #f3ead2;
+  color: #211d3b;
+  border-color: rgba(33, 29, 59, 0.42);
+}
+
+.wall-editor button,
+.selection-toolbar button,
+.selection-controls button,
+.pixel-toolbar button,
+.editor-toolbar button {
+  color: #211d3b;
+}
