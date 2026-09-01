@@ -1,0 +1,23 @@
+--- a/artifacts/um-milhao-pixels-brasil/src/index.css
++++ b/artifacts/um-milhao-pixels-brasil/src/index.css
+@@ -1088,16 +1088,16 @@
+ 
+ /* V12 — correção precisa nos elementos reais da parede */
+ .pixel-editor-bar {
+-  background: #5ac8b0 !important;
+-  color: var(--ink) !important;
++  background: #215db0 !important;
++  color: #fffdf7 !important;
+   border-color: rgba(36,32,59,.30) !important;
+   box-shadow: 0 12px 35px rgba(36,32,59,.16) !important;
+ }
+ 
+ .pixel-editor-tools button,
+ .pixel-editor-actions button {
+-  color: rgba(36,32,59,.78) !important;
+-  border-color: rgba(36,32,59,.18) !important;
++  color: rgba(255,253,247,.88) !important;
++  border-color: rgba(255,253,247,.20) !important;
+ }
+ 
+ .pixel-editor-tools button:hover,
