@@ -132,7 +132,9 @@ async function serviceRoleGet<T>(path: string): Promise<T> {
     headers: {
       Accept: "application/json",
       apikey: supabaseServiceRoleKey,
-      Authorization: `Bearer ${supabaseServiceRoleKey}`,
+      ...(supabaseServiceRoleKey.startsWith("sb_secret_")
+        ? {}
+        : { Authorization: `Bearer ${supabaseServiceRoleKey}` }),
     },
     cache: "no-store",
   });
@@ -198,7 +200,9 @@ async function finalizeReservation(
       Accept: "application/json",
       "Content-Type": "application/json",
       apikey: supabaseServiceRoleKey,
-      Authorization: `Bearer ${supabaseServiceRoleKey}`,
+      ...(supabaseServiceRoleKey.startsWith("sb_secret_")
+        ? {}
+        : { Authorization: `Bearer ${supabaseServiceRoleKey}` }),
     },
     body: JSON.stringify({
       p_reservation_id: reservationId,
