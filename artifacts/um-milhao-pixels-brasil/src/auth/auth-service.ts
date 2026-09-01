@@ -371,6 +371,17 @@ export async function readOAuthSessionFromUrl(): Promise<AuthRedirectResult | nu
   });
   const kind = hash.get('type') === 'recovery' ? 'recovery' : 'oauth';
   storePkceFlow(null);
+
+  let returnTo: string | undefined;
+  if (kind === 'oauth') {
+    const storedReturnTo = window.localStorage.getItem(oauthReturnStorageKey);
+    window.localStorage.removeItem(oauthReturnStorageKey);
+
+    if (storedReturnTo && storedReturnTo.startsWith('/') && !storedReturnTo.startsWith('//')) {
+      returnTo = storedReturnTo;
+    }
+  }
+
   window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
-  return { session, kind };
+  return { session, kind, returnTo };
 }
