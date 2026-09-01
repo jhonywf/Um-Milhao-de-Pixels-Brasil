@@ -1,0 +1,49 @@
+--- a/artifacts/um-milhao-pixels-brasil/src/index.css
++++ b/artifacts/um-milhao-pixels-brasil/src/index.css
+@@ -1041,3 +1041,46 @@
+ .editor-toolbar button {
+   color: #211d3b;
+ }
++
++
++/* V11 — acabamento visual final: parede quente + painel turquesa */
++.wall-canvas,
++.pixel-canvas,
++.canvas-surface,
++.wall-stage canvas,
++.wall-stage {
++  background: #fffdf7 !important;
++}
++
++/* Neutraliza qualquer tom azulado residual da grade/superfície */
++.wall-stage canvas {
++  box-shadow: inset 0 0 0 1px rgba(102, 92, 72, 0.10);
++}
++
++/* Painel principal de edição/seleção inspirado no turquesa da identidade */
++.wall-editor,
++.selection-toolbar,
++.selection-controls,
++.pixel-toolbar,
++.editor-toolbar {
++  background: #2f8f8b !important;
++  color: #fffdf7 !important;
++  border-color: rgba(20, 78, 75, 0.50) !important;
++}
++
++.wall-editor button,
++.selection-toolbar button,
++.selection-controls button,
++.pixel-toolbar button,
++.editor-toolbar button {
++  border-color: rgba(255, 253, 247, 0.22);
++}
++
++/* Mantém legibilidade dos textos auxiliares dentro do painel */
++.wall-editor .muted,
++.selection-toolbar .muted,
++.selection-controls .muted,
++.pixel-toolbar .muted,
++.editor-toolbar .muted {
++  color: rgba(255, 253, 247, 0.82) !important;
++}
