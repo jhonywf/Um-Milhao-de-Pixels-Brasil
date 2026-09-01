@@ -1,0 +1,53 @@
+diff --git a/artifacts/api-server/src/routes/mercado-pago.ts b/artifacts/api-server/src/routes/mercado-pago.ts
+--- a/artifacts/api-server/src/routes/mercado-pago.ts
++++ b/artifacts/api-server/src/routes/mercado-pago.ts
+@@ -30,6 +30,7 @@ type MercadoPagoPayment = {
+   currency_id?: string;
+   transaction_amount?: number;
+   external_reference?: string | null;
++  date_approved?: string | null;
+ };
+
+ type WallOrderRow = {
+@@ -193,6 +194,7 @@ async function finalizeReservation(
+   reservationId: string,
+   paymentId: string,
+   amountCents: number,
++  approvedAt: string,
+ ) {
+   if (!supabaseServiceRoleKey) {
+     throw new Error("SUPABASE_SERVICE_ROLE_KEY_MISSING");
+@@ -214,6 +216,7 @@ async function finalizeReservation(
+       p_provider: "mercado_pago",
+       p_provider_reference: paymentId,
+       p_amount_cents: amountCents,
++      p_approved_at: approvedAt,
+     }),
+   });
+
+@@ -389,6 +392,16 @@ router.post("/mercado-pago/webhook", async (req: Request, res: Response) => {
+       return;
+     }
+
++    const approvedAt = typeof payment.date_approved === "string"
++      ? payment.date_approved.trim()
++      : "";
++
++    if (!approvedAt || Number.isNaN(Date.parse(approvedAt))) {
++      req.log?.error({ dataId, reservationId }, "Approved Mercado Pago payment has no valid approval date");
++      res.sendStatus(409);
++      return;
++    }
++
+     if (reservation.status === "converted") {
+       const order = await findExistingPaidOrder(dataId);
+       if (order?.status === "paid" && order.reservation_id === reservation.id) {
+@@ -424,7 +437,7 @@ router.post("/mercado-pago/webhook", async (req: Request, res: Response) => {
+       return;
+     }
+
+-    await finalizeReservation(reservation.id, dataId, reservation.amount_cents);
++    await finalizeReservation(reservation.id, dataId, reservation.amount_cents, approvedAt);
+
+     req.log?.info(
+       { dataId, reservationId, pixelCount: reservation.pixel_count, amountCents: reservation.amount_cents },
