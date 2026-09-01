@@ -855,3 +855,58 @@ button:focus-visible, a:focus-visible, canvas:focus-visible {
   .pixel-editor-actions { width: 100%; }.pixel-editor-actions button { flex: 1; justify-content: center; }
   .pixel-editor-total { width: 100%; grid-template-columns: auto 1fr auto; border-right: 0; }.pixel-editor-total strong:last-child { grid-column: 3; grid-row: 1; font-size: 11px; }
 }
+
+/* V7 — mobile-first wall compacting and individual pixel coloring */
+.wall-main { padding-top: clamp(28px, 4vw, 54px); }
+.wall-heading { align-items: center; margin-bottom: 28px; }
+.wall-heading h1 { font-size: clamp(42px, 5.8vw, 78px); line-height: .88; }
+.wall-intro { max-width: 290px; }
+.wall-intro p { margin-bottom: 11px; font-size: 15px; }
+.canvas-hint { max-width: calc(100% - 32px); flex-wrap: wrap; }
+.customizer-actions { display: grid; gap: 8px; }
+.customizer-secondary { width: 100%; min-height: 43px; border: 1px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; font: 700 10px var(--app-font-mono); text-transform: uppercase; }
+.recolor-banner { position: absolute; z-index: 13; left: 18px; right: 18px; bottom: 88px; min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; border: 1px solid var(--sun); background: var(--ink); color: var(--sun); font: 700 9px var(--app-font-mono); text-transform: uppercase; }
+.recolor-banner span { display: inline-flex; align-items: center; gap: 7px; }.recolor-banner button { min-height: 28px; padding: 0 10px; border: 0; background: var(--sun); color: var(--ink); cursor: pointer; font: 700 9px var(--app-font-mono); text-transform: uppercase; }
+.selection-summary { padding: 22px 20px; }
+.selection-summary-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; font: 700 10px var(--app-font-mono); text-transform: uppercase; }
+.selection-summary-title strong { color: var(--mint); font-size: 10px; }
+.selection-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid rgba(36,32,59,.16); background: rgba(36,32,59,.16); }
+.selection-summary-grid > div { min-width: 0; padding: 13px 12px; background: var(--paper); }
+.selection-summary-grid span { display: block; margin-bottom: 7px; color: rgba(36,32,59,.52); font: 8px var(--app-font-mono); text-transform: uppercase; }
+.selection-summary-grid b { display: block; overflow-wrap: anywhere; font: 600 10px var(--app-font-mono); }
+.selection-summary .selection-button { margin-top: 14px; }
+.compact-selection { padding: 24px 20px; }
+.compact-empty { padding: 22px 20px; }
+.compact-empty .empty-cross { width: 50px; height: 50px; margin-bottom: 14px; }.compact-empty h2 { margin-bottom: 8px; font-size: 25px; }.compact-empty p { font-size: 12px; }
+
+@media (max-width: 620px) {
+  .wall-main { padding: 18px 14px 32px; }
+  .wall-heading { display: grid; gap: 8px; margin-bottom: 14px; }
+  .wall-heading > div:first-child { display: grid; gap: 7px; }
+  .wall-heading .eyebrow { font-size: 8px; }
+  .wall-heading h1 { margin: 0; font-size: clamp(29px, 8.4vw, 39px); line-height: .9; letter-spacing: -.075em; }
+  .wall-intro { max-width: none; margin-top: 0; padding: 0; }
+  .wall-intro p { margin: 0 0 7px; font-size: 12px; line-height: 1.32; }
+  .wall-intro span { font-size: 8px; }
+  .wall-intro span svg { width: 13px; height: 13px; }
+  .canvas-toolbar { padding: 8px 10px; gap: 7px; }
+  .canvas-status { font-size: 8px; }
+  .canvas-coords { font-size: 8px; }
+  .zoom-controls { gap: 5px; }.zoom-controls button { width: 28px; height: 28px; }.zoom-controls span { min-width: 37px; font-size: 9px; }
+  .canvas-stage { height: 82vw; min-height: 330px; }
+  .canvas-hint { left: 8px; right: 8px; bottom: 8px; max-width: none; padding: 7px 8px; font-size: 7px; line-height: 1.3; }
+  .pixel-editor-card { padding-bottom: 154px; }
+  .canvas-footer { padding: 9px 11px; }
+  .wall-layout { gap: 10px; }
+  .selection-panel { min-height: 0; }
+  .selection-summary { padding: 16px 14px 14px; }
+  .selection-summary-title { margin-bottom: 10px; }
+  .selection-summary-grid > div { padding: 10px; }
+  .selection-summary .selection-button { min-height: 43px; margin-top: 10px; }
+  .panel-foot { padding: 10px 14px; }
+  .compact-empty { display: grid; grid-template-columns: 46px 1fr; gap: 12px; padding: 14px; }
+  .compact-empty .empty-cross { width: 46px; height: 46px; margin: 0; }
+  .compact-empty h2 { margin: 0 0 5px; font-size: 22px; }.compact-empty p { font-size: 11px; line-height: 1.35; }
+  .wall-bottom-note { margin-top: 10px; }
+  .recolor-banner { position: fixed; z-index: 31; left: 10px; right: 10px; bottom: 10px; }
+}

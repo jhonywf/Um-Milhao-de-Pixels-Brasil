@@ -9,7 +9,6 @@ import {
   Crosshair,
   Grid2X2,
   Hand,
-  Image as ImageIcon,
   Instagram,
   Minus,
   MousePointer2,
@@ -266,7 +265,6 @@ function WallPage() {
 
 type SelectedPixel = { x: number; y: number; color: string };
 type PixelTool = 'select' | 'erase' | 'pan';
-type CustomizeTab = 'colors' | 'image';
 
 const PIXEL_PALETTE = [
   '#ef4444', '#f97316', '#f59e0b', '#facc15', '#a3e635', '#22c55e', '#15803d',
@@ -283,13 +281,13 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [selectedBlock, setSelectedBlock] = useState<PixelBlock | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
-  const [customizeTab, setCustomizeTab] = useState<CustomizeTab>('colors');
   const [activeColor, setActiveColor] = useState('#ef4444');
-  const [imageName, setImageName] = useState('');
   const cameraRef = useRef(camera);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
-  const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number } | null>(null);
+  const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
+  const longPressRef = useRef<{ pointerId: number; timer: number; startX: number; startY: number; x: number; y: number } | null>(null);
+  const [recolorMode, setRecolorMode] = useState(false);
   const gestureRef = useRef({ multiTouch: false });
   const pinchRef = useRef<{
     distance: number;
@@ -298,7 +296,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     camera: { x: number; y: number; scale: number };
   } | null>(null);
   const minZoom = 0.24;
-  const maxZoom = 16;
+  const maxZoom = 22;
   const hasFittedInitialViewRef = useRef(false);
 
   useEffect(() => { cameraRef.current = camera; }, [camera]);
@@ -326,14 +324,14 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const originX = rect.width / 2 - 500 * camera.scale + camera.x;
     const originY = rect.height / 2 - 500 * camera.scale + camera.y;
     const wallSize = 1000 * camera.scale;
-    ctx.fillStyle = '#fff4d9';
+    ctx.fillStyle = '#fffbf0';
     ctx.fillRect(originX, originY, wallSize, wallSize);
     const gridStep = camera.scale >= 2.5 ? camera.scale : camera.scale > 0.72 ? 10 * camera.scale : camera.scale > 0.38 ? 20 * camera.scale : 50 * camera.scale;
     ctx.save();
     ctx.beginPath();
     ctx.rect(originX, originY, wallSize, wallSize);
     ctx.clip();
-    ctx.strokeStyle = 'rgba(115, 112, 104, 0.28)';
+    ctx.strokeStyle = 'rgba(115, 112, 104, 0.22)';
     ctx.lineWidth = camera.scale >= 2.5 ? 0.75 : 1;
     for (let x = originX; x <= originX + wallSize; x += gridStep) { ctx.beginPath(); ctx.moveTo(x, originY); ctx.lineTo(x, originY + wallSize); ctx.stroke(); }
     for (let y = originY; y <= originY + wallSize; y += gridStep) { ctx.beginPath(); ctx.moveTo(originX, y); ctx.lineTo(originX + wallSize, y); ctx.stroke(); }
@@ -417,7 +415,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     block.status !== 'available' && x >= block.x && x < block.x + block.width && y >= block.y && y < block.y + block.height
   ));
 
-  const updatePixel = (x: number, y: number, action: 'add' | 'erase') => {
+  const updatePixel = (x: number, y: number, action: 'add' | 'erase' | 'recolor') => {
     if (x < 0 || y < 0 || x >= 1000 || y >= 1000) return;
     if (occupiedAt(x + 0.5, y + 0.5)) return;
     const key = `${x}:${y}`;
@@ -425,12 +423,15 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setSelectedPixels((current) => {
       const next = new Map(current);
       if (action === 'erase') next.delete(key);
-      else if (!next.has(key)) next.set(key, { x, y, color: activeColor });
+      else if (action === 'recolor') {
+        const pixel = next.get(key);
+        if (pixel) next.set(key, { ...pixel, color: activeColor });
+      } else if (!next.has(key)) next.set(key, { x, y, color: activeColor });
       return next;
     });
   };
 
-  const paintLine = (fromX: number, fromY: number, toX: number, toY: number, action: 'add' | 'erase') => {
+  const paintLine = (fromX: number, fromY: number, toX: number, toY: number, action: 'add' | 'erase' | 'recolor') => {
     const dx = toX - fromX;
     const dy = toY - fromY;
     const steps = Math.max(Math.abs(dx), Math.abs(dy), 1);
@@ -501,10 +502,18 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setCamera(nextCamera);
   };
 
+  const cancelLongPress = () => {
+    const pending = longPressRef.current;
+    if (!pending) return;
+    window.clearTimeout(pending.timer);
+    longPressRef.current = null;
+  };
+
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size >= 2) {
+      cancelLongPress();
       gestureRef.current.multiTouch = true;
       paintRef.current = null;
       startPinch();
@@ -521,17 +530,30 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       setSelectedBlock(occupied);
       return;
     }
-    if (world.x >= 0 && world.x < 1000 && world.y >= 0 && world.y < 1000) {
-      const action = tool === 'erase' ? 'erase' : 'add';
-      updatePixel(x, y, action);
-      paintRef.current = { pointerId: event.pointerId, lastX: x, lastY: y };
+    if (world.x < 0 || world.x >= 1000 || world.y < 0 || world.y >= 1000) return;
+
+    const action: 'add' | 'erase' | 'recolor' = recolorMode ? 'recolor' : tool === 'erase' ? 'erase' : 'add';
+    const needsFirstLongPress = event.pointerType === 'touch' && action === 'add' && selectedPixels.size === 0;
+
+    if (needsFirstLongPress) {
+      const timer = window.setTimeout(() => {
+        updatePixel(x, y, 'add');
+        paintRef.current = { pointerId: event.pointerId, lastX: x, lastY: y, action: 'add' };
+        longPressRef.current = null;
+      }, 380);
+      longPressRef.current = { pointerId: event.pointerId, timer, startX: event.clientX, startY: event.clientY, x, y };
+      return;
     }
+
+    updatePixel(x, y, action);
+    paintRef.current = { pointerId: event.pointerId, lastX: x, lastY: y, action };
   };
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
     if (!pointersRef.current.has(event.pointerId)) return;
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size >= 2) {
+      cancelLongPress();
       setIsDragging(true);
       applyPinch();
       return;
@@ -539,6 +561,13 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const dx = event.clientX - dragRef.current.startX;
     const dy = event.clientY - dragRef.current.startY;
     if (Math.hypot(dx, dy) > 3) dragRef.current.moved = true;
+
+    const pending = longPressRef.current;
+    if (pending?.pointerId === event.pointerId) {
+      if (Math.hypot(event.clientX - pending.startX, event.clientY - pending.startY) > 8) cancelLongPress();
+      return;
+    }
+
     if (tool === 'pan') {
       const nextCamera = { ...cameraRef.current, x: dragRef.current.originX + dx, y: dragRef.current.originY + dy };
       cameraRef.current = nextCamera;
@@ -552,12 +581,13 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const x = Math.floor(world.x);
     const y = Math.floor(world.y);
     if (x === paint.lastX && y === paint.lastY) return;
-    paintLine(paint.lastX, paint.lastY, x, y, tool === 'erase' ? 'erase' : 'add');
+    paintLine(paint.lastX, paint.lastY, x, y, paint.action);
     paintRef.current = { ...paint, lastX: x, lastY: y };
     setIsDragging(true);
   };
 
   const onPointerUp = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (longPressRef.current?.pointerId === event.pointerId) cancelLongPress();
     pointersRef.current.delete(event.pointerId);
     if (pointersRef.current.size >= 2) startPinch();
     else pinchRef.current = null;
@@ -567,6 +597,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   };
 
   const onPointerCancel = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (longPressRef.current?.pointerId === event.pointerId) cancelLongPress();
     pointersRef.current.delete(event.pointerId);
     paintRef.current = null;
     pinchRef.current = null;
@@ -584,7 +615,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setSelectedPixels(new Map());
     setSelectedBlock(null);
     setCustomizeOpen(false);
-    setImageName('');
+    setRecolorMode(false);
   };
 
   const fillAll = (color: string) => {
@@ -596,37 +627,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     });
   };
 
-  const applyImageToSelection = (file: File) => {
-    if (!selectedCount) return;
-    setImageName(file.name);
-    const url = URL.createObjectURL(file);
-    const image = new window.Image();
-    image.onload = () => {
-      const xs = selectedList.map((pixel) => pixel.x);
-      const ys = selectedList.map((pixel) => pixel.y);
-      const minX = Math.min(...xs); const maxX = Math.max(...xs);
-      const minY = Math.min(...ys); const maxY = Math.max(...ys);
-      const width = Math.max(1, maxX - minX + 1);
-      const height = Math.max(1, maxY - minY + 1);
-      const sample = document.createElement('canvas');
-      sample.width = width;
-      sample.height = height;
-      const ctx = sample.getContext('2d', { willReadFrequently: true });
-      if (!ctx) { URL.revokeObjectURL(url); return; }
-      ctx.drawImage(image, 0, 0, width, height);
-      setSelectedPixels((current) => {
-        const next = new Map(current);
-        next.forEach((pixel, key) => {
-          const data = ctx.getImageData(pixel.x - minX, pixel.y - minY, 1, 1).data;
-          if (data[3] < 20) return;
-          next.set(key, { ...pixel, color: `rgb(${data[0]}, ${data[1]}, ${data[2]})` });
-        });
-        return next;
-      });
-      URL.revokeObjectURL(url);
-    };
-    image.src = url;
-  };
 
   return (
     <div className="wall-page">
@@ -635,7 +635,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
         <div className="wall-heading">
           <div>
             <div className="eyebrow light-eyebrow"><span className="eyebrow-dot" /> parede interativa <span className="demo-chip dark-chip">fase demo</span></div>
-            <h1>A PAREDE<br /><em>ESTÁ ABERTA.</em></h1>
+            <h1>A PAREDE <em>ESTÁ ABERTA.</em></h1>
           </div>
           <div className="wall-intro"><p>1.000 × 1.000 coordenadas.<br />Selecione pixels livres e monte sua ideia.</p><span><Hand size={16} /> dois dedos: mover e ampliar</span></div>
         </div>
@@ -662,14 +662,14 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 data-testid="canvas-pixel-wall"
                 aria-label="Parede interativa de um milhão de pixels"
               />
-              <div className="canvas-hint"><MousePointer2 size={14} /> toque = 1 pixel <span>·</span> continue tocando onde quiser <span>·</span> arraste = pincel</div>
+              <div className="canvas-hint"><MousePointer2 size={14} /> {recolorMode ? <>modo cor: toque ou arraste sobre pixels selecionados</> : selectedCount === 0 ? <>pressione e segure o primeiro pixel <span>·</span> depois toque ou arraste</> : <>toque = 1 pixel <span>·</span> arraste = pincel</>}</div>
             </div>
 
             <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
               <div className="pixel-editor-tools">
-                <button className={tool === 'select' ? 'active' : ''} onClick={() => setTool('select')}><Paintbrush size={17} /> Selecionar</button>
-                <button className={tool === 'erase' ? 'active' : ''} onClick={() => setTool('erase')}><Eraser size={17} /> Apagar</button>
-                <button className={tool === 'pan' ? 'active' : ''} onClick={() => setTool('pan')}><Hand size={17} /> Mover</button>
+                <button className={tool === 'select' && !recolorMode ? 'active' : ''} onClick={() => { setTool('select'); setRecolorMode(false); }}><Paintbrush size={17} /> Selecionar</button>
+                <button className={tool === 'erase' ? 'active' : ''} onClick={() => { setTool('erase'); setRecolorMode(false); }}><Eraser size={17} /> Apagar</button>
+                <button className={tool === 'pan' ? 'active' : ''} onClick={() => { setTool('pan'); setRecolorMode(false); }}><Hand size={17} /> Mover</button>
               </div>
               <div className="pixel-editor-total"><strong>{selectedCount}</strong><span>pixels</span><strong>R${selectedCount.toFixed(2).replace('.', ',')}</strong></div>
               <div className="pixel-editor-actions">
@@ -681,36 +681,26 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
             {customizeOpen && (
               <div className="pixel-customizer" role="dialog" aria-label="Personalizar pixels">
                 <div className="pixel-customizer-head"><strong>Personalizar {selectedCount} pixels</strong><button onClick={() => setCustomizeOpen(false)} aria-label="Fechar"><X size={20} /></button></div>
-                <div className="pixel-customizer-tabs">
-                  <button className={customizeTab === 'colors' ? 'active' : ''} onClick={() => setCustomizeTab('colors')}>Cores</button>
-                  <button className={customizeTab === 'image' ? 'active' : ''} onClick={() => setCustomizeTab('image')}>Imagem</button>
+                <div className="pixel-customizer-body">
+                  <p>Escolha uma cor. Você pode aplicar em todos ou pintar somente os pixels que quiser.</p>
+                  <div className="pixel-palette">
+                    {PIXEL_PALETTE.map((color) => <button key={color} className={activeColor === color ? 'active' : ''} style={{ backgroundColor: color }} onClick={() => setActiveColor(color)} aria-label={`Cor ${color}`} />)}
+                  </div>
+                  <div className="customizer-actions">
+                    <button className="customizer-primary" onClick={() => fillAll(activeColor)}>Aplicar aos {selectedCount} pixels</button>
+                    <button className="customizer-secondary" onClick={() => { setRecolorMode(true); setTool('select'); setCustomizeOpen(false); }}>Pintar pixel por pixel</button>
+                  </div>
                 </div>
-                {customizeTab === 'colors' ? (
-                  <div className="pixel-customizer-body">
-                    <p>Escolha uma cor. Depois continue selecionando pixels para pintar individualmente, ou aplique a mesma cor em todos.</p>
-                    <div className="pixel-palette">
-                      {PIXEL_PALETTE.map((color) => <button key={color} className={activeColor === color ? 'active' : ''} style={{ backgroundColor: color }} onClick={() => setActiveColor(color)} aria-label={`Cor ${color}`} />)}
-                    </div>
-                    <button className="customizer-primary" onClick={() => fillAll(activeColor)}>Aplicar esta cor aos {selectedCount} pixels</button>
-                  </div>
-                ) : (
-                  <div className="pixel-customizer-body">
-                    <p>A imagem será reduzida para pixel art dentro da área da sua seleção. Pixels não selecionados continuam livres.</p>
-                    <label className="image-upload-box">
-                      <ImageIcon size={25} />
-                      <span>{imageName || 'Enviar imagem'}</span>
-                      <small>PNG, JPG ou WEBP</small>
-                      <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) applyImageToSelection(file); }} />
-                    </label>
-                  </div>
-                )}
               </div>
             )}
-            <div className="canvas-footer"><span><i className="legend-free" /> espaço livre</span><span className="canvas-foot-note">R$1 por pixel · zoom máximo 1.600%</span></div>
+            {recolorMode && (
+              <div className="recolor-banner"><span><Paintbrush size={14} /> Pintando pixels individualmente</span><button onClick={() => setRecolorMode(false)}>Concluir</button></div>
+            )}
+            <div className="canvas-footer"><span><i className="legend-free" /> espaço livre</span><span className="canvas-foot-note">R$1 por pixel · zoom máximo 2.200%</span></div>
           </section>
           <SelectionPanel selectedCount={selectedCount} selectedBlock={selectedBlock} coordinateText={coordinateText} />
         </div>
-        <div className="wall-bottom-note"><Grid2X2 size={17} /> Selecione pixels independentes para criar letras, símbolos, desenhos ou aplicar uma imagem. A compra e a reserva entram na próxima etapa.</div>
+        <div className="wall-bottom-note"><Grid2X2 size={17} /> Selecione pixels independentes para criar letras, símbolos e desenhos. A compra e a reserva entram na próxima etapa.</div>
       </main>
     </div>
   );
@@ -727,26 +717,23 @@ function SelectionPanel({ selectedCount, selectedBlock, coordinateText }: { sele
   };
   return (
     <aside className={`selection-panel ${(selectedCount || selectedBlock) ? 'has-selection' : ''}`}>
-      <div className="selection-head"><span>SELEÇÃO</span>{selectedCount > 0 && <span className="selected-mark"><Check size={13} /> {selectedCount} pixels</span>}</div>
       {selectedBlock ? (
-        <div className="selection-content">
-          <div className="selection-color" style={{ backgroundColor: selectedBlock.color }}><span>{selectedBlock.initials}</span></div>
+        <div className="selection-content compact-selection">
           <span className="selection-type">área ocupada</span><h2>{selectedBlock.name}</h2><p>{selectedBlock.detail}</p>
           <div className="selection-detail"><span>coordenada</span><b>{coordinateText}</b></div>
         </div>
       ) : selectedCount > 0 ? (
-        <div className="selection-content">
-          <div className="selection-color free-color"><Paintbrush size={26} /></div>
-          <span className="selection-type">sua composição</span><h2>Monte seu desenho<br />pixel por pixel.</h2>
-          <p>Os pixels podem ficar separados. Você paga somente pelos pixels selecionados.</p>
-          <div className="selection-detail"><span>pixels selecionados</span><b>{selectedCount}</b></div>
-          <div className="selection-detail"><span>valor atual</span><b>R$ {selectedCount.toFixed(2).replace('.', ',')}</b></div>
-          <div className="selection-detail"><span>primeiro pixel</span><b>{coordinateText}</b></div>
+        <div className="selection-content selection-summary">
+          <div className="selection-summary-title"><span>Resumo da seleção</span><strong>{selectedCount} pixels</strong></div>
+          <div className="selection-summary-grid">
+            <div><span>valor atual</span><b>R$ {selectedCount.toFixed(2).replace('.', ',')}</b></div>
+            <div><span>primeiro pixel</span><b>{coordinateText}</b></div>
+          </div>
           <button className="selection-button" onClick={handleInterest}>Continuar com esta seleção <ArrowRight size={17} /></button>
           {notice && <div className="demo-notice" role="status"><Check size={15} /> Seleção pronta. Reserva e pagamento entram na próxima fase.</div>}
         </div>
       ) : (
-        <div className="selection-empty"><div className="empty-cross"><Crosshair size={27} /></div><h2>Crie qualquer<br />formato.</h2><p>Toque em pixels livres, um por um, em qualquer lugar. Arraste para desenhar mais rápido.</p></div>
+        <div className="selection-empty compact-empty"><div className="empty-cross"><Crosshair size={24} /></div><div><h2>Monte seu desenho.</h2><p>No celular, pressione e segure o primeiro pixel. Depois toque onde quiser ou arraste para desenhar.</p></div></div>
       )}
       <div className="panel-foot"><span><span className="pulse-dot" /> seleção livre</span><Link href="/"><ArrowLeft size={14} /> voltar ao início</Link></div>
     </aside>
