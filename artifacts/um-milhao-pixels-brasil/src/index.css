@@ -1118,3 +1118,34 @@ button:focus-visible, a:focus-visible, canvas:focus-visible {
 .pixel-editor-total strong:last-child {
   color: var(--ink) !important;
 }
+
+
+/* V14 — contraste final do painel azul */
+.pixel-editor-bar {
+  color: #111111 !important;
+}
+
+.pixel-editor-tools button,
+.pixel-editor-actions button,
+.pixel-editor-total,
+.pixel-editor-total span,
+.pixel-editor-total strong,
+.pixel-editor-total strong:last-child {
+  color: #111111 !important;
+}
+
+.pixel-editor-tools button,
+.pixel-editor-actions button {
+  border-color: #111111 !important;
+}
+
+.pixel-editor-total {
+  border-left-color: #111111 !important;
+  border-right-color: #111111 !important;
+}
+
+.pixel-editor-tools button svg,
+.pixel-editor-actions button svg {
+  color: #111111 !important;
+  stroke: #111111 !important;
+}
