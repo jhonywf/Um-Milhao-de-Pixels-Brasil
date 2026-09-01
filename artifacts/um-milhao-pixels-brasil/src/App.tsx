@@ -34,6 +34,7 @@ import { AuthProvider, useAuth } from '@/auth/auth-context';
 import { AuthDialogs } from '@/auth/auth-dialogs';
 import { supabasePublicStorageUrl } from '@/auth/auth-service';
 import { loadPublicWallPixels, reserveWallPixels, type PublicWallPixel, type WallReservationSuccess } from '@/data/wall-reservation-service';
+import { createMercadoPagoCheckout } from '@/data/payment-service';
 
 const queryClient = new QueryClient();
 
@@ -848,6 +849,8 @@ function SelectionPanel({
 }) {
   const [reservationError, setReservationError] = useState<string | null>(null);
   const [reserving, setReserving] = useState(false);
+  const [openingCheckout, setOpeningCheckout] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const { user, session, profile, openAuth, openProfile } = useAuth();
   const selectedCount = selectedPixels.length;
 
@@ -885,6 +888,21 @@ function SelectionPanel({
     }
   };
 
+  const handlePayment = async () => {
+    setPaymentError(null);
+
+    if (!session || !lastReservation) return;
+
+    setOpeningCheckout(true);
+    try {
+      const checkout = await createMercadoPagoCheckout(lastReservation.reservation_id, session.access_token);
+      window.location.assign(checkout.checkout_url);
+    } catch (caught) {
+      setPaymentError(caught instanceof Error ? caught.message : 'Não foi possível iniciar o pagamento agora.');
+      setOpeningCheckout(false);
+    }
+  };
+
   return (
     <aside className={`selection-panel ${(selectedCount || selectedBlock) ? 'has-selection' : ''}`}>
       {selectedBlock ? (
@@ -909,9 +927,16 @@ function SelectionPanel({
           )}
           {reservationError && <div className="demo-notice" role="alert">{reservationError}</div>}
           {lastReservation && (
-            <div className="demo-notice" role="status">
-              <Check size={15} /> {lastReservation.pixel_count} pixels reservados até {new Date(lastReservation.expires_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Valor confirmado pelo banco: R$ {(lastReservation.amount_cents / 100).toFixed(2).replace('.', ',')}.
-            </div>
+            <>
+              <div className="demo-notice" role="status">
+                <Check size={15} /> {lastReservation.pixel_count} pixels reservados até {new Date(lastReservation.expires_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Valor confirmado pelo banco: R$ {(lastReservation.amount_cents / 100).toFixed(2).replace('.', ',')}.
+              </div>
+              <button className="selection-button" type="button" onClick={handlePayment} disabled={openingCheckout}>
+                {openingCheckout ? 'Abrindo Mercado Pago...' : 'Pagar com Mercado Pago'}
+                {!openingCheckout && <ArrowRight size={17} />}
+              </button>
+              {paymentError && <div className="demo-notice" role="alert">{paymentError}</div>}
+            </>
           )}
         </div>
       ) : (
