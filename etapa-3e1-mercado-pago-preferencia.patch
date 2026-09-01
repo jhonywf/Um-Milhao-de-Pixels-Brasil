@@ -1,0 +1,297 @@
+diff --git a/artifacts/api-server/src/routes/index.ts b/artifacts/api-server/src/routes/index.ts
+index 9db007d..218d74b 100644
+--- a/artifacts/api-server/src/routes/index.ts
++++ b/artifacts/api-server/src/routes/index.ts
+@@ -1,10 +1,12 @@
+ import { Router, type IRouter } from "express";
+ import healthRouter from "./health";
+ import supabaseRouter from "./supabase";
++import mercadoPagoRouter from "./mercado-pago";
+ 
+ const router: IRouter = Router();
+ 
+ router.use(healthRouter);
+ router.use("/supabase", supabaseRouter);
++router.use("/payments", mercadoPagoRouter);
+ 
+ export default router;
+diff --git a/artifacts/api-server/src/routes/mercado-pago.ts b/artifacts/api-server/src/routes/mercado-pago.ts
+new file mode 100644
+index 0000000..a71b561
+--- /dev/null
++++ b/artifacts/api-server/src/routes/mercado-pago.ts
+@@ -0,0 +1,164 @@
++import { Router, type IRouter, type Request, type Response } from "express";
++
++const router: IRouter = Router();
++
++const supabaseUrl = process.env.SUPABASE_URL || "https://cnyjodkusuikivdwbwcg.supabase.co";
++const supabasePublishableKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
++const mercadoPagoAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN || "";
++const appPublicUrl = (process.env.APP_PUBLIC_URL || "https://um-milhao-de-pixels-brasil--jhonymec2.replit.app").replace(/\/$/, "");
++
++type ReservationRow = {
++  id: string;
++  user_id: string;
++  status: "active" | "converted" | "expired" | "cancelled";
++  pixel_count: number;
++  amount_cents: number;
++  expires_at: string;
++};
++
++type MercadoPagoPreferenceResponse = {
++  id?: string;
++  init_point?: string;
++  sandbox_init_point?: string;
++  message?: string;
++  error?: string;
++};
++
++function getBearerToken(req: Request) {
++  const authorization = req.header("authorization") || "";
++  const match = authorization.match(/^Bearer\s+(.+)$/i);
++  return match?.[1] ?? "";
++}
++
++async function loadOwnActiveReservation(reservationId: string, accessToken: string) {
++  if (!supabasePublishableKey) {
++    throw new Error("SUPABASE_PUBLIC_KEY_MISSING");
++  }
++
++  const query = new URLSearchParams({
++    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
++    id: `eq.${reservationId}`,
++    limit: "1",
++  });
++
++  const response = await fetch(`${supabaseUrl}/rest/v1/wall_reservations?${query.toString()}`, {
++    headers: {
++      Accept: "application/json",
++      apikey: supabasePublishableKey,
++      Authorization: `Bearer ${accessToken}`,
++    },
++    cache: "no-store",
++  });
++
++  if (!response.ok) {
++    return null;
++  }
++
++  const rows = await response.json() as ReservationRow[];
++  const reservation = rows[0] ?? null;
++
++  if (!reservation) return null;
++  if (reservation.status !== "active") return null;
++  if (new Date(reservation.expires_at).getTime() <= Date.now()) return null;
++  if (!Number.isInteger(reservation.pixel_count) || reservation.pixel_count < 1) return null;
++  if (!Number.isInteger(reservation.amount_cents) || reservation.amount_cents < 1) return null;
++
++  return reservation;
++}
++
++router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
++  const accessToken = getBearerToken(req);
++  const reservationId = typeof req.body?.reservation_id === "string" ? req.body.reservation_id.trim() : "";
++
++  if (!accessToken) {
++    res.status(401).json({ message: "Entre na sua conta para continuar com o pagamento." });
++    return;
++  }
++
++  if (!reservationId) {
++    res.status(400).json({ message: "Reserva inválida." });
++    return;
++  }
++
++  if (!mercadoPagoAccessToken) {
++    req.log?.error("MERCADO_PAGO_ACCESS_TOKEN is not configured");
++    res.status(503).json({ message: "O pagamento ainda não está configurado no servidor." });
++    return;
++  }
++
++  try {
++    const reservation = await loadOwnActiveReservation(reservationId, accessToken);
++
++    if (!reservation) {
++      res.status(409).json({
++        message: "Essa reserva não está mais disponível. Volte à parede e faça uma nova seleção.",
++      });
++      return;
++    }
++
++    const preferenceResponse = await fetch("https://api.mercadopago.com/checkout/preferences", {
++      method: "POST",
++      headers: {
++        Accept: "application/json",
++        "Content-Type": "application/json",
++        Authorization: `Bearer ${mercadoPagoAccessToken}`,
++      },
++      body: JSON.stringify({
++        items: [
++          {
++            id: `pixels-${reservation.id}`,
++            title: `${reservation.pixel_count} pixels — Um Milhão de Pixels Brasil`,
++            description: "Reserva de pixels na parede digital Um Milhão de Pixels Brasil",
++            quantity: 1,
++            currency_id: "BRL",
++            unit_price: reservation.amount_cents / 100,
++          },
++        ],
++        external_reference: reservation.id,
++        metadata: {
++          reservation_id: reservation.id,
++          pixel_count: reservation.pixel_count,
++        },
++        back_urls: {
++          success: `${appPublicUrl}/parede?payment=success`,
++          pending: `${appPublicUrl}/parede?payment=pending`,
++          failure: `${appPublicUrl}/parede?payment=failure`,
++        },
++        auto_return: "approved",
++      }),
++    });
++
++    const payload = await preferenceResponse.json() as MercadoPagoPreferenceResponse;
++
++    if (!preferenceResponse.ok || !payload.id) {
++      req.log?.error(
++        { status: preferenceResponse.status, mpError: payload.error, mpMessage: payload.message },
++        "Mercado Pago preference creation failed",
++      );
++      res.status(502).json({ message: "Não foi possível abrir o Mercado Pago agora. Tente novamente." });
++      return;
++    }
++
++    const checkoutUrl = payload.sandbox_init_point || payload.init_point;
++
++    if (!checkoutUrl) {
++      req.log?.error({ preferenceId: payload.id }, "Mercado Pago preference returned no checkout URL");
++      res.status(502).json({ message: "O Mercado Pago não retornou o link de pagamento." });
++      return;
++    }
++
++    res.status(201).json({
++      preference_id: payload.id,
++      checkout_url: checkoutUrl,
++      reservation_id: reservation.id,
++      pixel_count: reservation.pixel_count,
++      amount_cents: reservation.amount_cents,
++      expires_at: reservation.expires_at,
++    });
++  } catch (error) {
++    req.log?.error({ err: error }, "Could not create Mercado Pago preference");
++    res.status(500).json({ message: "Não foi possível iniciar o pagamento agora." });
++  }
++});
++
++export default router;
+diff --git a/artifacts/um-milhao-pixels-brasil/src/App.tsx b/artifacts/um-milhao-pixels-brasil/src/App.tsx
+index a212fa8..45272cb 100644
+--- a/artifacts/um-milhao-pixels-brasil/src/App.tsx
++++ b/artifacts/um-milhao-pixels-brasil/src/App.tsx
+@@ -34,6 +34,7 @@ import { AuthProvider, useAuth } from '@/auth/auth-context';
+ import { AuthDialogs } from '@/auth/auth-dialogs';
+ import { supabasePublicStorageUrl } from '@/auth/auth-service';
+ import { loadPublicWallPixels, reserveWallPixels, type PublicWallPixel, type WallReservationSuccess } from '@/data/wall-reservation-service';
++import { createMercadoPagoCheckout } from '@/data/payment-service';
+ 
+ const queryClient = new QueryClient();
+ 
+@@ -848,6 +849,8 @@ function SelectionPanel({
+ }) {
+   const [reservationError, setReservationError] = useState<string | null>(null);
+   const [reserving, setReserving] = useState(false);
++  const [openingCheckout, setOpeningCheckout] = useState(false);
++  const [paymentError, setPaymentError] = useState<string | null>(null);
+   const { user, session, profile, openAuth, openProfile } = useAuth();
+   const selectedCount = selectedPixels.length;
+ 
+@@ -885,6 +888,21 @@ function SelectionPanel({
+     }
+   };
+ 
++  const handlePayment = async () => {
++    setPaymentError(null);
++
++    if (!session || !lastReservation) return;
++
++    setOpeningCheckout(true);
++    try {
++      const checkout = await createMercadoPagoCheckout(lastReservation.reservation_id, session.access_token);
++      window.location.assign(checkout.checkout_url);
++    } catch (caught) {
++      setPaymentError(caught instanceof Error ? caught.message : 'Não foi possível iniciar o pagamento agora.');
++      setOpeningCheckout(false);
++    }
++  };
++
+   return (
+     <aside className={`selection-panel ${(selectedCount || selectedBlock) ? 'has-selection' : ''}`}>
+       {selectedBlock ? (
+@@ -909,9 +927,16 @@ function SelectionPanel({
+           )}
+           {reservationError && <div className="demo-notice" role="alert">{reservationError}</div>}
+           {lastReservation && (
+-            <div className="demo-notice" role="status">
+-              <Check size={15} /> {lastReservation.pixel_count} pixels reservados até {new Date(lastReservation.expires_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Valor confirmado pelo banco: R$ {(lastReservation.amount_cents / 100).toFixed(2).replace('.', ',')}.
+-            </div>
++            <>
++              <div className="demo-notice" role="status">
++                <Check size={15} /> {lastReservation.pixel_count} pixels reservados até {new Date(lastReservation.expires_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Valor confirmado pelo banco: R$ {(lastReservation.amount_cents / 100).toFixed(2).replace('.', ',')}.
++              </div>
++              <button className="selection-button" type="button" onClick={handlePayment} disabled={openingCheckout}>
++                {openingCheckout ? 'Abrindo Mercado Pago...' : 'Pagar com Mercado Pago'}
++                {!openingCheckout && <ArrowRight size={17} />}
++              </button>
++              {paymentError && <div className="demo-notice" role="alert">{paymentError}</div>}
++            </>
+           )}
+         </div>
+       ) : (
+diff --git a/artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts b/artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts
+new file mode 100644
+index 0000000..1b24e70
+--- /dev/null
++++ b/artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts
+@@ -0,0 +1,41 @@
++export type MercadoPagoCheckout = {
++  preference_id: string;
++  checkout_url: string;
++  reservation_id: string;
++  pixel_count: number;
++  amount_cents: number;
++  expires_at: string;
++};
++
++function readablePaymentError(payload: unknown) {
++  if (typeof payload === 'object' && payload && 'message' in payload) {
++    return String(payload.message);
++  }
++  return 'Não foi possível iniciar o pagamento agora.';
++}
++
++export async function createMercadoPagoCheckout(
++  reservationId: string,
++  accessToken: string,
++): Promise<MercadoPagoCheckout> {
++  const response = await fetch('/api/payments/mercado-pago/preference', {
++    method: 'POST',
++    headers: {
++      Accept: 'application/json',
++      'Content-Type': 'application/json',
++      Authorization: `Bearer ${accessToken}`,
++    },
++    body: JSON.stringify({ reservation_id: reservationId }),
++  });
++
++  const contentType = response.headers.get('content-type') ?? '';
++  const payload = contentType.includes('application/json')
++    ? await response.json()
++    : await response.text();
++
++  if (!response.ok) {
++    throw new Error(readablePaymentError(payload));
++  }
++
++  return payload as MercadoPagoCheckout;
++}
