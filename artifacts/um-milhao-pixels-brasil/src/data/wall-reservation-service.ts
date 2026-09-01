@@ -25,6 +25,47 @@ export type WallReservationUnavailable = {
 
 export type WallReservationResult = WallReservationSuccess | WallReservationUnavailable;
 
+export type PublicWallPixel = {
+  x: number;
+  y: number;
+  color: string | null;
+  status: 'reserved' | 'purchased';
+};
+
+export async function loadPublicWallPixels(): Promise<PublicWallPixel[]> {
+  if (!supabasePublishableKey) {
+    throw new Error('A chave pública do Supabase não está configurada.');
+  }
+
+  const pageSize = 1000;
+  const pixels: PublicWallPixel[] = [];
+
+  for (let offset = 0; ; offset += pageSize) {
+    const response = await fetch(
+      `${supabasePublicUrl}/rest/v1/public_wall_pixels?select=x,y,color,status&order=y.asc,x.asc`,
+      {
+        headers: {
+          Accept: 'application/json',
+          apikey: supabasePublishableKey,
+          Range: `${offset}-${offset + pageSize - 1}`,
+        },
+        cache: 'no-store',
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error('Não foi possível atualizar a disponibilidade da parede.');
+    }
+
+    const page = await response.json() as PublicWallPixel[];
+    pixels.push(...page);
+
+    if (page.length < pageSize) break;
+  }
+
+  return pixels;
+}
+
 function readableReservationError(payload: unknown) {
   const message = typeof payload === 'object' && payload && 'message' in payload
     ? String(payload.message)
