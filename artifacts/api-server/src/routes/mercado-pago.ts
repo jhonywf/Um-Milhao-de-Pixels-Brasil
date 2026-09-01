@@ -124,6 +124,32 @@ async function loadOwnActiveReservation(reservationId: string, accessToken: stri
   return reservation;
 }
 
+async function loadOwnReservation(reservationId: string, accessToken: string) {
+  if (!supabasePublishableKey) {
+    throw new Error("SUPABASE_PUBLIC_KEY_MISSING");
+  }
+
+  const query = new URLSearchParams({
+    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
+    id: `eq.${reservationId}`,
+    limit: "1",
+  });
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/wall_reservations?${query.toString()}`, {
+    headers: {
+      Accept: "application/json",
+      apikey: supabasePublishableKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) return null;
+
+  const rows = await response.json() as ReservationRow[];
+  return rows[0] ?? null;
+}
+
 async function serviceRoleGet<T>(path: string): Promise<T> {
   if (!supabaseServiceRoleKey) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY_MISSING");
@@ -163,6 +189,17 @@ async function findExistingPaidOrder(paymentId: string) {
     select: "id,status,reservation_id,provider_reference",
     provider: "eq.mercado_pago",
     provider_reference: `eq.${paymentId}`,
+    limit: "1",
+  });
+
+  const rows = await serviceRoleGet<WallOrderRow[]>(`wall_orders?${query.toString()}`);
+  return rows[0] ?? null;
+}
+
+async function findOrderByReservation(reservationId: string) {
+  const query = new URLSearchParams({
+    select: "id,status,reservation_id,provider_reference",
+    reservation_id: `eq.${reservationId}`,
     limit: "1",
   });
 
@@ -319,6 +356,44 @@ router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
   } catch (error) {
     req.log?.error({ err: error }, "Could not create Mercado Pago preference");
     res.status(500).json({ message: "Não foi possível iniciar o pagamento agora." });
+  }
+});
+
+router.get("/mercado-pago/status", async (req: Request, res: Response) => {
+  const accessToken = getBearerToken(req);
+  const reservationId = readQueryString(req.query.reservation_id);
+
+  if (!accessToken) {
+    res.status(401).json({ message: "Entre na sua conta para confirmar o pagamento." });
+    return;
+  }
+
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reservationId)) {
+    res.status(400).json({ message: "Reserva inválida." });
+    return;
+  }
+
+  try {
+    const reservation = await loadOwnReservation(reservationId, accessToken);
+
+    if (!reservation) {
+      res.status(404).json({ message: "Reserva não encontrada para esta conta." });
+      return;
+    }
+
+    const order = await findOrderByReservation(reservation.id);
+
+    res.status(200).json({
+      reservation_id: reservation.id,
+      reservation_status: reservation.status,
+      pixel_count: reservation.pixel_count,
+      amount_cents: reservation.amount_cents,
+      order_status: order?.status ?? null,
+      paid: order?.status === "paid" && reservation.status === "converted",
+    });
+  } catch (error) {
+    req.log?.error({ err: error, reservationId }, "Could not read Mercado Pago payment status");
+    res.status(500).json({ message: "Não foi possível confirmar o pagamento agora." });
   }
 });
 

@@ -34,7 +34,7 @@ import { AuthProvider, useAuth } from '@/auth/auth-context';
 import { AuthDialogs } from '@/auth/auth-dialogs';
 import { supabasePublicStorageUrl } from '@/auth/auth-service';
 import { loadPublicWallPixels, reserveWallPixels, type PublicWallPixel, type WallReservationSuccess } from '@/data/wall-reservation-service';
-import { createMercadoPagoCheckout } from '@/data/payment-service';
+import { createMercadoPagoCheckout, getMercadoPagoPaymentStatus } from '@/data/payment-service';
 
 const queryClient = new QueryClient();
 
@@ -260,8 +260,200 @@ function Footer() {
   );
 }
 
+function PaymentReturnExperience() {
+  const { session, openAuth } = useAuth();
+  const [mode, setMode] = useState<'hidden' | 'checking' | 'paid' | 'pending' | 'failure' | 'error'>('hidden');
+  const [pixelCount, setPixelCount] = useState(0);
+  const [message, setMessage] = useState('');
+
+  const cleanReturnUrl = () => {
+    window.history.replaceState({}, '', '/parede');
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentReturn = params.get('payment');
+    if (!paymentReturn) return;
+
+    if (paymentReturn === 'failure') {
+      setMode('failure');
+      return;
+    }
+
+    const reservationId =
+      window.localStorage.getItem('pixel-wall-checkout-reservation') ||
+      params.get('external_reference') ||
+      '';
+
+    if (!reservationId) {
+      setMode('error');
+      setMessage('Não encontramos a reserva desta compra. Entre na sua conta e atualize a parede.');
+      return;
+    }
+
+    if (!session) {
+      setMode('pending');
+      setMessage('Entre na mesma conta usada na compra para confirmar seus pixels.');
+      return;
+    }
+
+    let cancelled = false;
+    let attempts = 0;
+    setMode('checking');
+
+    const check = async () => {
+      try {
+        const status = await getMercadoPagoPaymentStatus(reservationId, session.access_token);
+        if (cancelled) return;
+
+        setPixelCount(status.pixel_count);
+
+        if (status.paid) {
+          window.localStorage.removeItem('pixel-wall-checkout-reservation');
+          setMode('paid');
+          return;
+        }
+
+        attempts += 1;
+        if (attempts >= 24) {
+          setMode('pending');
+          setMessage('O pagamento ainda está sendo confirmado. Seus pixels serão atualizados automaticamente após a confirmação segura.');
+          return;
+        }
+
+        window.setTimeout(check, 1500);
+      } catch (caught) {
+        if (cancelled) return;
+
+        attempts += 1;
+        if (attempts >= 6) {
+          setMode('error');
+          setMessage(caught instanceof Error ? caught.message : 'Não foi possível confirmar o pagamento agora.');
+          return;
+        }
+
+        window.setTimeout(check, 1500);
+      }
+    };
+
+    void check();
+    return () => { cancelled = true; };
+  }, [session]);
+
+  if (mode === 'hidden') return null;
+
+  const close = () => {
+    cleanReturnUrl();
+    setMode('hidden');
+  };
+
+  const share = async () => {
+    const text = `Agora eu possuo ${pixelCount} pixels no Um Milhão de Pixels Brasil!`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Um Milhão de Pixels Brasil',
+          text,
+          url: window.location.origin,
+        });
+      } else {
+        await navigator.clipboard.writeText(`${text} ${window.location.origin}`);
+        setMessage('Link copiado para compartilhar!');
+      }
+    } catch {
+      // O usuário pode cancelar o compartilhamento sem alterar a compra.
+    }
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Status do pagamento"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 80,
+        background: 'rgba(20,18,14,.62)',
+        display: 'grid',
+        placeItems: 'center',
+        padding: 18,
+      }}
+    >
+      <div style={{
+        width: 'min(520px, 100%)',
+        background: '#fffdf7',
+        border: '2px solid #111',
+        boxShadow: '8px 8px 0 #111',
+        padding: 24,
+      }}>
+        {mode === 'checking' && (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em' }}>Mercado Pago</div>
+            <h2 style={{ fontSize: 32, lineHeight: 1, margin: '12px 0' }}>Confirmando seu pagamento...</h2>
+            <p style={{ margin: 0, lineHeight: 1.55 }}>Estamos esperando a confirmação segura do servidor. Não feche esta página.</p>
+            <div style={{ height: 8, background: '#e8e2d4', marginTop: 22, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: '58%', background: '#215DB0' }} />
+            </div>
+          </>
+        )}
+
+        {mode === 'paid' && (
+          <>
+            <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#facc15', border: '2px solid #111' }}>
+              <Check size={30} />
+            </div>
+            <h2 style={{ fontSize: 34, lineHeight: 1, margin: '16px 0 10px' }}>VOCÊ AGORA POSSUI UM PEDAÇO DA INTERNET!</h2>
+            <p style={{ lineHeight: 1.55, margin: 0 }}>Pagamento confirmado. <b>{pixelCount} pixels</b> agora fazem parte permanentemente da parede.</p>
+            {message && <p style={{ marginTop: 12, fontWeight: 700 }}>{message}</p>}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 22 }}>
+              <button className="selection-button" type="button" onClick={close}>Ver meus pixels <ArrowRight size={17} /></button>
+              <button className="editor-customize" type="button" onClick={share}><Share2 size={16} /> Compartilhar</button>
+            </div>
+          </>
+        )}
+
+        {mode === 'pending' && (
+          <>
+            <h2 style={{ fontSize: 30, lineHeight: 1, margin: '0 0 12px' }}>Pagamento em confirmação</h2>
+            <p style={{ lineHeight: 1.55 }}>{message || 'Estamos aguardando a confirmação do Mercado Pago.'}</p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
+              {!session && <button className="selection-button" type="button" onClick={openAuth}>Entrar na minha conta</button>}
+              <button className="editor-customize" type="button" onClick={close}>Voltar para a parede</button>
+            </div>
+          </>
+        )}
+
+        {mode === 'failure' && (
+          <>
+            <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#ef4444', border: '2px solid #111', color: '#fff' }}>
+              <X size={28} />
+            </div>
+            <h2 style={{ fontSize: 30, lineHeight: 1, margin: '16px 0 10px' }}>Pagamento não concluído</h2>
+            <p style={{ lineHeight: 1.55 }}>Nenhum pixel foi marcado como comprado. Você pode voltar à parede e tentar novamente enquanto sua reserva estiver disponível.</p>
+            <button className="selection-button" type="button" onClick={close} style={{ marginTop: 18 }}>Voltar para a parede</button>
+          </>
+        )}
+
+        {mode === 'error' && (
+          <>
+            <h2 style={{ fontSize: 30, lineHeight: 1, margin: '0 0 12px' }}>Não conseguimos confirmar agora</h2>
+            <p style={{ lineHeight: 1.55 }}>{message}</p>
+            <button className="selection-button" type="button" onClick={close} style={{ marginTop: 18 }}>Voltar para a parede</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function WallPage() {
-  return <WallCanvas blocks={getPixelBlocks()} />;
+  return (
+    <>
+      <PaymentReturnExperience />
+      <WallCanvas blocks={getPixelBlocks()} />
+    </>
+  );
 }
 
 type SelectedPixel = { x: number; y: number; color: string };
@@ -896,6 +1088,7 @@ function SelectionPanel({
     setOpeningCheckout(true);
     try {
       const checkout = await createMercadoPagoCheckout(lastReservation.reservation_id, session.access_token);
+      window.localStorage.setItem('pixel-wall-checkout-reservation', lastReservation.reservation_id);
       window.location.assign(checkout.checkout_url);
     } catch (caught) {
       setPaymentError(caught instanceof Error ? caught.message : 'Não foi possível iniciar o pagamento agora.');
