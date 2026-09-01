@@ -1084,3 +1084,37 @@ button:focus-visible, a:focus-visible, canvas:focus-visible {
 .editor-toolbar .muted {
   color: rgba(255, 253, 247, 0.82) !important;
 }
+
+
+/* V12 — correção precisa nos elementos reais da parede */
+.pixel-editor-bar {
+  background: #5ac8b0 !important;
+  color: var(--ink) !important;
+  border-color: rgba(36,32,59,.30) !important;
+  box-shadow: 0 12px 35px rgba(36,32,59,.16) !important;
+}
+
+.pixel-editor-tools button,
+.pixel-editor-actions button {
+  color: rgba(36,32,59,.78) !important;
+  border-color: rgba(36,32,59,.18) !important;
+}
+
+.pixel-editor-tools button:hover,
+.pixel-editor-actions button:hover:not(:disabled) {
+  color: var(--ink) !important;
+  border-color: var(--ink) !important;
+}
+
+.pixel-editor-total {
+  border-left-color: rgba(36,32,59,.16) !important;
+  border-right-color: rgba(36,32,59,.16) !important;
+}
+
+.pixel-editor-total span {
+  color: rgba(36,32,59,.56) !important;
+}
+
+.pixel-editor-total strong:last-child {
+  color: var(--ink) !important;
+}

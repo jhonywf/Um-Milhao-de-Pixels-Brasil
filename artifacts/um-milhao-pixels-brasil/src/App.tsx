@@ -334,7 +334,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const originX = rect.width / 2 - 500 * camera.scale + camera.x;
     const originY = rect.height / 2 - 500 * camera.scale + camera.y;
     const wallSize = 1000 * camera.scale;
-    ctx.fillStyle = '#fbfbfa';
+    ctx.fillStyle = '#fffdf7';
     ctx.fillRect(originX, originY, wallSize, wallSize);
     const logicalGridStep = camera.scale >= 4 ? 1 : camera.scale >= 1.5 ? 5 : camera.scale >= 0.55 ? 10 : camera.scale >= 0.3 ? 40 : 50;
     const gridStep = logicalGridStep * camera.scale;
@@ -342,17 +342,17 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     ctx.beginPath();
     ctx.rect(originX, originY, wallSize, wallSize);
     ctx.clip();
-    ctx.strokeStyle = 'rgba(148, 155, 166, 0.34)';
+    ctx.strokeStyle = 'rgba(132, 126, 112, 0.28)';
     ctx.lineWidth = camera.scale >= 4 ? 0.8 : 1;
     for (let x = originX; x <= originX + wallSize; x += gridStep) { ctx.beginPath(); ctx.moveTo(x, originY); ctx.lineTo(x, originY + wallSize); ctx.stroke(); }
     for (let y = originY; y <= originY + wallSize; y += gridStep) { ctx.beginPath(); ctx.moveTo(originX, y); ctx.lineTo(originX + wallSize, y); ctx.stroke(); }
     const majorStep = Math.max(100 * camera.scale, gridStep * 5);
-    ctx.strokeStyle = 'rgba(115, 123, 136, 0.48)';
+    ctx.strokeStyle = 'rgba(110, 103, 88, 0.40)';
     ctx.lineWidth = 1;
     for (let x = originX; x <= originX + wallSize; x += majorStep) { ctx.beginPath(); ctx.moveTo(x, originY); ctx.lineTo(x, originY + wallSize); ctx.stroke(); }
     for (let y = originY; y <= originY + wallSize; y += majorStep) { ctx.beginPath(); ctx.moveTo(originX, y); ctx.lineTo(originX + wallSize, y); ctx.stroke(); }
     ctx.restore();
-    ctx.strokeStyle = 'rgba(148, 155, 166, 0.7)';
+    ctx.strokeStyle = 'rgba(120, 113, 98, 0.55)';
     ctx.lineWidth = 1;
     ctx.strokeRect(originX, originY, wallSize, wallSize);
 
