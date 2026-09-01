@@ -33,6 +33,7 @@ import type { PixelBlock } from '@/data/pixel-blocks';
 import { AuthProvider, useAuth } from '@/auth/auth-context';
 import { AuthDialogs } from '@/auth/auth-dialogs';
 import { supabasePublicStorageUrl } from '@/auth/auth-service';
+import { reserveWallPixels, type WallReservationSuccess } from '@/data/wall-reservation-service';
 
 const queryClient = new QueryClient();
 
@@ -281,6 +282,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [isDragging, setIsDragging] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [activeColor, setActiveColor] = useState('#ef4444');
+  const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
   const cameraRef = useRef(camera);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
@@ -432,6 +434,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   ));
 
   const updatePixel = (x: number, y: number, action: 'add' | 'erase' | 'recolor') => {
+    if (lastReservation) return;
     if (x < 0 || y < 0 || x >= 1000 || y >= 1000) return;
     if (occupiedAt(x + 0.5, y + 0.5)) return;
     const key = `${x}:${y}`;
@@ -676,15 +679,23 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setSelectedBlock(null);
     setCustomizeOpen(false);
     setRecolorMode(false);
+    setLastReservation(null);
   };
 
   const fillAll = (color: string) => {
+    if (lastReservation) return;
     setActiveColor(color);
     setSelectedPixels((current) => {
       const next = new Map<string, SelectedPixel>();
       current.forEach((pixel, key) => next.set(key, { ...pixel, color }));
       return next;
     });
+  };
+
+  const handleReserved = (reservation: WallReservationSuccess) => {
+    setLastReservation(reservation);
+    setCustomizeOpen(false);
+    setRecolorMode(false);
   };
 
 
@@ -718,14 +729,14 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
             <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
               <div className="pixel-editor-tools">
-                <button className={tool === 'select' && !recolorMode ? 'active' : ''} onClick={() => { setTool('select'); setRecolorMode(false); }}><Paintbrush size={17} /> Selecionar</button>
-                <button className={tool === 'erase' ? 'active' : ''} onClick={() => { setTool('erase'); setRecolorMode(false); }}><Eraser size={17} /> Apagar</button>
+                <button className={tool === 'select' && !recolorMode ? 'active' : ''} onClick={() => { setTool('select'); setRecolorMode(false); }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
+                <button className={tool === 'erase' ? 'active' : ''} onClick={() => { setTool('erase'); setRecolorMode(false); }} disabled={!!lastReservation}><Eraser size={17} /> Apagar</button>
                 <button className={tool === 'pan' ? 'active' : ''} onClick={() => { setTool('pan'); setRecolorMode(false); }}><Hand size={17} /> Mover</button>
               </div>
               <div className="pixel-editor-total"><strong>{selectedCount}</strong><span>pixels</span><strong>R${selectedCount.toFixed(2).replace('.', ',')}</strong></div>
               <div className="pixel-editor-actions">
-                <button className="editor-clear" onClick={clearSelection} disabled={!selectedCount}>Limpar</button>
-                <button className="editor-customize" onClick={() => setCustomizeOpen(true)} disabled={!selectedCount}><Paintbrush size={16} /> Personalizar</button>
+                <button className="editor-clear" onClick={clearSelection} disabled={!selectedCount || !!lastReservation}>Limpar</button>
+                <button className="editor-customize" onClick={() => setCustomizeOpen(true)} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
               </div>
             </div>
 
@@ -748,23 +759,71 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
               <div className="recolor-banner"><span><Paintbrush size={14} /> Pintando pixels individualmente</span><button onClick={() => setRecolorMode(false)}>Concluir</button></div>
             )}
           </section>
-          <SelectionPanel selectedCount={selectedCount} selectedBlock={selectedBlock} coordinateText={coordinateText} />
+          <SelectionPanel
+            selectedPixels={selectedList}
+            selectedBlock={selectedBlock}
+            coordinateText={coordinateText}
+            lastReservation={lastReservation}
+            onReserved={handleReserved}
+          />
         </div>
-        <div className="wall-bottom-note"><Grid2X2 size={17} /> Selecione pixels independentes para criar letras, símbolos e desenhos. A compra e a reserva entram na próxima etapa.</div>
+        <div className="wall-bottom-note"><Grid2X2 size={17} /> Selecione pixels independentes para criar letras, símbolos e desenhos. Ao continuar, sua seleção fica reservada por 15 minutos.</div>
       </main>
     </div>
   );
 }
 
-function SelectionPanel({ selectedCount, selectedBlock, coordinateText }: { selectedCount: number; selectedBlock: PixelBlock | null; coordinateText: string }) {
-  const [notice, setNotice] = useState(false);
-  const { user, profile, openAuth, openProfile } = useAuth();
-  const handleInterest = () => {
-    setNotice(false);
-    if (!user) { openAuth(); return; }
-    if (!profile) { openProfile(); return; }
-    setNotice(true);
+function SelectionPanel({
+  selectedPixels,
+  selectedBlock,
+  coordinateText,
+  lastReservation,
+  onReserved,
+}: {
+  selectedPixels: SelectedPixel[];
+  selectedBlock: PixelBlock | null;
+  coordinateText: string;
+  lastReservation: WallReservationSuccess | null;
+  onReserved: (reservation: WallReservationSuccess) => void;
+}) {
+  const [reservationError, setReservationError] = useState<string | null>(null);
+  const [reserving, setReserving] = useState(false);
+  const { user, session, profile, openAuth, openProfile } = useAuth();
+  const selectedCount = selectedPixels.length;
+
+  const handleReserve = async () => {
+    setReservationError(null);
+
+    if (!user || !session) {
+      openAuth();
+      return;
+    }
+
+    if (!profile?.onboarding_completed) {
+      openProfile();
+      return;
+    }
+
+    if (selectedCount < 5) {
+      setReservationError('Selecione pelo menos 5 pixels para continuar.');
+      return;
+    }
+
+    setReserving(true);
+    try {
+      const result = await reserveWallPixels(selectedPixels, session.access_token);
+      if (!result.ok) {
+        setReservationError('Um ou mais pixels acabaram de ser reservados por outra pessoa. Ajuste sua seleção e tente novamente.');
+        return;
+      }
+      onReserved(result);
+    } catch (caught) {
+      setReservationError(caught instanceof Error ? caught.message : 'Não foi possível reservar os pixels agora.');
+    } finally {
+      setReserving(false);
+    }
   };
+
   return (
     <aside className={`selection-panel ${(selectedCount || selectedBlock) ? 'has-selection' : ''}`}>
       {selectedBlock ? (
@@ -779,8 +838,20 @@ function SelectionPanel({ selectedCount, selectedBlock, coordinateText }: { sele
             <div><span>valor atual</span><b>R$ {selectedCount.toFixed(2).replace('.', ',')}</b></div>
             <div><span>primeiro pixel</span><b>{coordinateText}</b></div>
           </div>
-          <button className="selection-button" onClick={handleInterest}>Continuar com esta seleção <ArrowRight size={17} /></button>
-          {notice && <div className="demo-notice" role="status"><Check size={15} /> Seleção pronta. Reserva e pagamento entram na próxima fase.</div>}
+          <button className="selection-button" onClick={handleReserve} disabled={reserving || !!lastReservation}>
+            {reserving ? 'Reservando...' : lastReservation ? 'Seleção reservada' : 'Continuar com esta seleção'}
+            {!reserving && !lastReservation && <ArrowRight size={17} />}
+            {lastReservation && <Check size={17} />}
+          </button>
+          {selectedCount < 5 && !lastReservation && (
+            <div className="demo-notice" role="status">Selecione mais {5 - selectedCount} {5 - selectedCount === 1 ? 'pixel' : 'pixels'} para atingir o mínimo de R$ 5,00.</div>
+          )}
+          {reservationError && <div className="demo-notice" role="alert">{reservationError}</div>}
+          {lastReservation && (
+            <div className="demo-notice" role="status">
+              <Check size={15} /> {lastReservation.pixel_count} pixels reservados até {new Date(lastReservation.expires_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Valor confirmado pelo banco: R$ {(lastReservation.amount_cents / 100).toFixed(2).replace('.', ',')}.
+            </div>
+          )}
         </div>
       ) : (
         <div className="selection-empty compact-empty"><div className="empty-cross"><Crosshair size={24} /></div><div><h2>Monte seu desenho.</h2><p>No celular, toque duas vezes no primeiro pixel. Depois toque onde quiser ou arraste para desenhar.</p></div></div>
