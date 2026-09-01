@@ -11,11 +11,10 @@ import {
   Hand,
   Instagram,
   Minus,
-  MousePointer2,
   Paintbrush,
   Eraser,
   Plus,
-  RotateCcw,
+  Search,
   Share2,
   Sparkles,
   Star,
@@ -286,7 +285,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
   const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
-  const longPressRef = useRef<{ pointerId: number; timer: number; startX: number; startY: number; x: number; y: number } | null>(null);
+  const firstTapRef = useRef<{ at: number; x: number; y: number; clientX: number; clientY: number } | null>(null);
   const [recolorMode, setRecolorMode] = useState(false);
   const gestureRef = useRef({ multiTouch: false });
   const pinchRef = useRef<{
@@ -296,7 +295,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     camera: { x: number; y: number; scale: number };
   } | null>(null);
   const minZoom = 0.24;
-  const maxZoom = 22;
+  const maxZoom = 30;
   const hasFittedInitialViewRef = useRef(false);
 
   useEffect(() => { cameraRef.current = camera; }, [camera]);
@@ -324,20 +323,26 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const originX = rect.width / 2 - 500 * camera.scale + camera.x;
     const originY = rect.height / 2 - 500 * camera.scale + camera.y;
     const wallSize = 1000 * camera.scale;
-    ctx.fillStyle = '#fffbf0';
+    ctx.fillStyle = '#fbfbfa';
     ctx.fillRect(originX, originY, wallSize, wallSize);
-    const gridStep = camera.scale >= 2.5 ? camera.scale : camera.scale > 0.72 ? 10 * camera.scale : camera.scale > 0.38 ? 20 * camera.scale : 50 * camera.scale;
+    const logicalGridStep = camera.scale >= 4 ? 1 : camera.scale >= 1.5 ? 5 : camera.scale >= 0.55 ? 10 : camera.scale >= 0.3 ? 40 : 50;
+    const gridStep = logicalGridStep * camera.scale;
     ctx.save();
     ctx.beginPath();
     ctx.rect(originX, originY, wallSize, wallSize);
     ctx.clip();
-    ctx.strokeStyle = 'rgba(115, 112, 104, 0.22)';
-    ctx.lineWidth = camera.scale >= 2.5 ? 0.75 : 1;
+    ctx.strokeStyle = 'rgba(148, 155, 166, 0.34)';
+    ctx.lineWidth = camera.scale >= 4 ? 0.8 : 1;
     for (let x = originX; x <= originX + wallSize; x += gridStep) { ctx.beginPath(); ctx.moveTo(x, originY); ctx.lineTo(x, originY + wallSize); ctx.stroke(); }
     for (let y = originY; y <= originY + wallSize; y += gridStep) { ctx.beginPath(); ctx.moveTo(originX, y); ctx.lineTo(originX + wallSize, y); ctx.stroke(); }
+    const majorStep = Math.max(100 * camera.scale, gridStep * 5);
+    ctx.strokeStyle = 'rgba(115, 123, 136, 0.48)';
+    ctx.lineWidth = 1;
+    for (let x = originX; x <= originX + wallSize; x += majorStep) { ctx.beginPath(); ctx.moveTo(x, originY); ctx.lineTo(x, originY + wallSize); ctx.stroke(); }
+    for (let y = originY; y <= originY + wallSize; y += majorStep) { ctx.beginPath(); ctx.moveTo(originX, y); ctx.lineTo(originX + wallSize, y); ctx.stroke(); }
     ctx.restore();
-    ctx.strokeStyle = 'rgba(255,207,51,0.75)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(148, 155, 166, 0.7)';
+    ctx.lineWidth = 1;
     ctx.strokeRect(originX, originY, wallSize, wallSize);
 
     blocks.forEach((block) => {
@@ -502,20 +507,14 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setCamera(nextCamera);
   };
 
-  const cancelLongPress = () => {
-    const pending = longPressRef.current;
-    if (!pending) return;
-    window.clearTimeout(pending.timer);
-    longPressRef.current = null;
-  };
-
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size >= 2) {
-      cancelLongPress();
       gestureRef.current.multiTouch = true;
       paintRef.current = null;
+      firstTapRef.current = null;
       startPinch();
       return;
     }
@@ -533,15 +532,19 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     if (world.x < 0 || world.x >= 1000 || world.y < 0 || world.y >= 1000) return;
 
     const action: 'add' | 'erase' | 'recolor' = recolorMode ? 'recolor' : tool === 'erase' ? 'erase' : 'add';
-    const needsFirstLongPress = event.pointerType === 'touch' && action === 'add' && selectedPixels.size === 0;
+    const needsFirstDoubleTap = event.pointerType === 'touch' && action === 'add' && selectedPixels.size === 0;
 
-    if (needsFirstLongPress) {
-      const timer = window.setTimeout(() => {
-        updatePixel(x, y, 'add');
-        paintRef.current = { pointerId: event.pointerId, lastX: x, lastY: y, action: 'add' };
-        longPressRef.current = null;
-      }, 380);
-      longPressRef.current = { pointerId: event.pointerId, timer, startX: event.clientX, startY: event.clientY, x, y };
+    if (needsFirstDoubleTap) {
+      const now = performance.now();
+      const previous = firstTapRef.current;
+      const isSecondTap = !!previous && now - previous.at <= 420 && Math.hypot(event.clientX - previous.clientX, event.clientY - previous.clientY) <= 34;
+      if (!isSecondTap) {
+        firstTapRef.current = { at: now, x, y, clientX: event.clientX, clientY: event.clientY };
+        return;
+      }
+      firstTapRef.current = null;
+      updatePixel(x, y, 'add');
+      paintRef.current = { pointerId: event.pointerId, lastX: x, lastY: y, action: 'add' };
       return;
     }
 
@@ -553,7 +556,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     if (!pointersRef.current.has(event.pointerId)) return;
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size >= 2) {
-      cancelLongPress();
       setIsDragging(true);
       applyPinch();
       return;
@@ -561,12 +563,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const dx = event.clientX - dragRef.current.startX;
     const dy = event.clientY - dragRef.current.startY;
     if (Math.hypot(dx, dy) > 3) dragRef.current.moved = true;
-
-    const pending = longPressRef.current;
-    if (pending?.pointerId === event.pointerId) {
-      if (Math.hypot(event.clientX - pending.startX, event.clientY - pending.startY) > 8) cancelLongPress();
-      return;
-    }
 
     if (tool === 'pan') {
       const nextCamera = { ...cameraRef.current, x: dragRef.current.originX + dx, y: dragRef.current.originY + dy };
@@ -587,7 +583,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   };
 
   const onPointerUp = (event: PointerEvent<HTMLCanvasElement>) => {
-    if (longPressRef.current?.pointerId === event.pointerId) cancelLongPress();
     pointersRef.current.delete(event.pointerId);
     if (pointersRef.current.size >= 2) startPinch();
     else pinchRef.current = null;
@@ -597,18 +592,11 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   };
 
   const onPointerCancel = (event: PointerEvent<HTMLCanvasElement>) => {
-    if (longPressRef.current?.pointerId === event.pointerId) cancelLongPress();
     pointersRef.current.delete(event.pointerId);
     paintRef.current = null;
     pinchRef.current = null;
     if (pointersRef.current.size === 0) gestureRef.current.multiTouch = false;
     setIsDragging(false);
-  };
-
-  const resetView = () => {
-    const nextCamera = { x: 0, y: 0, scale: 1 };
-    cameraRef.current = nextCamera;
-    setCamera(nextCamera);
   };
 
   const clearSelection = () => {
@@ -632,26 +620,18 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     <div className="wall-page">
       <Header />
       <main className="wall-main">
-        <div className="wall-heading">
-          <div>
-            <div className="eyebrow light-eyebrow"><span className="eyebrow-dot" /> parede interativa <span className="demo-chip dark-chip">fase demo</span></div>
-            <h1>A PAREDE <em>ESTÁ ABERTA.</em></h1>
-          </div>
-          <div className="wall-intro"><p>1.000 × 1.000 coordenadas.<br />Selecione pixels livres e monte sua ideia.</p><span><Hand size={16} /> dois dedos: mover e ampliar</span></div>
+        <div className="wall-heading wall-heading-clean">
+          <h1>A PAREDE <em>ESTÁ ABERTA.</em></h1>
         </div>
         <div className="wall-layout">
           <section className="canvas-card pixel-editor-card" data-testid="interactive-wall">
-            <div className="canvas-toolbar">
-              <span className="canvas-status"><i /> ao vivo <b>·</b> demonstração</span>
-              <span className="canvas-coords">{firstSelected ? `primeiro pixel ${coordinateText}` : 'escolha pixels livremente'}</span>
-              <div className="zoom-controls">
-                <button onClick={() => zoomAt(camera.scale - 0.18)} aria-label="Diminuir zoom"><Minus size={16} /></button>
-                <span>{Math.round(camera.scale * 100)}%</span>
-                <button onClick={() => zoomAt(camera.scale + 0.18)} aria-label="Aumentar zoom"><Plus size={16} /></button>
-                <button onClick={resetView} aria-label="Recentrar parede"><RotateCcw size={15} /></button>
-              </div>
-            </div>
             <div className={`canvas-stage ${isDragging ? 'dragging' : ''}`} ref={stageRef}>
+              <div className="floating-zoom" aria-label="Controles de zoom">
+                <Search size={16} aria-hidden="true" />
+                <button onClick={() => zoomAt(cameraRef.current.scale * 1.25)} aria-label="Aumentar zoom"><Plus size={20} /></button>
+                <span className="floating-zoom-divider" />
+                <button onClick={() => zoomAt(cameraRef.current.scale / 1.25)} aria-label="Diminuir zoom"><Minus size={20} /></button>
+              </div>
               <canvas
                 ref={canvasRef}
                 onPointerDown={onPointerDown}
@@ -662,7 +642,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 data-testid="canvas-pixel-wall"
                 aria-label="Parede interativa de um milhão de pixels"
               />
-              <div className="canvas-hint"><MousePointer2 size={14} /> {recolorMode ? <>modo cor: toque ou arraste sobre pixels selecionados</> : selectedCount === 0 ? <>pressione e segure o primeiro pixel <span>·</span> depois toque ou arraste</> : <>toque = 1 pixel <span>·</span> arraste = pincel</>}</div>
             </div>
 
             <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
@@ -696,7 +675,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
             {recolorMode && (
               <div className="recolor-banner"><span><Paintbrush size={14} /> Pintando pixels individualmente</span><button onClick={() => setRecolorMode(false)}>Concluir</button></div>
             )}
-            <div className="canvas-footer"><span><i className="legend-free" /> espaço livre</span><span className="canvas-foot-note">R$1 por pixel · zoom máximo 2.200%</span></div>
           </section>
           <SelectionPanel selectedCount={selectedCount} selectedBlock={selectedBlock} coordinateText={coordinateText} />
         </div>
@@ -733,7 +711,7 @@ function SelectionPanel({ selectedCount, selectedBlock, coordinateText }: { sele
           {notice && <div className="demo-notice" role="status"><Check size={15} /> Seleção pronta. Reserva e pagamento entram na próxima fase.</div>}
         </div>
       ) : (
-        <div className="selection-empty compact-empty"><div className="empty-cross"><Crosshair size={24} /></div><div><h2>Monte seu desenho.</h2><p>No celular, pressione e segure o primeiro pixel. Depois toque onde quiser ou arraste para desenhar.</p></div></div>
+        <div className="selection-empty compact-empty"><div className="empty-cross"><Crosshair size={24} /></div><div><h2>Monte seu desenho.</h2><p>No celular, toque duas vezes no primeiro pixel. Depois toque onde quiser ou arraste para desenhar.</p></div></div>
       )}
       <div className="panel-foot"><span><span className="pulse-dot" /> seleção livre</span><Link href="/"><ArrowLeft size={14} /> voltar ao início</Link></div>
     </aside>

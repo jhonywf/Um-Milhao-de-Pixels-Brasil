@@ -910,3 +910,55 @@ button:focus-visible, a:focus-visible, canvas:focus-visible {
   .wall-bottom-note { margin-top: 10px; }
   .recolor-banner { position: fixed; z-index: 31; left: 10px; right: 10px; bottom: 10px; }
 }
+
+/* V8 — wall-first mobile UI, double-tap activation and compact floating zoom */
+.wall-heading-clean { justify-content: flex-start; margin-bottom: 18px; }
+.wall-heading-clean h1 { margin: 0; }
+.pixel-editor-card,
+.canvas-stage,
+.canvas-stage canvas {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.canvas-stage canvas { touch-action: none; }
+.floating-zoom {
+  position: absolute;
+  z-index: 6;
+  left: 14px;
+  bottom: 14px;
+  width: 48px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 9px 0;
+  border: 1px solid rgba(36,32,59,.2);
+  border-radius: 18px;
+  background: rgba(255,255,255,.94);
+  color: var(--ink);
+  box-shadow: 0 10px 28px rgba(36,32,59,.16);
+  backdrop-filter: blur(8px);
+}
+.floating-zoom > svg { margin: 2px 0 4px; opacity: .72; }
+.floating-zoom button {
+  width: 42px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.floating-zoom button:active { transform: scale(.94); }
+.floating-zoom-divider { width: 22px; height: 1px; background: rgba(36,32,59,.16); }
+
+@media (max-width: 620px) {
+  .wall-main { padding-top: 13px; }
+  .wall-heading-clean { margin-bottom: 10px; }
+  .wall-heading-clean h1 { font-size: clamp(27px, 7.6vw, 35px); line-height: .9; }
+  .canvas-stage { height: 86vw; min-height: 340px; }
+  .floating-zoom { left: 10px; bottom: 10px; width: 44px; border-radius: 16px; padding: 7px 0; }
+  .floating-zoom button { width: 38px; height: 34px; }
+}
