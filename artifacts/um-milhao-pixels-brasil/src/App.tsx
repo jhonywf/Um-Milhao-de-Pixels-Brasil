@@ -285,6 +285,17 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
   const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
+  const pendingTouchRef = useRef<{
+    pointerId: number;
+    startedAt: number;
+    startX: number;
+    startY: number;
+    x: number;
+    y: number;
+    action: 'add' | 'erase' | 'recolor';
+    occupied: PixelBlock | null;
+    moved: boolean;
+  } | null>(null);
   const firstTapRef = useRef<{ at: number; x: number; y: number; clientX: number; clientY: number } | null>(null);
   const [recolorMode, setRecolorMode] = useState(false);
   const gestureRef = useRef({ multiTouch: false });
@@ -318,7 +329,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.scale(dpr, dpr);
-    ctx.fillStyle = '#24203b';
+    ctx.fillStyle = '#fff4c9';
     ctx.fillRect(0, 0, rect.width, rect.height);
     const originX = rect.width / 2 - 500 * camera.scale + camera.x;
     const originY = rect.height / 2 - 500 * camera.scale + camera.y;
@@ -511,40 +522,45 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
     if (pointersRef.current.size >= 2) {
       gestureRef.current.multiTouch = true;
       paintRef.current = null;
+      pendingTouchRef.current = null;
       firstTapRef.current = null;
       startPinch();
       return;
     }
+
     const current = cameraRef.current;
     dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: current.x, originY: current.y, moved: false };
+    if (tool === 'pan') return;
+
     const world = screenToWorld(event.clientX, event.clientY);
     const x = Math.floor(world.x);
     const y = Math.floor(world.y);
-    if (tool === 'pan') return;
-    const occupied = occupiedAt(world.x, world.y);
-    if (occupied) {
-      setSelectedBlock(occupied);
-      return;
-    }
-    if (world.x < 0 || world.x >= 1000 || world.y < 0 || world.y >= 1000) return;
+    const occupied = occupiedAt(world.x, world.y) ?? null;
+    if (!occupied && (world.x < 0 || world.x >= 1000 || world.y < 0 || world.y >= 1000)) return;
 
     const action: 'add' | 'erase' | 'recolor' = recolorMode ? 'recolor' : tool === 'erase' ? 'erase' : 'add';
-    const needsFirstDoubleTap = event.pointerType === 'touch' && action === 'add' && selectedPixels.size === 0;
 
-    if (needsFirstDoubleTap) {
-      const now = performance.now();
-      const previous = firstTapRef.current;
-      const isSecondTap = !!previous && now - previous.at <= 420 && Math.hypot(event.clientX - previous.clientX, event.clientY - previous.clientY) <= 34;
-      if (!isSecondTap) {
-        firstTapRef.current = { at: now, x, y, clientX: event.clientX, clientY: event.clientY };
-        return;
-      }
-      firstTapRef.current = null;
-      updatePixel(x, y, 'add');
-      paintRef.current = { pointerId: event.pointerId, lastX: x, lastY: y, action: 'add' };
+    if (event.pointerType === 'touch') {
+      pendingTouchRef.current = {
+        pointerId: event.pointerId,
+        startedAt: performance.now(),
+        startX: event.clientX,
+        startY: event.clientY,
+        x,
+        y,
+        action,
+        occupied,
+        moved: false,
+      };
+      return;
+    }
+
+    if (occupied) {
+      setSelectedBlock(occupied);
       return;
     }
 
@@ -555,11 +571,16 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
     if (!pointersRef.current.has(event.pointerId)) return;
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
     if (pointersRef.current.size >= 2) {
+      gestureRef.current.multiTouch = true;
+      pendingTouchRef.current = null;
+      paintRef.current = null;
       setIsDragging(true);
       applyPinch();
       return;
     }
+
     const dx = event.clientX - dragRef.current.startX;
     const dy = event.clientY - dragRef.current.startY;
     if (Math.hypot(dx, dy) > 3) dragRef.current.moved = true;
@@ -571,6 +592,23 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       setIsDragging(true);
       return;
     }
+
+    const pending = pendingTouchRef.current;
+    if (pending && pending.pointerId === event.pointerId) {
+      const movedDistance = Math.hypot(event.clientX - pending.startX, event.clientY - pending.startY);
+      if (movedDistance > 4) pending.moved = true;
+
+      if (pending.action === 'add' && selectedPixels.size === 0) return;
+
+      if (pending.moved && performance.now() - pending.startedAt >= 90 && !pending.occupied) {
+        updatePixel(pending.x, pending.y, pending.action);
+        paintRef.current = { pointerId: event.pointerId, lastX: pending.x, lastY: pending.y, action: pending.action };
+        pendingTouchRef.current = null;
+      } else {
+        return;
+      }
+    }
+
     const paint = paintRef.current;
     if (!paint || paint.pointerId !== event.pointerId) return;
     const world = screenToWorld(event.clientX, event.clientY);
@@ -583,7 +621,40 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   };
 
   const onPointerUp = (event: PointerEvent<HTMLCanvasElement>) => {
+    const wasMultiTouch = gestureRef.current.multiTouch;
+    const pending = pendingTouchRef.current?.pointerId === event.pointerId ? pendingTouchRef.current : null;
+
     pointersRef.current.delete(event.pointerId);
+
+    if (pending && !wasMultiTouch) {
+      pendingTouchRef.current = null;
+
+      if (pending.occupied) {
+        setSelectedBlock(pending.occupied);
+      } else if (pending.action === 'add' && selectedPixels.size === 0) {
+        const now = performance.now();
+        const previous = firstTapRef.current;
+        const isSecondTap = !!previous
+          && now - previous.at <= 420
+          && Math.hypot(pending.startX - previous.clientX, pending.startY - previous.clientY) <= 34;
+
+        if (isSecondTap) {
+          firstTapRef.current = null;
+          updatePixel(pending.x, pending.y, 'add');
+        } else {
+          firstTapRef.current = {
+            at: now,
+            x: pending.x,
+            y: pending.y,
+            clientX: pending.startX,
+            clientY: pending.startY,
+          };
+        }
+      } else if (!pending.moved) {
+        updatePixel(pending.x, pending.y, pending.action);
+      }
+    }
+
     if (pointersRef.current.size >= 2) startPinch();
     else pinchRef.current = null;
     if (paintRef.current?.pointerId === event.pointerId) paintRef.current = null;
@@ -593,6 +664,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
   const onPointerCancel = (event: PointerEvent<HTMLCanvasElement>) => {
     pointersRef.current.delete(event.pointerId);
+    if (pendingTouchRef.current?.pointerId === event.pointerId) pendingTouchRef.current = null;
     paintRef.current = null;
     pinchRef.current = null;
     if (pointersRef.current.size === 0) gestureRef.current.multiTouch = false;
@@ -620,9 +692,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     <div className="wall-page">
       <Header />
       <main className="wall-main">
-        <div className="wall-heading wall-heading-clean">
-          <h1>A PAREDE <em>ESTÁ ABERTA.</em></h1>
-        </div>
         <div className="wall-layout">
           <section className="canvas-card pixel-editor-card" data-testid="interactive-wall">
             <div className={`canvas-stage ${isDragging ? 'dragging' : ''}`} ref={stageRef}>
@@ -632,6 +701,9 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 <span className="floating-zoom-divider" />
                 <button onClick={() => zoomAt(cameraRef.current.scale / 1.25)} aria-label="Diminuir zoom"><Minus size={20} /></button>
               </div>
+              {selectedCount === 0 && (
+                <div className="first-pixel-hint">Toque 2× no primeiro pixel para começar</div>
+              )}
               <canvas
                 ref={canvasRef}
                 onPointerDown={onPointerDown}
