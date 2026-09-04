@@ -303,12 +303,43 @@ function RealWallMiniMap() {
 
     const interval = window.setInterval(
       () => void load(),
-      10000,
+      60000,
+    );
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void load();
+      }
+    };
+
+    const refreshOnPageShow = () => {
+      void load();
+    };
+
+    document.addEventListener(
+      'visibilitychange',
+      refreshWhenVisible,
+    );
+
+    window.addEventListener(
+      'pageshow',
+      refreshOnPageShow,
     );
 
     return () => {
       cancelled = true;
+
       window.clearInterval(interval);
+
+      document.removeEventListener(
+        'visibilitychange',
+        refreshWhenVisible,
+      );
+
+      window.removeEventListener(
+        'pageshow',
+        refreshOnPageShow,
+      );
     };
   }, []);
 
@@ -1694,6 +1725,10 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   );
   const publicPixelBucketSize = 50;
   const [wallSyncError, setWallSyncError] = useState<string | null>(null);
+
+  const wallSyncInFlightRef = useRef(false);
+  const wallLastSyncAtRef = useRef(0);
+
   const cameraRef = useRef(camera);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
@@ -1724,6 +1759,12 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   useEffect(() => { cameraRef.current = camera; }, [camera]);
 
   const refreshPublicPixels = useCallback(async () => {
+    if (wallSyncInFlightRef.current) {
+      return;
+    }
+
+    wallSyncInFlightRef.current = true;
+
     try {
       const pixels = await loadPublicWallPixels();
       const next = new Map<string, PublicWallPixel>();
@@ -1775,14 +1816,81 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
         });
       }
     } catch (caught) {
-      setWallSyncError(caught instanceof Error ? caught.message : 'Não foi possível atualizar a parede.');
+      setWallSyncError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível atualizar a parede.',
+      );
+    } finally {
+      wallLastSyncAtRef.current = Date.now();
+      wallSyncInFlightRef.current = false;
     }
   }, [lastReservation]);
 
   useEffect(() => {
     void refreshPublicPixels();
-    const interval = window.setInterval(() => { void refreshPublicPixels(); }, 10000);
-    return () => window.clearInterval(interval);
+
+    const interval = window.setInterval(
+      () => {
+        void refreshPublicPixels();
+      },
+      60000,
+    );
+
+    const refreshIfStale = () => {
+      const staleFor =
+        Date.now() -
+        wallLastSyncAtRef.current;
+
+      if (
+        document.visibilityState === 'visible' &&
+        staleFor >= 10000
+      ) {
+        void refreshPublicPixels();
+      }
+    };
+
+    const handlePageShow = () => {
+      refreshIfStale();
+    };
+
+    const handleFocus = () => {
+      refreshIfStale();
+    };
+
+    document.addEventListener(
+      'visibilitychange',
+      refreshIfStale,
+    );
+
+    window.addEventListener(
+      'pageshow',
+      handlePageShow,
+    );
+
+    window.addEventListener(
+      'focus',
+      handleFocus,
+    );
+
+    return () => {
+      window.clearInterval(interval);
+
+      document.removeEventListener(
+        'visibilitychange',
+        refreshIfStale,
+      );
+
+      window.removeEventListener(
+        'pageshow',
+        handlePageShow,
+      );
+
+      window.removeEventListener(
+        'focus',
+        handleFocus,
+      );
+    };
   }, [refreshPublicPixels]);
 
   const selectedList = Array.from(selectedPixels.values());
