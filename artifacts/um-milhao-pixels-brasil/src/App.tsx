@@ -1289,7 +1289,7 @@ function PaymentReturnExperience() {
         position: 'fixed',
         inset: 0,
         zIndex: 80,
-        background: 'rgba(20,18,14,.62)',
+        background: 'rgba(0,0,0,.82)',
         display: 'grid',
         placeItems: 'center',
         padding: 18,
@@ -1297,9 +1297,10 @@ function PaymentReturnExperience() {
     >
       <div style={{
         width: 'min(520px, 100%)',
-        background: '#fffdf7',
-        border: '2px solid #111',
-        boxShadow: '8px 8px 0 #111',
+        background: '#111111',
+        color: '#f5f4ef',
+        border: '2px solid #3a3a3a',
+        boxShadow: '8px 8px 0 #000000',
         padding: 24,
       }}>
         {mode === 'checking' && (
@@ -1307,15 +1308,15 @@ function PaymentReturnExperience() {
             <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em' }}>Mercado Pago</div>
             <h2 style={{ fontSize: 32, lineHeight: 1, margin: '12px 0' }}>Confirmando seu pagamento...</h2>
             <p style={{ margin: 0, lineHeight: 1.55 }}>Estamos esperando a confirmação segura do servidor. Não feche esta página.</p>
-            <div style={{ height: 8, background: '#e8e2d4', marginTop: 22, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: '58%', background: '#215DB0' }} />
+            <div style={{ height: 8, background: '#2b2b2b', marginTop: 22, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: '58%', background: '#ff681d' }} />
             </div>
           </>
         )}
 
         {mode === 'paid' && (
           <>
-            <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#facc15', border: '2px solid #111' }}>
+            <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#ff681d', border: '2px solid #3a3a3a' }}>
               <Check size={30} />
             </div>
 
@@ -1326,7 +1327,7 @@ function PaymentReturnExperience() {
                 fontWeight: 800,
                 textTransform: 'uppercase',
                 letterSpacing: '.08em',
-                color: '#ef6b50',
+                color: '#ff681d',
               }}
             >
               compra confirmada
@@ -1351,7 +1352,8 @@ function PaymentReturnExperience() {
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
-                border: '1px solid #343434',
+                border: '1px solid #3a3a3a',
+                background: '#171717',
                 marginTop: 22,
               }}
             >
@@ -1375,7 +1377,7 @@ function PaymentReturnExperience() {
               <div
                 style={{
                   padding: 16,
-                  borderLeft: '1px solid #343434',
+                  borderLeft: '1px solid #3a3a3a',
                 }}
               >
                 <span
@@ -1454,7 +1456,7 @@ function PaymentReturnExperience() {
 
         {mode === 'failure' && (
           <>
-            <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#ef4444', border: '2px solid #111', color: '#fff' }}>
+            <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#ff681d', border: '2px solid #f5f4ef', color: '#111111' }}>
               <X size={28} />
             </div>
             <h2 style={{ fontSize: 30, lineHeight: 1, margin: '16px 0 10px' }}>Pagamento não concluído</h2>
@@ -3308,7 +3310,7 @@ function MyPixelsPage() {
                 }}
               >
                 MEUS<br />
-                <span style={{ color: '#ef6b50' }}>PIXELS.</span>
+                <span style={{ color: '#ff681d' }}>PIXELS.</span>
               </h1>
 
               <p
@@ -3519,7 +3521,7 @@ function MyPixelsPage() {
                           <strong
                             style={{
                               fontSize: 20,
-                              color: '#ef6b50',
+                              color: '#ff681d',
                             }}
                           >
                             {money(purchase.amount_cents)}
