@@ -1149,3 +1149,91 @@ button:focus-visible, a:focus-visible, canvas:focus-visible {
   color: #111111 !important;
   stroke: #111111 !important;
 }
+
+/* =========================================================
+   Ajuste do Hero para tablets / iPad em horizontal
+   Evita que a miniatura da parede invada o texto
+   ========================================================= */
+
+@media (min-width: 900px) and (max-width: 1366px) {
+  .hero {
+    grid-template-columns: minmax(0, 0.95fr) minmax(380px, 0.72fr);
+    column-gap: clamp(28px, 4vw, 64px);
+  }
+
+  .hero-copy {
+    min-width: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-visual {
+    min-width: 0;
+    width: 100%;
+    max-width: 560px;
+    justify-self: end;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-visual .pixel-mosaic {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* iPad Pro / tablets largos em landscape */
+@media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+  .hero-copy h1 {
+    font-size: clamp(72px, 8.1vw, 118px);
+  }
+
+  .hero-visual {
+    max-width: 520px;
+  }
+}
+
+
+/* =========================================================
+   Ajuste do Hero para tablets / iPad em horizontal
+   Evita que a miniatura da parede invada o texto
+   ========================================================= */
+
+@media (min-width: 900px) and (max-width: 1366px) {
+  .hero {
+    grid-template-columns: minmax(0, 0.95fr) minmax(380px, 0.72fr);
+    column-gap: clamp(28px, 4vw, 64px);
+  }
+
+  .hero-copy {
+    min-width: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-visual {
+    min-width: 0;
+    width: 100%;
+    max-width: 560px;
+    justify-self: end;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-visual .pixel-mosaic {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* iPad Pro / tablets largos em landscape */
+@media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+  .hero-copy h1 {
+    font-size: clamp(72px, 8.1vw, 118px);
+  }
+
+  .hero-visual {
+    max-width: 520px;
+  }
+}
+
