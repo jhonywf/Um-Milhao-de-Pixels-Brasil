@@ -3593,3 +3593,556 @@ button {
   }
 }
 
+
+
+/* =========================================================
+   MEUS PIXELS — PALETA ATUAL
+   Remove definitivamente os fundos bege/creme antigos
+   ========================================================= */
+
+.my-pixels-page,
+.my-pixels-page main,
+.my-pixels-content {
+  background-color: #050505;
+}
+
+/* Cards e superfícies claras */
+.my-pixels-page .my-pixels-stats,
+.my-pixels-page .my-pixels-stat,
+.my-pixels-page .my-pixels-card,
+.my-pixels-page .purchase-card,
+.my-pixels-page .my-purchase-card {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: #211d42 !important;
+}
+
+/* Textos dentro dos cards claros */
+.my-pixels-page .my-pixels-stat *,
+.my-pixels-page .my-pixels-card *,
+.my-pixels-page .purchase-card *,
+.my-pixels-page .my-purchase-card * {
+  color: #211d42;
+}
+
+/* Preços/destaques continuam usando coral */
+.my-pixels-page .purchase-price,
+.my-pixels-page .price,
+.my-pixels-page [class*="price"] {
+  color: #ef6b50 !important;
+}
+
+/* Dropdown da conta */
+.header-account-menu,
+.account-menu,
+.account-dropdown,
+[class*="account-menu"],
+[class*="account-dropdown"] {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: #211d42 !important;
+}
+
+/* Links e botões do dropdown */
+.header-account-menu a,
+.header-account-menu button,
+.account-menu a,
+.account-menu button,
+.account-dropdown a,
+.account-dropdown button {
+  color: #211d42 !important;
+}
+
+/* Sair permanece coral */
+.header-account-menu .logout,
+.header-account-menu [data-action="logout"],
+.account-menu .logout,
+.account-dropdown .logout {
+  color: #ef6b50 !important;
+}
+
+/* Evita que hover/focus tragam o bege de volta */
+.header-account-menu a:hover,
+.header-account-menu button:hover,
+.account-menu a:hover,
+.account-menu button:hover,
+.account-dropdown a:hover,
+.account-dropdown button:hover {
+  background-color: #5dd3c6 !important;
+  color: #211d42 !important;
+}
+
+/* Superfícies claras da página não devem usar warm-white */
+.my-pixels-page [class*="card"],
+.my-pixels-page [class*="stat"] {
+  background-image: none;
+}
+
+/* =========================================================
+   FIM — MEUS PIXELS
+   ========================================================= */
+
+
+/* =========================================================
+   DROPDOWN DA CONTA — PALETA NOVA
+   ========================================================= */
+
+.header-account-menu,
+.account-menu,
+.account-dropdown,
+[class*="account-menu"],
+[class*="account-dropdown"] {
+  background: #111111 !important;
+  background-color: #111111 !important;
+  background-image: none !important;
+  border-color: #343434 !important;
+}
+
+.header-account-menu a,
+.header-account-menu button,
+.account-menu a,
+.account-menu button,
+.account-dropdown a,
+.account-dropdown button {
+  color: #f5f4ef !important;
+}
+
+.header-account-menu a:hover,
+.header-account-menu button:hover,
+.account-menu a:hover,
+.account-menu button:hover,
+.account-dropdown a:hover,
+.account-dropdown button:hover {
+  background: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+.header-account-menu .logout,
+.header-account-menu [data-action="logout"],
+.account-menu .logout,
+.account-dropdown .logout {
+  color: #ff681d !important;
+}
+
+/* =========================================================
+   AUTH / PERFIL — PALETA NOVA
+   ========================================================= */
+
+.auth-modal,
+.auth-dialog,
+.profile-modal,
+.profile-dialog,
+[class*="auth-modal"],
+[class*="auth-dialog"],
+[class*="profile-modal"],
+[class*="profile-dialog"] {
+  background: #111111 !important;
+  background-color: #111111 !important;
+  background-image: none !important;
+  color: #f5f4ef !important;
+  border-color: #343434 !important;
+}
+
+/* Cabeçalhos e textos */
+.auth-modal h1,
+.auth-modal h2,
+.auth-modal h3,
+.auth-dialog h1,
+.auth-dialog h2,
+.auth-dialog h3,
+.profile-modal h1,
+.profile-modal h2,
+.profile-modal h3,
+.profile-dialog h1,
+.profile-dialog h2,
+.profile-dialog h3 {
+  color: #f5f4ef !important;
+}
+
+.auth-modal p,
+.auth-dialog p,
+.profile-modal p,
+.profile-dialog p,
+.auth-modal label,
+.auth-dialog label,
+.profile-modal label,
+.profile-dialog label {
+  color: #9b9b9b !important;
+}
+
+/* Inputs */
+.auth-modal input,
+.auth-dialog input,
+.profile-modal input,
+.profile-dialog input,
+.auth-modal select,
+.auth-dialog select,
+.profile-modal select,
+.profile-dialog select,
+.auth-modal textarea,
+.auth-dialog textarea,
+.profile-modal textarea,
+.profile-dialog textarea {
+  background: #0d0d0d !important;
+  background-color: #0d0d0d !important;
+  color: #f5f4ef !important;
+  border-color: #343434 !important;
+}
+
+.auth-modal input::placeholder,
+.auth-dialog input::placeholder,
+.profile-modal input::placeholder,
+.profile-dialog input::placeholder,
+.auth-modal textarea::placeholder,
+.auth-dialog textarea::placeholder,
+.profile-modal textarea::placeholder,
+.profile-dialog textarea::placeholder {
+  color: #6f6f6f !important;
+}
+
+/* Botões primários */
+.auth-modal button[type="submit"],
+.auth-dialog button[type="submit"],
+.profile-modal button[type="submit"],
+.profile-dialog button[type="submit"],
+.auth-modal .button-primary,
+.auth-dialog .button-primary,
+.profile-modal .button-primary,
+.profile-dialog .button-primary {
+  background: #ff681d !important;
+  background-color: #ff681d !important;
+  color: #0a0a0a !important;
+  border-color: #ff681d !important;
+}
+
+/* Botões Google / secundários */
+.auth-modal .google-button,
+.auth-dialog .google-button,
+.profile-modal .google-button,
+.profile-dialog .google-button,
+.auth-modal .button-secondary,
+.auth-dialog .button-secondary,
+.profile-modal .button-secondary,
+.profile-dialog .button-secondary {
+  background: #171717 !important;
+  color: #f5f4ef !important;
+  border-color: #343434 !important;
+}
+
+/* Links */
+.auth-modal a,
+.auth-dialog a,
+.profile-modal a,
+.profile-dialog a {
+  color: #f5f4ef !important;
+}
+
+.auth-modal a:hover,
+.auth-dialog a:hover,
+.profile-modal a:hover,
+.profile-dialog a:hover {
+  color: #ff681d !important;
+}
+
+/* Separadores */
+.auth-modal hr,
+.auth-dialog hr,
+.profile-modal hr,
+.profile-dialog hr {
+  border-color: #343434 !important;
+}
+
+/* Áreas antigas claras/bege dentro dos modais */
+.auth-modal [style*="background"],
+.auth-dialog [style*="background"],
+.profile-modal [style*="background"],
+.profile-dialog [style*="background"] {
+  background-color: transparent;
+}
+
+/* Fecha qualquer superfície interna com bege herdado */
+.auth-modal .card,
+.auth-dialog .card,
+.profile-modal .card,
+.profile-dialog .card,
+.auth-modal .panel,
+.auth-dialog .panel,
+.profile-modal .panel,
+.profile-dialog .panel {
+  background: #111111 !important;
+  color: #f5f4ef !important;
+  border-color: #343434 !important;
+}
+
+
+/* =========================================================
+   AUTH + PERFIL — VISUAL 2.0 DEFINITIVO
+   Preto / Branco / Cinza / Laranja
+   ========================================================= */
+
+/* Fundo escurecido atrás do modal */
+.account-dialog-backdrop {
+  background: rgba(0, 0, 0, .78) !important;
+  backdrop-filter: blur(3px);
+}
+
+/* Caixa principal */
+.account-dialog {
+  background: #111111 !important;
+  background-color: #111111 !important;
+  background-image: none !important;
+  color: #f5f4ef !important;
+
+  border: 1px solid #343434 !important;
+  box-shadow: 10px 10px 0 rgba(255, 104, 29, .20) !important;
+}
+
+/* Título principal */
+.account-dialog h1,
+.account-dialog h2,
+.account-dialog h3,
+.account-dialog strong {
+  color: #f5f4ef !important;
+}
+
+/* Kicker superior */
+.account-dialog-kicker {
+  color: #ff681d !important;
+}
+
+.account-dialog-kicker .eyebrow-dot {
+  background: #ff681d !important;
+}
+
+/* Texto explicativo */
+.account-dialog-intro {
+  color: #9b9b9b !important;
+}
+
+/* X fechar */
+.account-dialog-close {
+  background: transparent !important;
+  color: #f5f4ef !important;
+  border-color: #343434 !important;
+}
+
+.account-dialog-close:hover {
+  background: #1a1a1a !important;
+  color: #ff681d !important;
+  border-color: #ff681d !important;
+}
+
+/* Labels */
+.account-dialog label {
+  color: #c7c7c7 !important;
+}
+
+/* Campos */
+.account-dialog input,
+.account-dialog select,
+.account-dialog textarea {
+  background: #0d0d0d !important;
+  background-color: #0d0d0d !important;
+  color: #f5f4ef !important;
+
+  border: 1px solid #3a3a3a !important;
+  outline: none !important;
+}
+
+.account-dialog input:focus,
+.account-dialog select:focus,
+.account-dialog textarea:focus {
+  border-color: #ff681d !important;
+  box-shadow: 0 0 0 1px #ff681d !important;
+}
+
+/* Placeholder */
+.account-dialog input::placeholder,
+.account-dialog textarea::placeholder {
+  color: #707070 !important;
+}
+
+/* Wrapper de input */
+.account-input-wrap {
+  background: #0d0d0d !important;
+  background-color: #0d0d0d !important;
+  border-color: #3a3a3a !important;
+  color: #f5f4ef !important;
+}
+
+.account-input-wrap svg {
+  color: #8f8f8f !important;
+  stroke: #8f8f8f !important;
+}
+
+/* Botão do olho da senha */
+.account-input-wrap button {
+  background: transparent !important;
+  color: #9b9b9b !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.account-input-wrap button:hover {
+  color: #ff681d !important;
+}
+
+/* Botão principal */
+.account-submit {
+  background: #ff681d !important;
+  background-color: #ff681d !important;
+  color: #090909 !important;
+
+  border: 1px solid #ff681d !important;
+  box-shadow: 5px 5px 0 #3d210f !important;
+}
+
+.account-submit:hover {
+  background: #ff8a50 !important;
+  background-color: #ff8a50 !important;
+  color: #090909 !important;
+}
+
+/* Google / segundo botão */
+.google-button {
+  background: #171717 !important;
+  background-color: #171717 !important;
+  color: #f5f4ef !important;
+
+  border: 1px solid #4a4a4a !important;
+  box-shadow: none !important;
+}
+
+.google-button:hover {
+  background: #222222 !important;
+  border-color: #ff681d !important;
+  color: #ffffff !important;
+}
+
+/* Bolinha G do Google */
+.google-mark {
+  background: #f5f4ef !important;
+  color: #111111 !important;
+}
+
+/* Separador "ou entre..." */
+.account-divider {
+  color: #777777 !important;
+}
+
+.account-divider::before,
+.account-divider::after {
+  background: #343434 !important;
+}
+
+.account-divider span {
+  background: #111111 !important;
+  color: #777777 !important;
+}
+
+/* Esqueci senha */
+.account-link-button {
+  background: transparent !important;
+  color: #b5b5b5 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.account-link-button:hover {
+  color: #ff681d !important;
+}
+
+/* Trocar login/cadastro */
+.account-switch {
+  color: #8f8f8f !important;
+}
+
+.account-switch button {
+  background: transparent !important;
+  color: #f5f4ef !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.account-switch button:hover {
+  color: #ff681d !important;
+}
+
+/* Texto legal */
+.account-legal {
+  color: #6f6f6f !important;
+}
+
+/* Mensagens */
+.account-error {
+  color: #ff8a50 !important;
+}
+
+.account-success {
+  background: #171717 !important;
+  color: #f5f4ef !important;
+  border-color: #343434 !important;
+}
+
+/* Upload de foto / áreas internas do perfil */
+.account-dialog input[type="file"] {
+  background: #171717 !important;
+  color: #bdbdbd !important;
+}
+
+/* Checkboxes */
+.account-dialog input[type="checkbox"] {
+  accent-color: #ff681d !important;
+}
+
+/* Remove qualquer amarelo/bege herdado de botões
+   dentro dos formulários de autenticação */
+.account-dialog .account-form button:not(.account-link-button):not(.account-submit):not(.google-button) {
+  background-color: #171717 !important;
+  color: #f5f4ef !important;
+  border-color: #343434 !important;
+}
+
+/* =========================================================
+   DROPDOWN DA CONTA — COR FINAL
+   ========================================================= */
+
+.header-account-menu,
+.account-menu,
+.account-dropdown {
+  background: #111111 !important;
+  color: #f5f4ef !important;
+  border-color: #343434 !important;
+}
+
+.header-account-menu a,
+.header-account-menu button,
+.account-menu a,
+.account-menu button,
+.account-dropdown a,
+.account-dropdown button {
+  color: #f5f4ef !important;
+}
+
+.header-account-menu a:hover,
+.header-account-menu button:hover,
+.account-menu a:hover,
+.account-menu button:hover,
+.account-dropdown a:hover,
+.account-dropdown button:hover {
+  background: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+.header-account-menu .logout,
+.account-menu .logout,
+.account-dropdown .logout {
+  color: #ff681d !important;
+}
+
+/* =========================================================
+   FIM AUTH VISUAL 2.0
+   ========================================================= */
+
