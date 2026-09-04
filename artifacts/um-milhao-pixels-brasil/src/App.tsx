@@ -527,6 +527,23 @@ function clearPendingPixelSelection() {
   window.localStorage.removeItem(pendingPixelSelectionKey);
 }
 
+const pendingCheckoutIntentKey = 'um-milhao-pixels.pending-checkout';
+
+function markPendingCheckoutIntent() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(pendingCheckoutIntentKey, '1');
+}
+
+function hasPendingCheckoutIntent() {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(pendingCheckoutIntentKey) === '1';
+}
+
+function clearPendingCheckoutIntent() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(pendingCheckoutIntentKey);
+}
+
 type PixelTool = 'select' | 'erase' | 'pan';
 
 const PIXEL_PALETTE = [
@@ -1114,59 +1131,142 @@ function SelectionPanel({
   const [reserving, setReserving] = useState(false);
   const [openingCheckout, setOpeningCheckout] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const { user, session, profile, openAuth, openProfile } = useAuth();
+  const { user, session, openAuth } = useAuth();
   const selectedCount = selectedPixels.length;
+  const autoCheckoutStartedRef = useRef(false);
 
-  const handleReserve = async () => {
+  const openMercadoPagoCheckout = async (
+    reservation: WallReservationSuccess,
+    accessToken: string,
+  ) => {
+    setPaymentError(null);
+    setOpeningCheckout(true);
+
+    try {
+      const checkout = await createMercadoPagoCheckout(
+        reservation.reservation_id,
+        accessToken,
+      );
+
+      window.localStorage.setItem(
+        'pixel-wall-checkout-reservation',
+        reservation.reservation_id,
+      );
+
+      clearPendingCheckoutIntent();
+      clearPendingPixelSelection();
+
+      window.location.assign(checkout.checkout_url);
+    } catch (caught) {
+      clearPendingCheckoutIntent();
+      setPaymentError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível iniciar o pagamento agora.',
+      );
+      setOpeningCheckout(false);
+    }
+  };
+
+  const reserveAndOpenCheckout = async () => {
     setReservationError(null);
+    setPaymentError(null);
 
-    if (!user || !session) {
-      savePendingPixelSelection(selectedPixels);
-      openAuth();
-      return;
-    }
-
-    if (!profile?.onboarding_completed) {
-      openProfile();
-      return;
-    }
+    if (!session) return;
 
     if (selectedCount < 5) {
+      clearPendingCheckoutIntent();
+      autoCheckoutStartedRef.current = false;
       setReservationError('Selecione pelo menos 5 pixels para continuar.');
       return;
     }
 
     setReserving(true);
+
     try {
-      const result = await reserveWallPixels(selectedPixels, session.access_token);
+      const result = await reserveWallPixels(
+        selectedPixels,
+        session.access_token,
+      );
+
       if (!result.ok) {
-        setReservationError('Um ou mais pixels acabaram de ser reservados por outra pessoa. A parede foi atualizada; ajuste sua seleção e tente novamente.');
+        clearPendingCheckoutIntent();
+        autoCheckoutStartedRef.current = false;
+
+        setReservationError(
+          'Um ou mais pixels foram reservados por outra pessoa enquanto você fazia login. A parede foi atualizada; ajuste sua seleção e tente novamente.',
+        );
+
         await onAvailabilityConflict();
         return;
       }
+
       onReserved(result);
+      setReserving(false);
+
+      await openMercadoPagoCheckout(
+        result,
+        session.access_token,
+      );
     } catch (caught) {
-      setReservationError(caught instanceof Error ? caught.message : 'Não foi possível reservar os pixels agora.');
-    } finally {
+      clearPendingCheckoutIntent();
+      autoCheckoutStartedRef.current = false;
+
+      setReservationError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível reservar os pixels agora.',
+      );
+
       setReserving(false);
     }
   };
 
-  const handlePayment = async () => {
-    setPaymentError(null);
+  const handleReserve = async () => {
+    setReservationError(null);
 
-    if (!session || !lastReservation) return;
+    if (!user || !session) {
+      if (selectedCount < 5) {
+        setReservationError('Selecione pelo menos 5 pixels para continuar.');
+        return;
+      }
 
-    setOpeningCheckout(true);
-    try {
-      const checkout = await createMercadoPagoCheckout(lastReservation.reservation_id, session.access_token);
-      window.localStorage.setItem('pixel-wall-checkout-reservation', lastReservation.reservation_id);
-      window.location.assign(checkout.checkout_url);
-    } catch (caught) {
-      setPaymentError(caught instanceof Error ? caught.message : 'Não foi possível iniciar o pagamento agora.');
-      setOpeningCheckout(false);
+      savePendingPixelSelection(selectedPixels);
+      markPendingCheckoutIntent();
+      openAuth();
+      return;
     }
+
+    if (reserving || openingCheckout || lastReservation) return;
+
+    autoCheckoutStartedRef.current = true;
+    await reserveAndOpenCheckout();
   };
+
+  const handlePayment = async () => {
+    if (!session || !lastReservation || openingCheckout) return;
+
+    await openMercadoPagoCheckout(
+      lastReservation,
+      session.access_token,
+    );
+  };
+
+  useEffect(() => {
+    if (
+      !user ||
+      !session ||
+      lastReservation ||
+      selectedCount < 5 ||
+      !hasPendingCheckoutIntent() ||
+      autoCheckoutStartedRef.current
+    ) {
+      return;
+    }
+
+    autoCheckoutStartedRef.current = true;
+    void reserveAndOpenCheckout();
+  }, [user, session, lastReservation, selectedCount]);
 
   return (
     <aside className={`selection-panel ${(selectedCount || selectedBlock) ? 'has-selection' : ''}`}>
