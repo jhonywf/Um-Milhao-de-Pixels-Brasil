@@ -1689,6 +1689,10 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [activeColor, setActiveColor] = useState('#ef4444');
   const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
   const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
+  const publicPixelBucketsRef = useRef(
+    new Map<string, PublicWallPixel[]>(),
+  );
+  const publicPixelBucketSize = 50;
   const [wallSyncError, setWallSyncError] = useState<string | null>(null);
   const cameraRef = useRef(camera);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
@@ -1723,7 +1727,37 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     try {
       const pixels = await loadPublicWallPixels();
       const next = new Map<string, PublicWallPixel>();
-      pixels.forEach((pixel) => next.set(`${pixel.x}:${pixel.y}`, pixel));
+      const nextBuckets =
+        new Map<string, PublicWallPixel[]>();
+
+      pixels.forEach((pixel) => {
+        next.set(`${pixel.x}:${pixel.y}`, pixel);
+
+        const bucketX = Math.floor(
+          pixel.x / publicPixelBucketSize,
+        );
+
+        const bucketY = Math.floor(
+          pixel.y / publicPixelBucketSize,
+        );
+
+        const bucketKey =
+          `${bucketX}:${bucketY}`;
+
+        const bucket =
+          nextBuckets.get(bucketKey) ?? [];
+
+        bucket.push(pixel);
+
+        nextBuckets.set(
+          bucketKey,
+          bucket,
+        );
+      });
+
+      publicPixelBucketsRef.current =
+        nextBuckets;
+
       setPublicPixels(next);
       setWallSyncError(null);
 
@@ -1891,24 +1925,171 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       }
     });
 
-    publicPixels.forEach((pixel) => {
-      const x = originX + pixel.x * camera.scale;
-      const y = originY + pixel.y * camera.scale;
-      const size = Math.max(1, camera.scale);
-      ctx.fillStyle = pixel.status === 'purchased' ? (pixel.color ?? '#111111') : '#b9b4aa';
-      ctx.fillRect(x, y, size, size);
+    /*
+     * PERFORMANCE:
+     * só percorremos os buckets que cruzam
+     * a área visível do Canvas.
+     *
+     * O Map completo continua disponível para
+     * claimedAt(), portanto a segurança da seleção
+     * não muda.
+     */
 
-      if (pixel.status === 'reserved' && camera.scale >= 6) {
-        ctx.strokeStyle = 'rgba(70, 66, 58, 0.72)';
-        ctx.lineWidth = Math.max(1, camera.scale * 0.10);
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.18, y + size * 0.18);
-        ctx.lineTo(x + size * 0.82, y + size * 0.82);
-        ctx.moveTo(x + size * 0.82, y + size * 0.18);
-        ctx.lineTo(x + size * 0.18, y + size * 0.82);
-        ctx.stroke();
+    const visibleMinX = Math.max(
+      0,
+      Math.floor(
+        (-originX) / camera.scale,
+      ),
+    );
+
+    const visibleMinY = Math.max(
+      0,
+      Math.floor(
+        (-originY) / camera.scale,
+      ),
+    );
+
+    const visibleMaxX = Math.min(
+      999,
+      Math.ceil(
+        (rect.width - originX) /
+          camera.scale,
+      ),
+    );
+
+    const visibleMaxY = Math.min(
+      999,
+      Math.ceil(
+        (rect.height - originY) /
+          camera.scale,
+      ),
+    );
+
+    if (
+      visibleMinX <= visibleMaxX &&
+      visibleMinY <= visibleMaxY
+    ) {
+      const firstBucketX = Math.floor(
+        visibleMinX /
+          publicPixelBucketSize,
+      );
+
+      const lastBucketX = Math.floor(
+        visibleMaxX /
+          publicPixelBucketSize,
+      );
+
+      const firstBucketY = Math.floor(
+        visibleMinY /
+          publicPixelBucketSize,
+      );
+
+      const lastBucketY = Math.floor(
+        visibleMaxY /
+          publicPixelBucketSize,
+      );
+
+      for (
+        let bucketY = firstBucketY;
+        bucketY <= lastBucketY;
+        bucketY += 1
+      ) {
+        for (
+          let bucketX = firstBucketX;
+          bucketX <= lastBucketX;
+          bucketX += 1
+        ) {
+          const bucket =
+            publicPixelBucketsRef.current.get(
+              `${bucketX}:${bucketY}`,
+            );
+
+          if (!bucket) continue;
+
+          for (const pixel of bucket) {
+            if (
+              pixel.x < visibleMinX ||
+              pixel.x > visibleMaxX ||
+              pixel.y < visibleMinY ||
+              pixel.y > visibleMaxY
+            ) {
+              continue;
+            }
+
+            const x =
+              originX +
+              pixel.x *
+                camera.scale;
+
+            const y =
+              originY +
+              pixel.y *
+                camera.scale;
+
+            const size =
+              Math.max(
+                1,
+                camera.scale,
+              );
+
+            ctx.fillStyle =
+              pixel.status === 'purchased'
+                ? (
+                    pixel.color ??
+                    '#111111'
+                  )
+                : '#b9b4aa';
+
+            ctx.fillRect(
+              x,
+              y,
+              size,
+              size,
+            );
+
+            if (
+              pixel.status ===
+                'reserved' &&
+              camera.scale >= 6
+            ) {
+              ctx.strokeStyle =
+                'rgba(70, 66, 58, 0.72)';
+
+              ctx.lineWidth =
+                Math.max(
+                  1,
+                  camera.scale *
+                    0.10,
+                );
+
+              ctx.beginPath();
+
+              ctx.moveTo(
+                x + size * 0.18,
+                y + size * 0.18,
+              );
+
+              ctx.lineTo(
+                x + size * 0.82,
+                y + size * 0.82,
+              );
+
+              ctx.moveTo(
+                x + size * 0.82,
+                y + size * 0.18,
+              );
+
+              ctx.lineTo(
+                x + size * 0.18,
+                y + size * 0.82,
+              );
+
+              ctx.stroke();
+            }
+          }
+        }
       }
-    });
+    }
 
     selectedPixels.forEach((pixel) => {
       const x = originX + pixel.x * camera.scale;
