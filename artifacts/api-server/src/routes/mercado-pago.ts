@@ -454,7 +454,12 @@ router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
       return;
     }
 
-    const checkoutUrl = payload.sandbox_init_point || payload.init_point;
+    const isMercadoPagoTestCredential =
+      mercadoPagoAccessToken.startsWith("TEST-");
+
+    const checkoutUrl = isMercadoPagoTestCredential
+      ? payload.sandbox_init_point || payload.init_point
+      : payload.init_point;
 
     if (!checkoutUrl) {
       req.log?.error({ preferenceId: payload.id }, "Mercado Pago preference returned no checkout URL");
