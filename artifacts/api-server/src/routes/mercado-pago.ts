@@ -1428,10 +1428,31 @@ router.post("/mercado-pago/webhook", async (req: Request, res: Response) => {
       return;
     }
 
-    if (reservation.status !== "active") {
+    const approvedAtMs = Date.parse(approvedAt);
+    const reservationExpiresAtMs = Date.parse(reservation.expires_at);
+
+    const approvedBeforeReservationExpired =
+      Number.isFinite(approvedAtMs) &&
+      Number.isFinite(reservationExpiresAtMs) &&
+      approvedAtMs <= reservationExpiresAtMs;
+
+    const reservationCanBeFinalized =
+      reservation.status === "active" ||
+      (
+        reservation.status === "expired" &&
+        approvedBeforeReservationExpired
+      );
+
+    if (!reservationCanBeFinalized) {
       req.log?.error(
-        { dataId, reservationId, reservationStatus: reservation.status },
-        "Approved Mercado Pago payment references a non-active reservation",
+        {
+          dataId,
+          reservationId,
+          reservationStatus: reservation.status,
+          approvedAt,
+          reservationExpiresAt: reservation.expires_at,
+        },
+        "Approved Mercado Pago payment cannot finalize reservation",
       );
       res.sendStatus(409);
       return;
