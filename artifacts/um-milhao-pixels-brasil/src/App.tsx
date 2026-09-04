@@ -457,6 +457,76 @@ function WallPage() {
 }
 
 type SelectedPixel = { x: number; y: number; color: string };
+
+const pendingPixelSelectionKey = 'um-milhao-pixels.pending-selection';
+const pendingPixelSelectionMaxAgeMs = 30 * 60 * 1000;
+
+function savePendingPixelSelection(pixels: SelectedPixel[]) {
+  if (typeof window === 'undefined') return;
+
+  window.localStorage.setItem(
+    pendingPixelSelectionKey,
+    JSON.stringify({
+      savedAt: Date.now(),
+      pixels,
+    }),
+  );
+}
+
+function loadPendingPixelSelection(): Map<string, SelectedPixel> {
+  const result = new Map<string, SelectedPixel>();
+  if (typeof window === 'undefined') return result;
+
+  try {
+    const raw = window.localStorage.getItem(pendingPixelSelectionKey);
+    if (!raw) return result;
+
+    const parsed = JSON.parse(raw) as {
+      savedAt?: unknown;
+      pixels?: unknown;
+    };
+
+    if (
+      typeof parsed.savedAt !== 'number' ||
+      Date.now() - parsed.savedAt > pendingPixelSelectionMaxAgeMs ||
+      !Array.isArray(parsed.pixels)
+    ) {
+      window.localStorage.removeItem(pendingPixelSelectionKey);
+      return result;
+    }
+
+    for (const value of parsed.pixels.slice(0, 100000)) {
+      if (
+        !value ||
+        typeof value !== 'object' ||
+        !Number.isInteger(value.x) ||
+        !Number.isInteger(value.y) ||
+        value.x < 0 ||
+        value.x >= 1000 ||
+        value.y < 0 ||
+        value.y >= 1000 ||
+        typeof value.color !== 'string' ||
+        !/^#[0-9a-f]{6}$/i.test(value.color)
+      ) {
+        continue;
+      }
+
+      const pixel = value as SelectedPixel;
+      result.set(`${pixel.x}:${pixel.y}`, pixel);
+    }
+
+    return result;
+  } catch {
+    window.localStorage.removeItem(pendingPixelSelectionKey);
+    return result;
+  }
+}
+
+function clearPendingPixelSelection() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(pendingPixelSelectionKey);
+}
+
 type PixelTool = 'select' | 'erase' | 'pan';
 
 const PIXEL_PALETTE = [
@@ -470,7 +540,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
   const [tool, setTool] = useState<PixelTool>('select');
-  const [selectedPixels, setSelectedPixels] = useState<Map<string, SelectedPixel>>(() => new Map());
+  const [selectedPixels, setSelectedPixels] = useState<Map<string, SelectedPixel>>(() => loadPendingPixelSelection());
   const [selectedBlock, setSelectedBlock] = useState<PixelBlock | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
@@ -942,6 +1012,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   };
 
   const handleReserved = (reservation: WallReservationSuccess) => {
+    clearPendingPixelSelection();
     setLastReservation(reservation);
     setCustomizeOpen(false);
     setRecolorMode(false);
@@ -1050,6 +1121,7 @@ function SelectionPanel({
     setReservationError(null);
 
     if (!user || !session) {
+      savePendingPixelSelection(selectedPixels);
       openAuth();
       return;
     }
