@@ -371,11 +371,39 @@ router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
   }
 
   try {
+    const user =
+      await loadAuthenticatedUser(
+        accessToken,
+      );
+
+    if (!user) {
+      res.status(401).json({
+        message:
+          "Sua sessão expirou. Entre novamente.",
+      });
+      return;
+    }
+
     const reservation = await loadOwnActiveReservation(reservationId, accessToken);
 
     if (!reservation) {
       res.status(409).json({
         message: "Essa reserva não está mais disponível. Volte à parede e faça uma nova seleção.",
+      });
+      return;
+    }
+
+    if (reservation.user_id !== user.id) {
+      req.log?.warn(
+        {
+          userId: user.id,
+          reservationId: reservation.id,
+        },
+        "User attempted to pay another user's reservation",
+      );
+
+      res.status(403).json({
+        message: "Essa reserva não pertence à sua conta.",
       });
       return;
     }
@@ -463,14 +491,45 @@ router.get("/mercado-pago/status", async (req: Request, res: Response) => {
   }
 
   try {
-    const reservation = await loadOwnReservation(reservationId, accessToken);
+    const user = await loadAuthenticatedUser(accessToken);
 
-    if (!reservation) {
-      res.status(404).json({ message: "Reserva não encontrada para esta conta." });
+    if (!user) {
+      res.status(401).json({
+        message: "Sua sessão expirou. Entre novamente.",
+      });
       return;
     }
 
-    const order = await findOrderByReservation(reservation.id);
+    const reservation = await loadOwnReservation(
+      reservationId,
+      accessToken,
+    );
+
+    if (!reservation) {
+      res.status(404).json({
+        message: "Reserva não encontrada para esta conta.",
+      });
+      return;
+    }
+
+    if (reservation.user_id !== user.id) {
+      req.log?.warn(
+        {
+          userId: user.id,
+          reservationId: reservation.id,
+        },
+        "User attempted to read another user's reservation",
+      );
+
+      res.status(403).json({
+        message: "Essa reserva não pertence à sua conta.",
+      });
+      return;
+    }
+
+    const order = await findOrderByReservation(
+      reservation.id,
+    );
 
     res.status(200).json({
       reservation_id: reservation.id,
