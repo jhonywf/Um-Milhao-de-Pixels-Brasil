@@ -770,7 +770,13 @@ button:focus-visible, a:focus-visible, canvas:focus-visible {
 .canvas-card { min-width: 0; overflow: hidden; border: 1px solid rgba(255,244,201,.27); background: #2a2645; }
 .canvas-toolbar { min-height: 52px; display: flex; align-items: center; gap: 14px; padding: 0 16px; border-bottom: 1px solid rgba(255,244,201,.16); font: 10px var(--app-font-mono); }.canvas-status { display: flex; align-items: center; gap: 7px; color: var(--mint); white-space: nowrap; }.canvas-status i { width: 7px; height: 7px; background: var(--mint); border-radius: 50%; }.canvas-status b { color: rgba(255,244,201,.4); }.canvas-coords { margin-left: auto; color: rgba(255,244,201,.48); text-transform: uppercase; }
 .zoom-controls { display: flex; align-items: center; gap: 8px; margin-left: 8px; color: var(--paper); }.zoom-controls button { width: 29px; height: 29px; display: grid; place-items: center; padding: 0; border: 1px solid rgba(255,244,201,.35); background: transparent; color: var(--paper); cursor: pointer; transition: background .2s ease, color .2s ease; }.zoom-controls button:hover { background: var(--sun); color: var(--ink); }.zoom-controls span { min-width: 40px; text-align: center; font-size: 10px; }
-.canvas-stage { height: min(62vw, 670px); min-height: 420px; position: relative; touch-action: none; cursor: grab; }.canvas-stage.dragging { cursor: grabbing; }.canvas-stage canvas { width: 100%; height: 100%; display: block; }.canvas-hint { position: absolute; left: 16px; bottom: 14px; display: flex; align-items: center; gap: 6px; padding: 8px 10px; color: rgba(255,244,201,.72); background: rgba(36,32,59,.72); font: 10px var(--app-font-mono); text-transform: uppercase; pointer-events: none; }.canvas-hint span { color: var(--coral); }.canvas-footer { margin: 0; padding: 14px 16px; border-top: 1px solid rgba(255,244,201,.16); }.canvas-foot-note { margin-left: auto; color: rgba(255,244,201,.38); }
+.canvas-stage {
+  height: min(78vw, 820px);
+  min-height: 560px;
+  position: relative;
+  touch-action: none;
+  cursor: grab;
+}.canvas-stage.dragging { cursor: grabbing; }.canvas-stage canvas { width: 100%; height: 100%; display: block; }.canvas-hint { position: absolute; left: 16px; bottom: 14px; display: flex; align-items: center; gap: 6px; padding: 8px 10px; color: rgba(255,244,201,.72); background: rgba(36,32,59,.72); font: 10px var(--app-font-mono); text-transform: uppercase; pointer-events: none; }.canvas-hint span { color: var(--coral); }.canvas-footer { margin: 0; padding: 14px 16px; border-top: 1px solid rgba(255,244,201,.16); }.canvas-foot-note { margin-left: auto; color: rgba(255,244,201,.38); }
 .selection-panel { min-height: 100%; display: flex; flex-direction: column; background: var(--paper); color: var(--ink); border: 1px solid var(--paper); }.selection-head { min-height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 21px; border-bottom: 1px solid rgba(36,32,59,.18); }.selected-mark { display: flex; align-items: center; gap: 5px; color: var(--mint); font-size: 9px; }.selection-empty, .selection-content { padding: 37px 24px; }.empty-cross { width: 62px; height: 62px; display: grid; place-items: center; margin-bottom: 28px; border: 1px dashed rgba(36,32,59,.35); color: var(--coral); }.selection-panel h2 { margin: 0 0 16px; font: 700 31px/.9 var(--app-font-serif); letter-spacing: -.06em; }.selection-panel p { margin: 0; color: rgba(36,32,59,.64); font-size: 14px; line-height: 1.5; }.selection-empty p { max-width: 215px; }.selection-color { width: 68px; height: 68px; display: grid; place-items: center; margin-bottom: 19px; border: 1px solid var(--ink); color: var(--ink); font: 700 14px var(--app-font-mono); }.free-color { background: var(--paper); border-style: dashed; }.selection-type { display: block; margin-bottom: 16px; color: var(--coral); font: 10px var(--app-font-mono); text-transform: uppercase; }.selection-detail { display: flex; justify-content: space-between; gap: 10px; margin-top: 19px; padding-top: 13px; border-top: 1px solid rgba(36,32,59,.18); }.selection-detail span { color: rgba(36,32,59,.55); font: 9px var(--app-font-mono); text-transform: uppercase; }.selection-detail b { font: 500 10px var(--app-font-mono); text-align: right; }.selection-button { width: 100%; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 27px; border: 1px solid var(--ink); background: var(--coral); color: var(--ink); cursor: pointer; font: 700 10px var(--app-font-mono); text-transform: uppercase; transition: transform .2s ease, box-shadow .2s ease; }.selection-button:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }.ghost-button { background: transparent; }.demo-notice { display: flex; gap: 7px; align-items: flex-start; margin-top: 14px; padding: 10px; color: var(--ink); background: var(--mint); font: 10px/1.35 var(--app-font-mono); }.panel-foot { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-top: auto; padding: 17px 21px; border-top: 1px solid rgba(36,32,59,.18); color: rgba(36,32,59,.48); font: 9px var(--app-font-mono); text-transform: uppercase; }.panel-foot > span { display: flex; align-items: center; gap: 6px; }.pulse-dot { width: 6px; height: 6px; display: inline-block; background: var(--mint); border-radius: 50%; }.panel-foot a { display: flex; align-items: center; gap: 5px; color: var(--ink); text-decoration: none; }.panel-foot a:hover { color: var(--coral); }
 .wall-bottom-note { display: flex; align-items: center; gap: 9px; margin-top: 19px; color: rgba(255,244,201,.49); font: 10px var(--app-font-mono); }.wall-bottom-note svg { color: var(--sun); }
 
@@ -1237,3 +1243,991 @@ button:focus-visible, a:focus-visible, canvas:focus-visible {
   }
 }
 
+
+/* =========================================================
+   UM MILHÃO DE PIXELS BRASIL — VISUAL 2.0
+   Preto / Branco / Cinza / Laranja
+   ========================================================= */
+
+:root {
+  --v2-bg: #090909;
+  --v2-surface: #121212;
+  --v2-surface-2: #1a1a1a;
+  --v2-line: #303030;
+  --v2-text: #f5f4ef;
+  --v2-muted: #9b9b9b;
+  --v2-orange: #ff681d;
+  --v2-orange-soft: #ff8a50;
+}
+
+/* BASE */
+
+body {
+  background: var(--v2-bg);
+  color: var(--v2-text);
+}
+
+.app-shell {
+  background:
+    radial-gradient(circle at 88% 5%, rgba(255, 104, 29, .12), transparent 28%),
+    var(--v2-bg);
+  color: var(--v2-text);
+}
+
+/* HEADER */
+
+.site-header {
+  background: rgba(9, 9, 9, .94);
+  border-bottom-color: var(--v2-line);
+  backdrop-filter: blur(14px);
+}
+
+.brand-lockup,
+.desktop-nav a,
+.desktop-nav a:visited {
+  color: var(--v2-text);
+}
+
+.brand-lockup b {
+  color: var(--v2-orange);
+}
+
+.desktop-nav a:hover,
+.desktop-nav .active {
+  color: var(--v2-orange);
+}
+
+.header-login,
+.header-account {
+  color: var(--v2-text);
+  border-color: #555;
+  background: #111;
+}
+
+.header-login:hover,
+.header-account:hover {
+  border-color: var(--v2-orange);
+}
+
+.header-cta {
+  background: var(--v2-orange);
+  color: #080808;
+  border-color: var(--v2-orange);
+  box-shadow: 5px 5px 0 #3d210f;
+}
+
+.header-cta:hover {
+  background: var(--v2-orange-soft);
+}
+
+/* HERO */
+
+.hero {
+  background:
+    radial-gradient(circle at 84% 16%, rgba(255,104,29,.14), transparent 26%),
+    linear-gradient(180deg, #090909 0%, #0c0c0c 100%);
+}
+
+.eyebrow,
+.section-label {
+  color: var(--v2-orange);
+}
+
+.eyebrow-dot {
+  background: var(--v2-orange);
+}
+
+.hero-copy h1 {
+  color: var(--v2-text);
+}
+
+.hero-copy h1 em {
+  color: var(--v2-orange);
+}
+
+.hero-deck,
+.hero-bottom-note,
+.visual-caption,
+.text-link {
+  color: var(--v2-muted);
+}
+
+.hero-visual .pixel-mosaic {
+  border-color: #eaeaea;
+  box-shadow: 12px 12px 0 var(--v2-orange);
+}
+
+.hero-sticker {
+  background: var(--v2-orange);
+  color: #090909;
+  border-color: #090909;
+  box-shadow: 4px 4px 0 #fff;
+}
+
+/* BOTÕES */
+
+.button-yellow,
+.button-coral {
+  background: var(--v2-orange);
+  color: #090909;
+  border-color: var(--v2-orange);
+  box-shadow: 5px 5px 0 #3c1f10;
+}
+
+.button-yellow:hover,
+.button-coral:hover {
+  background: var(--v2-orange-soft);
+}
+
+.button-outline {
+  background: transparent;
+  color: var(--v2-text);
+  border-color: #666;
+}
+
+.button-outline:hover {
+  color: var(--v2-orange);
+  border-color: var(--v2-orange);
+}
+
+.inline-arrow-link,
+.text-link {
+  color: var(--v2-text);
+}
+
+.inline-arrow-link:hover,
+.text-link:hover {
+  color: var(--v2-orange);
+}
+
+/* NÚMEROS */
+
+.stat-strip {
+  background: #101010;
+  border-top-color: var(--v2-line);
+  border-bottom-color: var(--v2-line);
+}
+
+.stat-item {
+  border-color: var(--v2-line);
+}
+
+.stat-item strong {
+  color: var(--v2-orange);
+}
+
+.stat-item span,
+.stat-item small {
+  color: var(--v2-muted);
+}
+
+/* MANIFESTO */
+
+.manifesto-section {
+  background: #0c0c0c;
+  color: var(--v2-text);
+}
+
+.section-kicker {
+  color: #d9d9d9;
+}
+
+.section-kicker span,
+.manifesto-text h2 span {
+  color: var(--v2-orange);
+}
+
+.manifesto-text h2 {
+  color: var(--v2-text);
+}
+
+.manifesto-text p,
+.body-copy {
+  color: var(--v2-muted);
+}
+
+.marquee {
+  border-color: var(--v2-line);
+  color: #292929;
+  -webkit-text-stroke: 1px #555;
+}
+
+/* COMO FUNCIONA */
+
+.how-section {
+  background: #101010;
+  color: var(--v2-text);
+}
+
+.how-heading h2 {
+  color: var(--v2-text);
+}
+
+.how-heading h2 span {
+  color: var(--v2-orange);
+}
+
+.how-heading p,
+.step p {
+  color: var(--v2-muted);
+}
+
+.step {
+  border-color: var(--v2-line);
+}
+
+.step-number {
+  color: var(--v2-orange);
+}
+
+.step-icon {
+  background: var(--v2-surface-2);
+  color: var(--v2-orange);
+  border-color: #555;
+}
+
+.step h3 {
+  color: var(--v2-text);
+}
+
+/* CTA DA PAREDE */
+
+.preview-section {
+  background: #070707;
+  color: var(--v2-text);
+}
+
+.preview-copy h2 {
+  color: var(--v2-text);
+}
+
+.preview-copy h2 span {
+  color: var(--v2-orange);
+}
+
+.preview-copy p {
+  color: var(--v2-muted);
+}
+
+/* RANKING + HALL */
+
+.activity-section {
+  background: #0d0d0d;
+}
+
+.ranking-card,
+.records-card {
+  background: var(--v2-surface) !important;
+  color: var(--v2-text) !important;
+  border-color: #444 !important;
+  box-shadow: 9px 9px 0 #242424 !important;
+}
+
+.ranking-card .card-topline,
+.records-card .card-topline {
+  color: var(--v2-muted);
+}
+
+.ranking-card h2,
+.ranking-card h2 span {
+  color: var(--v2-text);
+}
+
+.ranking-card h2 span {
+  color: var(--v2-orange);
+}
+
+.rank-row {
+  border-color: var(--v2-line);
+}
+
+.rank-row strong {
+  color: var(--v2-orange);
+}
+
+.rank-row b {
+  color: var(--v2-text);
+}
+
+.rank-row small {
+  color: var(--v2-muted);
+}
+
+.record-big span,
+.record-small span {
+  color: var(--v2-muted);
+}
+
+.record-big strong {
+  color: var(--v2-orange);
+}
+
+.record-big em,
+.record-small b {
+  color: var(--v2-text);
+}
+
+.record-divider {
+  background: var(--v2-line);
+}
+
+.live-dot {
+  background: var(--v2-orange);
+}
+
+/* EMPRESAS */
+
+.company-section {
+  background: var(--v2-orange);
+  color: #090909;
+}
+
+.company-section .section-label,
+.company-copy h2,
+.company-copy h2 em,
+.company-copy p {
+  color: #090909;
+}
+
+.company-stamp {
+  background: #090909;
+  color: var(--v2-orange);
+  border-color: #090909;
+}
+
+.button-ink {
+  background: #090909;
+  color: #fff;
+  border-color: #090909;
+}
+
+.button-ink:hover {
+  background: #222;
+}
+
+.company-pattern {
+  filter: grayscale(1) contrast(1.25);
+  opacity: .42;
+}
+
+/* FOOTER */
+
+.site-footer {
+  background: #050505;
+  color: var(--v2-text);
+  border-top-color: var(--v2-line);
+}
+
+.footer-brand b {
+  color: var(--v2-orange);
+}
+
+.site-footer p,
+.footer-bottom {
+  color: var(--v2-muted);
+}
+
+.footer-links a,
+.footer-links button,
+.site-footer a {
+  color: var(--v2-text);
+}
+
+.footer-links a:hover,
+.footer-links button:hover,
+.site-footer a:hover {
+  color: var(--v2-orange);
+}
+
+/* DETALHES GERAIS */
+
+::selection {
+  background: var(--v2-orange);
+  color: #080808;
+}
+
+a,
+button {
+  transition:
+    background-color .18s ease,
+    border-color .18s ease,
+    color .18s ease,
+    transform .18s ease;
+}
+
+.button:hover,
+.header-cta:hover {
+  transform: translate(-2px, -2px);
+}
+
+/* MOBILE */
+
+@media (max-width: 767px) {
+  .hero {
+    background:
+      radial-gradient(circle at 100% 8%, rgba(255,104,29,.15), transparent 30%),
+      #090909;
+  }
+
+  .hero-visual .pixel-mosaic {
+    box-shadow: 7px 7px 0 var(--v2-orange);
+  }
+
+  .ranking-card,
+  .records-card {
+    box-shadow: 5px 5px 0 #242424 !important;
+  }
+}
+
+
+/* ============================================================
+   PAREDE — VISUAL 2.0
+   Mantém o canvas claro e aplica a nova identidade ao entorno
+   ============================================================ */
+
+/* Página da parede */
+.wall-page,
+.wall-shell,
+.wall-workspace {
+  background: #090909 !important;
+  color: #f5f4ef !important;
+}
+
+/* Região externa da parede */
+.wall-page main,
+.wall-page .wall-section,
+.wall-page .wall-container {
+  background-color: #090909 !important;
+  color: #f5f4ef !important;
+}
+
+/* Mantém a moldura/canvas como área de criação */
+.wall-canvas-wrap,
+.wall-stage,
+.canvas-wrapper {
+  background: #121212 !important;
+  border-color: #303030 !important;
+}
+
+/* Painel/editor inferior */
+.wall-page .editor-panel,
+.wall-page .wall-editor,
+.wall-page .selection-panel,
+.wall-page .editor-toolbar {
+  background: #121212 !important;
+  color: #f5f4ef !important;
+  border-color: #303030 !important;
+  box-shadow: none !important;
+}
+
+/* Botões do editor */
+.wall-page .editor-panel button,
+.wall-page .wall-editor button,
+.wall-page .selection-panel button,
+.wall-page .editor-toolbar button {
+  background: #1a1a1a !important;
+  color: #f5f4ef !important;
+  border-color: #3a3a3a !important;
+  box-shadow: none;
+}
+
+/* Hover */
+.wall-page .editor-panel button:hover,
+.wall-page .wall-editor button:hover,
+.wall-page .selection-panel button:hover,
+.wall-page .editor-toolbar button:hover {
+  border-color: #ff681d !important;
+  color: #ff681d !important;
+}
+
+/* Ferramenta ativa / botão principal */
+.wall-page button.active,
+.wall-page button[aria-pressed="true"],
+.wall-page .tool-active,
+.wall-page .primary-action {
+  background: #ff681d !important;
+  color: #090909 !important;
+  border-color: #ff681d !important;
+}
+
+/* Informações e instruções abaixo da parede */
+.wall-page .wall-instructions,
+.wall-page .wall-help,
+.wall-page .selection-info,
+.wall-page .wall-footer {
+  background: #090909 !important;
+  color: #f5f4ef !important;
+  border-color: #303030 !important;
+}
+
+.wall-page .wall-instructions p,
+.wall-page .wall-help p,
+.wall-page .selection-info p,
+.wall-page .wall-footer p {
+  color: #9b9b9b !important;
+}
+
+/* Destaques */
+.wall-page strong,
+.wall-page .accent,
+.wall-page .pixel-count,
+.wall-page .price {
+  color: #ff681d;
+}
+
+/* Controles de zoom */
+.wall-page .zoom-controls {
+  background: #121212 !important;
+  border-color: #303030 !important;
+  box-shadow: 5px 5px 0 rgba(255,104,29,.18) !important;
+}
+
+.wall-page .zoom-controls button {
+  background: #121212 !important;
+  color: #f5f4ef !important;
+  border-color: #303030 !important;
+}
+
+.wall-page .zoom-controls button:hover {
+  color: #ff681d !important;
+}
+
+/* Separadores */
+.wall-page hr {
+  border-color: #303030 !important;
+}
+
+/* Links */
+.wall-page a {
+  color: #f5f4ef;
+}
+
+.wall-page a:hover {
+  color: #ff681d;
+}
+
+/* Scrollbar */
+.wall-page {
+  scrollbar-color: #ff681d #121212;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .wall-page,
+  .wall-shell,
+  .wall-workspace {
+    background: #090909 !important;
+  }
+
+  .wall-page .editor-panel,
+  .wall-page .wall-editor,
+  .wall-page .selection-panel,
+  .wall-page .editor-toolbar {
+    background: #121212 !important;
+  }
+}
+
+
+/* =========================================================
+   PAREDE — CORREÇÃO FINAL DA PALETA
+   Remove bege e azul antigos
+   ========================================================= */
+
+.wall-page {
+  background: #090909 !important;
+  color: #f5f4ef !important;
+}
+
+/* fundo estrutural */
+.wall-main,
+.wall-layout,
+.canvas-card,
+.pixel-editor-card,
+.selection-panel,
+.panel-foot,
+.wall-bottom-note {
+  background: #090909 !important;
+  color: #f5f4ef !important;
+  border-color: #2f2f2f !important;
+}
+
+/* moldura externa da área da parede */
+.canvas-card,
+.pixel-editor-card {
+  background: #111111 !important;
+  border: 1px solid #2f2f2f !important;
+  box-shadow: none !important;
+}
+
+/* área onde o canvas fica */
+.canvas-stage {
+  background: #111111 !important;
+  border-color: #2f2f2f !important;
+}
+
+/* O canvas continua claro propositalmente */
+.canvas-stage canvas {
+  background: #fffdf5 !important;
+}
+
+/* painel inferior */
+.pixel-editor-bar {
+  background: #121212 !important;
+  border-color: #2f2f2f !important;
+  color: #f5f4ef !important;
+}
+
+/* todos os botões do editor */
+.pixel-editor-tools button,
+.pixel-editor-actions button,
+.editor-clear,
+.editor-customize,
+.selection-button,
+.customizer-primary,
+.customizer-secondary,
+.recolor-banner button {
+  background: #171717 !important;
+  color: #f5f4ef !important;
+  border: 1px solid #3a3a3a !important;
+  box-shadow: none !important;
+}
+
+/* botão ativo */
+.pixel-editor-tools button.active,
+.pixel-editor-tools button[aria-pressed="true"] {
+  background: #ff681d !important;
+  color: #090909 !important;
+  border-color: #ff681d !important;
+}
+
+/* hover */
+.pixel-editor-tools button:hover,
+.pixel-editor-actions button:hover,
+.editor-clear:hover,
+.editor-customize:hover,
+.selection-button:hover,
+.customizer-primary:hover,
+.customizer-secondary:hover {
+  border-color: #ff681d !important;
+  color: #ff681d !important;
+}
+
+/* quando ativo, hover continua laranja */
+.pixel-editor-tools button.active:hover {
+  background: #ff7b3b !important;
+  color: #090909 !important;
+}
+
+/* total de pixels / valor */
+.pixel-editor-total {
+  color: #f5f4ef !important;
+}
+
+.pixel-editor-total strong {
+  color: #ff681d !important;
+}
+
+.pixel-editor-total span {
+  color: #8f8f8f !important;
+}
+
+/* painel lateral de seleção */
+.selection-panel {
+  background: #111111 !important;
+  color: #f5f4ef !important;
+}
+
+.selection-content,
+.selection-summary,
+.selection-empty,
+.compact-empty,
+.compact-selection {
+  background: #111111 !important;
+  color: #f5f4ef !important;
+}
+
+.selection-summary-title,
+.selection-summary-grid,
+.selection-detail {
+  color: #f5f4ef !important;
+}
+
+.selection-summary-grid span,
+.selection-detail span,
+.selection-empty p,
+.compact-empty p {
+  color: #8f8f8f !important;
+}
+
+.selection-summary-grid b,
+.selection-detail b,
+.selection-empty h2,
+.compact-empty h2 {
+  color: #f5f4ef !important;
+}
+
+/* botão principal do painel lateral */
+.selection-button {
+  background: #ff681d !important;
+  color: #090909 !important;
+  border-color: #ff681d !important;
+}
+
+.selection-button:hover {
+  background: #ff7b3b !important;
+  color: #090909 !important;
+}
+
+/* rodapé do painel */
+.panel-foot {
+  border-color: #2f2f2f !important;
+  color: #9b9b9b !important;
+}
+
+.panel-foot a {
+  color: #f5f4ef !important;
+}
+
+.panel-foot a:hover {
+  color: #ff681d !important;
+}
+
+/* aviso inferior */
+.wall-bottom-note {
+  color: #8f8f8f !important;
+}
+
+.wall-bottom-note svg {
+  color: #ff681d !important;
+}
+
+/* zoom flutuante */
+.floating-zoom {
+  background: #121212 !important;
+  border: 1px solid #343434 !important;
+  color: #f5f4ef !important;
+  box-shadow: 4px 4px 0 rgba(255, 104, 29, .18) !important;
+}
+
+.floating-zoom button {
+  background: transparent !important;
+  color: #f5f4ef !important;
+}
+
+.floating-zoom button:hover {
+  color: #ff681d !important;
+}
+
+.floating-zoom-divider {
+  background: #343434 !important;
+}
+
+/* customizador */
+.pixel-customizer {
+  background: #111111 !important;
+  color: #f5f4ef !important;
+  border-color: #333333 !important;
+}
+
+.pixel-customizer-head,
+.pixel-customizer-body {
+  background: #111111 !important;
+  color: #f5f4ef !important;
+}
+
+.pixel-customizer-body p {
+  color: #9b9b9b !important;
+}
+
+/* banner de recolor */
+.recolor-banner {
+  background: #121212 !important;
+  color: #f5f4ef !important;
+  border-color: #333333 !important;
+}
+
+/* avisos */
+.demo-notice {
+  background: #151515 !important;
+  color: #d8d8d8 !important;
+  border-color: #3a3a3a !important;
+}
+
+/* textos auxiliares */
+.first-pixel-hint {
+  background: rgba(9, 9, 9, .88) !important;
+  color: #f5f4ef !important;
+  border-color: #333333 !important;
+}
+
+/* remove qualquer resquício visual azul dentro da parede */
+.wall-page [style*="#215DB0"],
+.wall-page [style*="#215db0"],
+.wall-page [style*="#2"],
+.wall-page .pixel-editor-bar,
+.wall-page .editor-customize {
+  --legacy-blue-disabled: initial;
+}
+
+/* bordas gerais */
+.wall-page button,
+.wall-page aside,
+.wall-page section {
+  box-shadow: none;
+}
+
+/* mobile */
+@media (max-width: 768px) {
+  .wall-main,
+  .wall-layout,
+  .canvas-card,
+  .pixel-editor-card,
+  .selection-panel {
+    background: #090909 !important;
+  }
+
+  .pixel-editor-bar {
+    background: #121212 !important;
+  }
+}
+
+
+/* =========================================================
+   HEADER DA PAREDE — VISUAL 2.0
+   Remove o bege restante da rota /parede
+   ========================================================= */
+
+.wall-page .site-header {
+  background: rgba(9, 9, 9, .96) !important;
+  color: #f5f4ef !important;
+  border-bottom: 1px solid #2f2f2f !important;
+  backdrop-filter: blur(14px);
+}
+
+.wall-page .brand-lockup {
+  color: #f5f4ef !important;
+}
+
+.wall-page .brand-lockup b {
+  color: #ff681d !important;
+}
+
+.wall-page .desktop-nav a,
+.wall-page .desktop-nav a:visited {
+  color: #b8b8b8 !important;
+}
+
+.wall-page .desktop-nav a:hover,
+.wall-page .desktop-nav a.active {
+  color: #ff681d !important;
+}
+
+.wall-page .header-login,
+.wall-page .header-account {
+  background: #151515 !important;
+  color: #f5f4ef !important;
+  border-color: #3a3a3a !important;
+}
+
+.wall-page .header-login:hover,
+.wall-page .header-account:hover {
+  border-color: #ff681d !important;
+  color: #ff681d !important;
+}
+
+.wall-page .header-cta {
+  background: #ff681d !important;
+  color: #090909 !important;
+  border-color: #ff681d !important;
+  box-shadow: 4px 4px 0 #3b1c0d !important;
+}
+
+.wall-page .header-cta:hover {
+  background: #ff7b3b !important;
+  color: #090909 !important;
+}
+
+
+/* =========================================================
+   PAREDE V2 — REMOVE ÚLTIMOS FUNDOS BEGE
+   ========================================================= */
+
+.wall-page .selection-summary,
+.wall-page .selection-summary-grid,
+.wall-page .selection-summary-grid > div,
+.wall-page .selection-detail,
+.wall-page .selection-content,
+.wall-page .compact-selection {
+  background: #111111 !important;
+  color: #f5f4ef !important;
+  border-color: #363636 !important;
+}
+
+/* Cards: Valor atual / Primeiro pixel */
+.wall-page .selection-summary-grid > div {
+  background: #171717 !important;
+}
+
+.wall-page .selection-summary-grid span,
+.wall-page .selection-summary-grid small,
+.wall-page .selection-detail span {
+  color: #8f8f8f !important;
+}
+
+.wall-page .selection-summary-grid b,
+.wall-page .selection-summary-grid strong,
+.wall-page .selection-detail b,
+.wall-page .selection-detail strong {
+  color: #f5f4ef !important;
+}
+
+/* Quantidade de pixels em laranja */
+.wall-page .selection-summary-title strong,
+.wall-page .selection-summary > strong {
+  color: #ff681d !important;
+}
+
+/* Mensagem do mínimo de compra */
+.wall-page .selection-warning,
+.wall-page .selection-minimum,
+.wall-page .minimum-warning {
+  background: #171717 !important;
+  color: #a5a5a5 !important;
+  border-color: #303030 !important;
+}
+
+/* Botão continuar */
+.wall-page .selection-summary .selection-button {
+  background: #ff681d !important;
+  color: #090909 !important;
+  border-color: #ff681d !important;
+}
+
+.wall-page .selection-summary .selection-button:disabled {
+  background: #171717 !important;
+  color: #777777 !important;
+  border-color: #363636 !important;
+}
+
+/* Segurança contra fundos antigos do painel */
+.wall-page .selection-panel div {
+  border-color: #303030;
+}
+
+
+
+/* Parede maior em tablets e desktop */
+@media (min-width: 768px) {
+  .canvas-stage {
+    height: min(80vw, 900px) !important;
+    min-height: 650px !important;
+  }
+}
+
+/* iPad horizontal */
+@media (min-width: 900px) and (max-width: 1366px) and (orientation: landscape) {
+  .canvas-stage {
+    height: min(78vw, 850px) !important;
+    min-height: 680px !important;
+  }
+}

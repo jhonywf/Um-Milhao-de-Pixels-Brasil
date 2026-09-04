@@ -1263,7 +1263,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     occupied: PixelBlock | null;
     moved: boolean;
   } | null>(null);
-  const firstTapRef = useRef<{ at: number; x: number; y: number; clientX: number; clientY: number } | null>(null);
   const [recolorMode, setRecolorMode] = useState(false);
   const gestureRef = useRef({ multiTouch: false });
   const pinchRef = useRef<{
@@ -1328,30 +1327,110 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.scale(dpr, dpr);
-    ctx.fillStyle = '#fff4c9';
+    ctx.fillStyle = '#090909';
     ctx.fillRect(0, 0, rect.width, rect.height);
     const originX = rect.width / 2 - 500 * camera.scale + camera.x;
     const originY = rect.height / 2 - 500 * camera.scale + camera.y;
     const wallSize = 1000 * camera.scale;
-    ctx.fillStyle = '#fffdf7';
+    ctx.fillStyle = '#f7f7f4';
     ctx.fillRect(originX, originY, wallSize, wallSize);
-    const logicalGridStep = camera.scale >= 4 ? 1 : camera.scale >= 1.5 ? 5 : camera.scale >= 0.55 ? 10 : camera.scale >= 0.3 ? 40 : 50;
-    const gridStep = logicalGridStep * camera.scale;
     ctx.save();
     ctx.beginPath();
     ctx.rect(originX, originY, wallSize, wallSize);
     ctx.clip();
-    ctx.strokeStyle = 'rgba(132, 126, 112, 0.28)';
-    ctx.lineWidth = camera.scale >= 4 ? 0.8 : 1;
-    for (let x = originX; x <= originX + wallSize; x += gridStep) { ctx.beginPath(); ctx.moveTo(x, originY); ctx.lineTo(x, originY + wallSize); ctx.stroke(); }
-    for (let y = originY; y <= originY + wallSize; y += gridStep) { ctx.beginPath(); ctx.moveTo(originX, y); ctx.lineTo(originX + wallSize, y); ctx.stroke(); }
-    const majorStep = Math.max(100 * camera.scale, gridStep * 5);
-    ctx.strokeStyle = 'rgba(110, 103, 88, 0.40)';
-    ctx.lineWidth = 1;
-    for (let x = originX; x <= originX + wallSize; x += majorStep) { ctx.beginPath(); ctx.moveTo(x, originY); ctx.lineTo(x, originY + wallSize); ctx.stroke(); }
-    for (let y = originY; y <= originY + wallSize; y += majorStep) { ctx.beginPath(); ctx.moveTo(originX, y); ctx.lineTo(originX + wallSize, y); ctx.stroke(); }
+
+    const drawGrid = (
+      logicalStep: number,
+      strokeStyle: string,
+      lineWidth: number,
+    ) => {
+      const step = logicalStep * camera.scale;
+
+      if (step < 3.5) return;
+
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = lineWidth;
+
+      const firstVertical =
+        originX + Math.ceil((0 - 0) / logicalStep) * step;
+
+      for (
+        let x = firstVertical;
+        x <= originX + wallSize;
+        x += step
+      ) {
+        ctx.beginPath();
+        ctx.moveTo(Math.round(x) + 0.5, originY);
+        ctx.lineTo(
+          Math.round(x) + 0.5,
+          originY + wallSize,
+        );
+        ctx.stroke();
+      }
+
+      const firstHorizontal =
+        originY + Math.ceil((0 - 0) / logicalStep) * step;
+
+      for (
+        let y = firstHorizontal;
+        y <= originY + wallSize;
+        y += step
+      ) {
+        ctx.beginPath();
+        ctx.moveTo(originX, Math.round(y) + 0.5);
+        ctx.lineTo(
+          originX + wallSize,
+          Math.round(y) + 0.5,
+        );
+        ctx.stroke();
+      }
+    };
+
+    // OVERVIEW
+    // Cerca de 50 células por eixo, como na referência.
+    if (camera.scale < 0.8) {
+      drawGrid(
+        20,
+        'rgba(184, 190, 196, 0.52)',
+        0.45,
+      );
+    }
+
+    // Em zoom médio aparecem divisões de 10 pixels.
+    if (camera.scale >= 0.8) {
+      drawGrid(
+        10,
+        'rgba(184, 190, 196, 0.48)',
+        0.45,
+      );
+    }
+
+    // Estrutura de 100 pixels, apenas um pouco mais marcada.
+    drawGrid(
+      100,
+      'rgba(145, 151, 157, 0.48)',
+      0.6,
+    );
+
+    // Aproximando mais, aparecem divisões de 5 pixels.
+    if (camera.scale >= 1.6) {
+      drawGrid(
+        5,
+        'rgba(190, 195, 200, 0.42)',
+        0.4,
+      );
+    }
+
+    // Só no zoom alto mostramos pixel por pixel.
+    if (camera.scale >= 4.5) {
+      drawGrid(
+        1,
+        'rgba(195, 200, 205, 0.38)',
+        0.35,
+      );
+    }
     ctx.restore();
-    ctx.strokeStyle = 'rgba(120, 113, 98, 0.55)';
+    ctx.strokeStyle = 'rgba(255, 104, 29, 0.75)';
     ctx.lineWidth = 1;
     ctx.strokeRect(originX, originY, wallSize, wallSize);
 
@@ -1465,7 +1544,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       maxZoom,
       Math.max(
         minZoom,
-        Math.min(rect.width, rect.height) / 1000 * 0.92,
+        Math.min(rect.width, rect.height) / 1000 * 0.985,
       ),
     );
 
@@ -1602,7 +1681,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       gestureRef.current.multiTouch = true;
       paintRef.current = null;
       pendingTouchRef.current = null;
-      firstTapRef.current = null;
       startPinch();
       return;
     }
@@ -1671,18 +1749,26 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
     const pending = pendingTouchRef.current;
     if (pending && pending.pointerId === event.pointerId) {
-      const movedDistance = Math.hypot(event.clientX - pending.startX, event.clientY - pending.startY);
-      if (movedDistance > 4) pending.moved = true;
+      const movedDistance = Math.hypot(
+        event.clientX - pending.startX,
+        event.clientY - pending.startY,
+      );
 
-      if (pending.action === 'add' && selectedPixels.size === 0) return;
+      if (movedDistance > 4) {
+        pending.moved = true;
 
-      if (pending.moved && performance.now() - pending.startedAt >= 90 && !pending.occupied) {
-        updatePixel(pending.x, pending.y, pending.action);
-        paintRef.current = { pointerId: event.pointerId, lastX: pending.x, lastY: pending.y, action: pending.action };
-        pendingTouchRef.current = null;
-      } else {
-        return;
+        const nextCamera = {
+          ...cameraRef.current,
+          x: dragRef.current.originX + dx,
+          y: dragRef.current.originY + dy,
+        };
+
+        cameraRef.current = nextCamera;
+        setCamera(nextCamera);
+        setIsDragging(true);
       }
+
+      return;
     }
 
     const paint = paintRef.current;
@@ -1705,29 +1791,18 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     if (pending && !wasMultiTouch) {
       pendingTouchRef.current = null;
 
-      if (pending.occupied) {
-        setSelectedBlock(pending.occupied);
-      } else if (pending.action === 'add' && selectedPixels.size === 0) {
-        const now = performance.now();
-        const previous = firstTapRef.current;
-        const isSecondTap = !!previous
-          && now - previous.at <= 420
-          && Math.hypot(pending.startX - previous.clientX, pending.startY - previous.clientY) <= 34;
-
-        if (isSecondTap) {
-          firstTapRef.current = null;
-          updatePixel(pending.x, pending.y, 'add');
+      // Se houve arraste, foi apenas navegação.
+      // Nunca selecionamos/pintamos pixels durante o movimento.
+      if (!pending.moved) {
+        if (pending.occupied) {
+          setSelectedBlock(pending.occupied);
         } else {
-          firstTapRef.current = {
-            at: now,
-            x: pending.x,
-            y: pending.y,
-            clientX: pending.startX,
-            clientY: pending.startY,
-          };
+          updatePixel(
+            pending.x,
+            pending.y,
+            pending.action,
+          );
         }
-      } else if (!pending.moved) {
-        updatePixel(pending.x, pending.y, pending.action);
       }
     }
 
@@ -2042,7 +2117,7 @@ function SelectionPanel({
           )}
         </div>
       ) : (
-        <div className="selection-empty compact-empty"><div className="empty-cross"><Crosshair size={24} /></div><div><h2>Monte seu desenho.</h2><p>No celular, toque duas vezes no primeiro pixel. Depois toque onde quiser ou arraste para desenhar.</p></div></div>
+        <div className="selection-empty compact-empty"><div className="empty-cross"><Crosshair size={24} /></div><div><h2>Monte seu desenho.</h2><p>Arraste com um dedo para navegar. Toque em um pixel livre para selecioná-lo. Use dois dedos para ampliar ou reduzir.</p></div></div>
       )}
       <div className="panel-foot"><span><span className="pulse-dot" /> seleção livre</span><Link href="/"><ArrowLeft size={14} /> voltar ao início</Link></div>
     </aside>
