@@ -2231,3 +2231,752 @@ button {
     min-height: 680px !important;
   }
 }
+
+/* =========================================================
+   LETREIRO AO VIVO — PAREDE
+   ========================================================= */
+
+.live-wall-ticker {
+  width: 100%;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: #ff681d;
+  color: #090909;
+  border-top: 1px solid #ff681d;
+  border-bottom: 1px solid #ff681d;
+  font-family: var(--app-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .055em;
+  white-space: nowrap;
+}
+
+.live-wall-ticker-track {
+  width: max-content;
+  display: flex;
+  align-items: center;
+  animation: live-wall-ticker-scroll 42s linear infinite;
+  will-change: transform;
+}
+
+.live-wall-ticker-group {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.live-wall-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 30px;
+  padding-left: 30px;
+}
+
+.live-wall-ticker-item i {
+  font-style: normal;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.live-wall-ticker-static {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 22px;
+}
+
+@keyframes live-wall-ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.live-wall-ticker:hover .live-wall-ticker-track {
+  animation-play-state: paused;
+}
+
+@media (max-width: 620px) {
+  .live-wall-ticker {
+    height: 36px;
+    font-size: 10px;
+  }
+
+  .live-wall-ticker-item {
+    gap: 22px;
+    padding-left: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-wall-ticker-track {
+    animation: none;
+  }
+}
+
+
+/* =========================================================
+   RANKING 2.0 — ABAS
+   ========================================================= */
+
+.ranking-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin: 22px 0 18px;
+  padding: 4px;
+  background: #090909;
+  border: 1px solid #303030;
+}
+
+.ranking-tabs button {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: #858585;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+  cursor: pointer;
+}
+
+.ranking-tabs button:hover {
+  color: #f5f4ef;
+}
+
+.ranking-tabs button.active {
+  background: #ff681d;
+  color: #090909;
+}
+
+.ranking-card .rank-list {
+  max-height: 430px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #ff681d #171717;
+}
+
+@media (max-width: 620px) {
+  .ranking-tabs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ranking-tabs button {
+    min-height: 42px;
+  }
+}
+
+
+/* =========================================================
+   TUTORIAL DA PAREDE
+   ========================================================= */
+
+.wall-tutorial-bar {
+  min-height: 48px;
+  padding: 8px clamp(18px, 4vw, 56px);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #101010;
+  border-bottom: 1px solid #292929;
+  color: #777;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.wall-tutorial-launch {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 32px;
+  padding: 6px 12px;
+  background: transparent;
+  color: #f5f4ef;
+  border: 1px solid #3a3a3a;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+
+.wall-tutorial-launch:hover {
+  color: #ff681d;
+  border-color: #ff681d;
+}
+
+.wall-tutorial-question {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ff681d;
+  color: #090909;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.wall-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0, 0, 0, .58);
+  pointer-events: none;
+}
+
+.wall-tutorial-dialog {
+  position: fixed;
+  right: clamp(16px, 4vw, 48px);
+  bottom: clamp(16px, 4vw, 48px);
+  z-index: 10000;
+  width: min(440px, calc(100vw - 32px));
+  padding: 24px;
+  background: #111;
+  color: #f5f4ef;
+  border: 1px solid #4a4a4a;
+  box-shadow: 10px 10px 0 rgba(255, 104, 29, .28);
+  pointer-events: auto;
+}
+
+.wall-tutorial-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  color: #ff681d;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.wall-tutorial-topline button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: #f5f4ef;
+  border: 1px solid #333;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.wall-tutorial-progress {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 24px;
+}
+
+.wall-tutorial-progress strong {
+  color: #ff681d;
+  font-size: 25px;
+}
+
+.wall-tutorial-progress > span {
+  color: #777;
+  font-size: 11px;
+}
+
+.wall-tutorial-progress > div {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.wall-tutorial-progress i {
+  height: 3px;
+  flex: 1;
+  min-width: 16px;
+  background: #303030;
+}
+
+.wall-tutorial-progress i.complete {
+  background: #ff681d;
+}
+
+.wall-tutorial-dialog h2 {
+  margin: 0 0 12px;
+  color: #f5f4ef;
+  font-size: clamp(24px, 4vw, 34px);
+  line-height: .98;
+}
+
+.wall-tutorial-dialog p {
+  margin: 0 0 24px;
+  color: #aaa;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.wall-tutorial-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+}
+
+.wall-tutorial-actions button {
+  min-height: 46px;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.wall-tutorial-primary {
+  background: #ff681d;
+  color: #090909;
+  border: 1px solid #ff681d;
+}
+
+.wall-tutorial-secondary {
+  background: #181818;
+  color: #f5f4ef;
+  border: 1px solid #383838;
+}
+
+.wall-tutorial-secondary:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.wall-tutorial-skip {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  background: transparent;
+  border: 0;
+  color: #6f6f6f;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.wall-tutorial-highlight {
+  position: relative;
+  z-index: 9999 !important;
+  outline: 3px solid #ff681d !important;
+  outline-offset: 6px;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, .12),
+    0 0 28px rgba(255, 104, 29, .45) !important;
+}
+
+@media (max-width: 620px) {
+  .wall-tutorial-bar {
+    justify-content: space-between;
+  }
+
+  .wall-tutorial-bar > span {
+    display: none;
+  }
+
+  .wall-tutorial-dialog {
+    right: 12px;
+    bottom: 12px;
+    width: calc(100vw - 24px);
+    padding: 20px;
+  }
+
+  .wall-tutorial-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .wall-tutorial-primary {
+    grid-row: 1;
+  }
+
+  .wall-tutorial-secondary {
+    grid-row: 2;
+  }
+}
+
+
+/* =========================================================
+   CORREÇÃO DE CAMADAS — TUTORIAL DA PAREDE
+   ========================================================= */
+
+/* Tutorial sempre acima de toda a interface */
+.wall-tutorial-overlay {
+  z-index: 50000 !important;
+  background: rgba(0, 0, 0, .62) !important;
+}
+
+/* Caixa do tutorial é o elemento mais alto */
+.wall-tutorial-dialog {
+  z-index: 50002 !important;
+  isolation: isolate;
+}
+
+/*
+  O elemento explicado NÃO pode criar uma camada
+  acima do overlay, senão cobre o próprio tutorial.
+*/
+.wall-tutorial-highlight {
+  z-index: auto !important;
+  outline: 3px solid #ff681d !important;
+  outline-offset: 5px !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 104, 29, .22),
+    0 0 30px rgba(255, 104, 29, .65) !important;
+}
+
+/* Garante que Canvas / editor não ultrapassem o tutorial */
+.wall-page .canvas-stage,
+.wall-page canvas,
+.wall-page .pixel-editor-card,
+.wall-page .pixel-editor-bar,
+.wall-page .selection-panel,
+.wall-page .floating-zoom {
+  z-index: auto;
+}
+
+/* No tablet/celular a caixa fica totalmente dentro da tela */
+@media (max-width: 900px) {
+  .wall-tutorial-dialog {
+    right: 16px !important;
+    bottom: 18px !important;
+    max-height: calc(100dvh - 36px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .wall-tutorial-dialog {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    width: auto !important;
+    max-height: calc(100dvh - 24px);
+  }
+}
+
+
+/* =========================================================
+   TUTORIAL 2.0 — MENOR E ADAPTATIVO
+   ========================================================= */
+
+.wall-tutorial-dialog {
+  width: min(350px, calc(100vw - 32px)) !important;
+  padding: 18px !important;
+  right: auto !important;
+  bottom: auto !important;
+  max-height: min(74vh, 520px);
+  overflow-y: auto;
+  transition:
+    top .28s ease,
+    right .28s ease,
+    bottom .28s ease,
+    left .28s ease;
+}
+
+/* posições utilizadas conforme cada etapa */
+
+.wall-tutorial-top-right {
+  top: 20px !important;
+  right: 20px !important;
+  left: auto !important;
+  bottom: auto !important;
+}
+
+.wall-tutorial-top-left {
+  top: 20px !important;
+  left: 20px !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+.wall-tutorial-bottom-right {
+  bottom: 20px !important;
+  right: 20px !important;
+  left: auto !important;
+  top: auto !important;
+}
+
+.wall-tutorial-bottom-left {
+  bottom: 20px !important;
+  left: 20px !important;
+  right: auto !important;
+  top: auto !important;
+}
+
+/* tipografia mais compacta */
+
+.wall-tutorial-topline {
+  margin-bottom: 12px !important;
+}
+
+.wall-tutorial-progress {
+  margin-bottom: 16px !important;
+}
+
+.wall-tutorial-progress strong {
+  font-size: 21px !important;
+}
+
+.wall-tutorial-dialog h2 {
+  margin-bottom: 9px !important;
+  font-size: clamp(21px, 3vw, 28px) !important;
+  line-height: 1.05 !important;
+}
+
+.wall-tutorial-dialog p {
+  margin-bottom: 17px !important;
+  font-size: 12.5px !important;
+  line-height: 1.52 !important;
+}
+
+.wall-tutorial-actions button {
+  min-height: 40px !important;
+  padding: 8px 12px !important;
+  font-size: 10px !important;
+}
+
+.wall-tutorial-skip {
+  margin-top: 6px !important;
+}
+
+/* deixa o destaque mais elegante */
+.wall-tutorial-highlight {
+  outline-width: 2px !important;
+  outline-offset: 4px !important;
+}
+
+/* tablet */
+@media (min-width: 621px) and (max-width: 1000px) {
+  .wall-tutorial-dialog {
+    width: min(330px, calc(100vw - 32px)) !important;
+    max-height: 68vh;
+  }
+
+  .wall-tutorial-top-right {
+    top: 14px !important;
+    right: 14px !important;
+  }
+
+  .wall-tutorial-top-left {
+    top: 14px !important;
+    left: 14px !important;
+  }
+
+  .wall-tutorial-bottom-right {
+    right: 14px !important;
+    bottom: 14px !important;
+  }
+
+  .wall-tutorial-bottom-left {
+    left: 14px !important;
+    bottom: 14px !important;
+  }
+}
+
+/* celular */
+@media (max-width: 620px) {
+  .wall-tutorial-dialog {
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    top: auto !important;
+    width: auto !important;
+    padding: 16px !important;
+    max-height: 58vh;
+  }
+
+  /*
+    Se estivermos ensinando algo na parte inferior,
+    sobe o tutorial para liberar essa área.
+  */
+  .wall-tutorial-top-right,
+  .wall-tutorial-top-left {
+    top: 10px !important;
+    bottom: auto !important;
+  }
+
+  .wall-tutorial-bottom-right,
+  .wall-tutorial-bottom-left {
+    bottom: 10px !important;
+    top: auto !important;
+  }
+}
+
+
+/* =========================================================
+   TUTORIAL 3.0 — POSIÇÃO REALMENTE DINÂMICA
+   ========================================================= */
+
+.wall-tutorial-dialog {
+  position: fixed !important;
+  width: min(330px, calc(100vw - 28px)) !important;
+  max-height: min(66vh, 470px) !important;
+  padding: 16px !important;
+  margin: 0 !important;
+  transition:
+    top .22s ease,
+    left .22s ease !important;
+}
+
+/* As posições antigas deixam de mandar */
+.wall-tutorial-top-right,
+.wall-tutorial-top-left,
+.wall-tutorial-bottom-right,
+.wall-tutorial-bottom-left {
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+}
+
+/* Um pouco mais compacto */
+.wall-tutorial-dialog h2 {
+  font-size: clamp(20px, 2.6vw, 26px) !important;
+}
+
+.wall-tutorial-dialog p {
+  font-size: 12px !important;
+  line-height: 1.48 !important;
+}
+
+.wall-tutorial-progress {
+  margin-bottom: 13px !important;
+}
+
+.wall-tutorial-actions button {
+  min-height: 38px !important;
+}
+
+/* No celular ainda menor */
+@media (max-width: 620px) {
+  .wall-tutorial-dialog {
+    width: min(310px, calc(100vw - 20px)) !important;
+    max-height: 52vh !important;
+    padding: 14px !important;
+  }
+}
+
+
+/* =========================================================
+   TUTORIAL 4.0 — JANELA COMPACTA
+   Mantém toda a lógica de posicionamento existente.
+   ========================================================= */
+
+.wall-tutorial-dialog {
+  width: min(250px, calc(100vw - 24px)) !important;
+  max-height: min(54vh, 360px) !important;
+  padding: 12px !important;
+}
+
+/* Cabeçalho */
+.wall-tutorial-dialog h2 {
+  font-size: 18px !important;
+  line-height: 1.15 !important;
+  margin-top: 9px !important;
+  margin-bottom: 7px !important;
+}
+
+/* Texto explicativo */
+.wall-tutorial-dialog p {
+  font-size: 10.5px !important;
+  line-height: 1.4 !important;
+  margin-bottom: 10px !important;
+}
+
+/* Título pequeno "TUTORIAL DA PAREDE" */
+.wall-tutorial-label {
+  font-size: 9px !important;
+  letter-spacing: .08em !important;
+}
+
+/* Número da etapa */
+.wall-tutorial-step-number {
+  font-size: 23px !important;
+}
+
+/* Área do progresso */
+.wall-tutorial-progress {
+  margin-top: 8px !important;
+  margin-bottom: 9px !important;
+  gap: 4px !important;
+}
+
+/* Barrinhas de progresso */
+.wall-tutorial-progress span {
+  height: 3px !important;
+}
+
+/* Botões */
+.wall-tutorial-actions {
+  gap: 7px !important;
+  margin-top: 10px !important;
+}
+
+.wall-tutorial-actions button {
+  min-height: 32px !important;
+  padding: 6px 9px !important;
+  font-size: 9px !important;
+}
+
+/* Botão X */
+.wall-tutorial-close {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+}
+
+/* Pular tutorial */
+.wall-tutorial-skip {
+  font-size: 9px !important;
+  margin-top: 8px !important;
+}
+
+/* Tablet / telas menores */
+@media (max-width: 900px) {
+  .wall-tutorial-dialog {
+    width: min(240px, calc(100vw - 20px)) !important;
+    max-height: min(50vh, 340px) !important;
+    padding: 11px !important;
+  }
+}
+
+/* Celular */
+@media (max-width: 620px) {
+  .wall-tutorial-dialog {
+    width: min(220px, calc(100vw - 18px)) !important;
+    max-height: min(48vh, 320px) !important;
+    padding: 10px !important;
+  }
+
+  .wall-tutorial-dialog h2 {
+    font-size: 16px !important;
+  }
+
+  .wall-tutorial-dialog p {
+    font-size: 10px !important;
+  }
+
+  .wall-tutorial-actions button {
+    min-height: 30px !important;
+    font-size: 8.5px !important;
+  }
+}
+
