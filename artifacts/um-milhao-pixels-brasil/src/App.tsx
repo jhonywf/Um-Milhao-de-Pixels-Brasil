@@ -545,6 +545,44 @@ function clearPendingCheckoutIntent() {
   window.localStorage.removeItem(pendingCheckoutIntentKey);
 }
 
+type WallFocusBounds = {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+};
+
+function readWallFocusBounds(): WallFocusBounds | null {
+  if (typeof window === 'undefined') return null;
+
+  const raw = new URLSearchParams(window.location.search).get('focus');
+  if (!raw) return null;
+
+  const values = raw.split(',').map((value) => Number(value));
+
+  if (
+    values.length !== 4 ||
+    values.some((value) => !Number.isInteger(value))
+  ) {
+    return null;
+  }
+
+  const [minX, minY, maxX, maxY] = values;
+
+  if (
+    minX < 0 ||
+    minY < 0 ||
+    maxX >= 1000 ||
+    maxY >= 1000 ||
+    minX > maxX ||
+    minY > maxY
+  ) {
+    return null;
+  }
+
+  return { minX, minY, maxX, maxY };
+}
+
 type PixelTool = 'select' | 'erase' | 'pan';
 
 const PIXEL_PALETTE = [
@@ -735,10 +773,64 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const fitInitialView = useCallback(() => {
     const stage = stageRef.current;
     if (!stage || hasFittedInitialViewRef.current) return;
+
     const rect = stage.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
-    const fittedScale = Math.min(maxZoom, Math.max(minZoom, Math.min(rect.width, rect.height) / 1000 * 0.92));
-    const nextCamera = { x: 0, y: 0, scale: fittedScale };
+
+    const focus = readWallFocusBounds();
+
+    if (focus) {
+      const width = focus.maxX - focus.minX + 1;
+      const height = focus.maxY - focus.minY + 1;
+
+      const paddingPixels = Math.max(
+        6,
+        Math.min(40, Math.max(width, height) * 0.35),
+      );
+
+      const visibleWidth = width + paddingPixels * 2;
+      const visibleHeight = height + paddingPixels * 2;
+
+      const fittedScale = Math.min(
+        maxZoom,
+        Math.max(
+          minZoom,
+          Math.min(
+            rect.width / visibleWidth,
+            rect.height / visibleHeight,
+          ) * 0.82,
+        ),
+      );
+
+      const centerX = (focus.minX + focus.maxX + 1) / 2;
+      const centerY = (focus.minY + focus.maxY + 1) / 2;
+
+      const nextCamera = {
+        x: -(centerX - 500) * fittedScale,
+        y: -(centerY - 500) * fittedScale,
+        scale: fittedScale,
+      };
+
+      hasFittedInitialViewRef.current = true;
+      cameraRef.current = nextCamera;
+      setCamera(nextCamera);
+      return;
+    }
+
+    const fittedScale = Math.min(
+      maxZoom,
+      Math.max(
+        minZoom,
+        Math.min(rect.width, rect.height) / 1000 * 0.92,
+      ),
+    );
+
+    const nextCamera = {
+      x: 0,
+      y: 0,
+      scale: fittedScale,
+    };
+
     hasFittedInitialViewRef.current = true;
     cameraRef.current = nextCamera;
     setCamera(nextCamera);
@@ -1657,7 +1749,11 @@ function MyPixelsPage() {
                       </div>
 
                       <Link
-                        href="/parede"
+                        href={
+                          purchase.bounds
+                            ? `/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`
+                            : '/parede'
+                        }
                         className="button button-outline"
                       >
                         Ver na parede
