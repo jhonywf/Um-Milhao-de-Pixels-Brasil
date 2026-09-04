@@ -2935,6 +2935,11 @@ function SelectionPanel({
         reservation.reservation_id,
       );
 
+      window.sessionStorage.setItem(
+        'pixel-wall-checkout-url',
+        checkout.checkout_url,
+      );
+
       clearPendingCheckoutIntent();
       clearPendingPixelSelection();
 
@@ -3025,11 +3030,49 @@ function SelectionPanel({
     await reserveAndOpenCheckout();
   };
 
+  useEffect(() => {
+    const restoreCheckoutState = () => {
+      setOpeningCheckout(false);
+    };
+
+    window.addEventListener('pageshow', restoreCheckoutState);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setOpeningCheckout(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pageshow', restoreCheckoutState);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   const handlePayment = async () => {
     if (!session || !lastReservation || openingCheckout) return;
 
     if (reservationExpired) {
       setPaymentError('Sua reserva expirou. Selecione novamente os pixels para continuar.');
+      return;
+    }
+
+    const savedReservationId = window.localStorage.getItem(
+      'pixel-wall-checkout-reservation',
+    );
+
+    const savedCheckoutUrl = window.sessionStorage.getItem(
+      'pixel-wall-checkout-url',
+    );
+
+    if (
+      savedReservationId === lastReservation.reservation_id &&
+      savedCheckoutUrl
+    ) {
+      setOpeningCheckout(true);
+      window.location.assign(savedCheckoutUrl);
       return;
     }
 
@@ -3118,7 +3161,7 @@ function SelectionPanel({
                   ? 'Reserva expirada'
                   : openingCheckout
                     ? 'Abrindo Mercado Pago...'
-                    : 'Pagar com Mercado Pago'}
+                    : 'Voltar ao checkout'}
                 {!openingCheckout && !reservationExpired && <ArrowRight size={17} />}
               </button>
               {paymentError && <div className="demo-notice" role="alert">{paymentError}</div>}
