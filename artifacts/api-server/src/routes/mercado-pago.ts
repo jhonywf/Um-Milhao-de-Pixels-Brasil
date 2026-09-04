@@ -43,10 +43,56 @@ type WallOrderRow = {
   provider_reference: string | null;
 };
 
+type SupabaseAuthUser = {
+  id: string;
+  email?: string;
+};
+
+type MyPurchaseOrderRow = {
+  id: string;
+  status: string;
+  reservation_id: string;
+  pixel_count: number;
+  amount_cents: number;
+  currency: string;
+  provider: string | null;
+  provider_reference: string | null;
+  paid_at: string | null;
+  created_at: string;
+};
+
+type MyPurchasePixelRow = {
+  x: number;
+  y: number;
+  color: string | null;
+  order_id: string | null;
+};
+
 function getBearerToken(req: Request) {
   const authorization = req.header("authorization") || "";
   const match = authorization.match(/^Bearer\s+(.+)$/i);
   return match?.[1] ?? "";
+}
+
+async function loadAuthenticatedUser(accessToken: string) {
+  if (!supabasePublishableKey || !accessToken) return null;
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      Accept: "application/json",
+      apikey: supabasePublishableKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) return null;
+
+  const user = await response.json() as SupabaseAuthUser;
+
+  if (!user?.id) return null;
+
+  return user;
 }
 
 function readQueryString(value: unknown) {
@@ -394,6 +440,114 @@ router.get("/mercado-pago/status", async (req: Request, res: Response) => {
   } catch (error) {
     req.log?.error({ err: error, reservationId }, "Could not read Mercado Pago payment status");
     res.status(500).json({ message: "Não foi possível confirmar o pagamento agora." });
+  }
+});
+
+router.get("/mercado-pago/my-purchases", async (req: Request, res: Response) => {
+  const accessToken = getBearerToken(req);
+
+  if (!accessToken) {
+    res.status(401).json({ message: "Entre na sua conta para ver seus pixels." });
+    return;
+  }
+
+  try {
+    const user = await loadAuthenticatedUser(accessToken);
+
+    if (!user) {
+      res.status(401).json({ message: "Sua sessão expirou. Entre novamente." });
+      return;
+    }
+
+    const orderQuery = new URLSearchParams({
+      select: "id,status,reservation_id,pixel_count,amount_cents,currency,provider,provider_reference,paid_at,created_at",
+      user_id: `eq.${user.id}`,
+      status: "eq.paid",
+      order: "paid_at.desc.nullslast,created_at.desc",
+    });
+
+    const orders = await serviceRoleGet<MyPurchaseOrderRow[]>(
+      `wall_orders?${orderQuery.toString()}`,
+    );
+
+    if (orders.length === 0) {
+      res.status(200).json({
+        total_pixels: 0,
+        total_amount_cents: 0,
+        purchase_count: 0,
+        purchases: [],
+      });
+      return;
+    }
+
+    const orderIds = orders
+      .map((order) => order.id)
+      .filter(Boolean);
+
+    const pixelQuery = new URLSearchParams({
+      select: "x,y,color,order_id",
+      order_id: `in.(${orderIds.join(",")})`,
+      status: "eq.purchased",
+      order: "order_id.asc,y.asc,x.asc",
+    });
+
+    const pixels = await serviceRoleGet<MyPurchasePixelRow[]>(
+      `wall_pixel_claims?${pixelQuery.toString()}`,
+    );
+
+    const pixelsByOrder = new Map<string, MyPurchasePixelRow[]>();
+
+    for (const pixel of pixels) {
+      if (!pixel.order_id) continue;
+
+      const list = pixelsByOrder.get(pixel.order_id) ?? [];
+      list.push(pixel);
+      pixelsByOrder.set(pixel.order_id, list);
+    }
+
+    const purchases = orders.map((order) => {
+      const orderPixels = pixelsByOrder.get(order.id) ?? [];
+
+      const xs = orderPixels.map((pixel) => pixel.x);
+      const ys = orderPixels.map((pixel) => pixel.y);
+
+      const bounds = orderPixels.length
+        ? {
+            min_x: Math.min(...xs),
+            min_y: Math.min(...ys),
+            max_x: Math.max(...xs),
+            max_y: Math.max(...ys),
+          }
+        : null;
+
+      return {
+        order_id: order.id,
+        reservation_id: order.reservation_id,
+        pixel_count: order.pixel_count,
+        amount_cents: order.amount_cents,
+        currency: order.currency,
+        provider: order.provider,
+        paid_at: order.paid_at,
+        created_at: order.created_at,
+        bounds,
+      };
+    });
+
+    res.status(200).json({
+      total_pixels: orders.reduce((total, order) => total + order.pixel_count, 0),
+      total_amount_cents: orders.reduce((total, order) => total + order.amount_cents, 0),
+      purchase_count: orders.length,
+      purchases,
+    });
+  } catch (error) {
+    req.log?.error(
+      { err: error },
+      "Could not load authenticated user purchases",
+    );
+
+    res.status(500).json({
+      message: "Não foi possível carregar seus pixels agora.",
+    });
   }
 });
 
