@@ -349,6 +349,38 @@ type PublicWallStats = {
     pixels: number;
     purchases: number;
   }>;
+  rankings?: {
+    general: Array<{
+      name: string;
+      username: string | null;
+      avatar_emoji: string | null;
+      avatar_path: string | null;
+      pixels: number;
+      purchases: number;
+    }>;
+    weekly: Array<{
+      name: string;
+      username: string | null;
+      avatar_emoji: string | null;
+      avatar_path: string | null;
+      pixels: number;
+      purchases: number;
+    }>;
+    daily: Array<{
+      name: string;
+      username: string | null;
+      avatar_emoji: string | null;
+      avatar_path: string | null;
+      pixels: number;
+      purchases: number;
+    }>;
+  };
+  recent_purchases: Array<{
+    name: string;
+    username: string | null;
+    pixel_count: number;
+    paid_at: string;
+  }>;
   records: {
     first_purchase: {
       pixel_count: number;
@@ -414,6 +446,89 @@ function usePublicWallStats() {
   }, []);
 
   return stats;
+}
+
+function LiveWallTicker() {
+  const stats = usePublicWallStats();
+
+  if (!stats || stats.purchase_count === 0) {
+    return (
+      <div
+        className="live-wall-ticker"
+        data-testid="live-wall-ticker"
+      >
+        <div className="live-wall-ticker-static">
+          A PAREDE ESTÁ AO VIVO
+          <span>•</span>
+          O PRÓXIMO PIXEL PODE SER O SEU
+        </div>
+      </div>
+    );
+  }
+
+  const messages: string[] = [];
+
+  const leader = stats.ranking[0];
+
+  if (leader) {
+    messages.push(
+      `RANKING: ${leader.name} LIDERA COM ${leader.pixels.toLocaleString('pt-BR')} ${leader.pixels === 1 ? 'PIXEL' : 'PIXELS'}`
+    );
+  }
+
+  if (stats.records.largest_purchase) {
+    const pixels = stats.records.largest_purchase.pixel_count;
+
+    messages.push(
+      `RECORDE: MAIOR COMPRA FOI DE ${pixels.toLocaleString('pt-BR')} ${pixels === 1 ? 'PIXEL' : 'PIXELS'}`
+    );
+  }
+
+  if (stats.records.first_purchase) {
+    const pixels = stats.records.first_purchase.pixel_count;
+
+    messages.push(
+      `HALL DA FAMA: PRIMEIRA COMPRA — ${pixels.toLocaleString('pt-BR')} ${pixels === 1 ? 'PIXEL' : 'PIXELS'}`
+    );
+  }
+
+  (stats.recent_purchases ?? []).slice(0, 8).forEach((purchase) => {
+    messages.push(
+      `AGORA: ${purchase.name} COMPROU ${purchase.pixel_count.toLocaleString('pt-BR')} ${purchase.pixel_count === 1 ? 'PIXEL' : 'PIXELS'}`
+    );
+  });
+
+  const renderMessages = (prefix: string) =>
+    messages.map((message, index) => (
+      <span
+        className="live-wall-ticker-item"
+        key={`${prefix}-${index}`}
+      >
+        {message}
+        <i aria-hidden="true">•</i>
+      </span>
+    ));
+
+  return (
+    <div
+      className="live-wall-ticker"
+      data-testid="live-wall-ticker"
+      aria-label="Atividade ao vivo da parede"
+    >
+      <div className="live-wall-ticker-track">
+        <div className="live-wall-ticker-group">
+          {renderMessages('a')}
+        </div>
+
+        <div
+          className="live-wall-ticker-group"
+          aria-hidden="true"
+        >
+          {renderMessages('b')}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function StatStrip() {
@@ -611,6 +726,10 @@ function Home() {
 
 function DemoActivity() {
   const stats = usePublicWallStats();
+  const [rankingMode, setRankingMode] =
+    useState<'general' | 'weekly' | 'daily' | 'recent'>(
+      'general',
+    );
 
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat('pt-BR', {
@@ -619,7 +738,53 @@ function DemoActivity() {
       year: 'numeric',
     }).format(new Date(value));
 
-  const ranking = stats?.ranking ?? [];
+  const generalRanking =
+    stats?.rankings?.general ??
+    stats?.ranking ??
+    [];
+
+  const weeklyRanking =
+    stats?.rankings?.weekly ?? [];
+
+  const dailyRanking =
+    stats?.rankings?.daily ?? [];
+
+  const recentRanking =
+    (stats?.recent_purchases ?? []).map(
+      (purchase) => ({
+        name: purchase.name,
+        username: purchase.username,
+        avatar_emoji: null,
+        avatar_path: null,
+        pixels: purchase.pixel_count,
+        purchases: 1,
+      }),
+    );
+
+  const ranking =
+    rankingMode === 'weekly'
+      ? weeklyRanking
+      : rankingMode === 'daily'
+        ? dailyRanking
+        : rankingMode === 'recent'
+          ? recentRanking
+          : generalRanking;
+
+  const emptyMessage =
+    rankingMode === 'weekly'
+      ? 'Ainda não houve compras nos últimos 7 dias.'
+      : rankingMode === 'daily'
+        ? 'Ainda não houve compras nas últimas 24 horas.'
+        : rankingMode === 'recent'
+          ? 'A primeira compra aparecerá aqui.'
+          : 'O ranking começa com a primeira compra.';
+
+  const tabs = [
+    ['general', 'Geral'],
+    ['weekly', 'Semanal'],
+    ['daily', 'Diário'],
+    ['recent', 'Recentes'],
+  ] as const;
 
   return (
     <section
@@ -646,6 +811,27 @@ function DemoActivity() {
             <span>mais marca?</span>
           </h2>
 
+          <div
+            className="ranking-tabs"
+            role="tablist"
+            aria-label="Período do ranking"
+          >
+            {tabs.map(([value, label]) => (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={rankingMode === value}
+                className={
+                  rankingMode === value ? 'active' : ''
+                }
+                onClick={() => setRankingMode(value)}
+                key={value}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <div className="rank-list">
             {!stats ? (
               <div className="demo-notice">
@@ -653,16 +839,18 @@ function DemoActivity() {
               </div>
             ) : ranking.length === 0 ? (
               <div className="demo-notice">
-                O ranking começa com a primeira compra.
+                {emptyMessage}
               </div>
             ) : (
-              ranking.slice(0, 5).map((entry, index) => (
+              ranking.slice(0, 10).map((entry, index) => (
                 <div
                   className="rank-row"
-                  key={`${entry.username ?? entry.name}-${index}`}
+                  key={`${rankingMode}-${entry.username ?? entry.name}-${index}`}
                   data-testid={`rank-row-${index + 1}`}
                 >
-                  <strong>{index + 1}</strong>
+                  <strong>
+                    {String(index + 1).padStart(2, '0')}
+                  </strong>
 
                   <i
                     style={{
@@ -678,7 +866,9 @@ function DemoActivity() {
                     <b>{entry.name}</b>
                     <small>
                       {entry.pixels.toLocaleString('pt-BR')}{' '}
-                      {entry.pixels === 1 ? 'pixel' : 'pixels'}
+                      {entry.pixels === 1
+                        ? 'pixel'
+                        : 'pixels'}
                     </small>
                   </div>
 
@@ -748,6 +938,7 @@ function DemoActivity() {
                     stats.records.latest_purchase.paid_at,
                   )}`
                 : 'esperando a primeira compra'}
+
               {stats?.records.latest_purchase && (
                 <span className="live-dot" />
               )}
@@ -1848,9 +2039,562 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   };
 
 
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tutorialPosition, setTutorialPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
+  const wallTutorialSteps = [
+    {
+      title: 'Bem-vindo à parede',
+      text: 'Esta é uma parede compartilhada de 1 milhão de pixels. Cada espaço comprado passa a fazer parte dela permanentemente.',
+      target: '[data-testid="canvas-pixel-wall"]',
+      placement: 'bottom-right',
+    },
+    {
+      title: 'Mova a parede',
+      text: 'No celular ou tablet, arraste com um dedo para navegar. Arrastar nunca seleciona pixels. No computador, use a ferramenta Mover quando quiser navegar.',
+      target: '[data-testid="canvas-pixel-wall"]',
+      placement: 'bottom-right',
+    },
+    {
+      title: 'Aproxime onde quiser',
+      text: 'Use dois dedos para ampliar ou reduzir no celular. Você também pode usar os controles + e − ao lado da parede.',
+      target: '.floating-zoom',
+      placement: 'top-right',
+    },
+    {
+      title: 'Selecione seus pixels',
+      text: 'Toque em um pixel livre para selecioná-lo. Continue tocando em outros espaços para montar letras, desenhos, símbolos ou qualquer composição.',
+      target: '[data-testid="pixel-editor-bar"]',
+      placement: 'top-right',
+    },
+    {
+      title: 'Edite sua seleção',
+      text: 'Use Selecionar, Apagar e Mover. Depois toque em Personalizar para escolher as cores dos pixels selecionados.',
+      target: '[data-testid="pixel-editor-bar"]',
+      placement: 'top-right',
+    },
+    {
+      title: 'Confira e continue',
+      text: 'O resumo mostra a quantidade de pixels e o valor da compra. O mínimo atual é de 5 pixels. Quando estiver satisfeito, toque em Continuar com esta seleção.',
+      target: '.selection-panel',
+      placement: 'top-left',
+    },
+    {
+      title: 'Reserva e pagamento',
+      text: 'Se ainda não estiver conectado, você fará login. Seus pixels são reservados por 15 minutos e o Mercado Pago é aberto para concluir o pagamento. O tutorial termina aqui.',
+      target: '.selection-panel',
+      placement: 'auto',
+    },
+  ] as const;
+
+  const closeWallTutorial = () => {
+    setTutorialOpen(false);
+    setTutorialStep(0);
+  };
+
+  useEffect(() => {
+    document
+      .querySelectorAll('.wall-tutorial-highlight')
+      .forEach((element) =>
+        element.classList.remove('wall-tutorial-highlight')
+      );
+
+    if (!tutorialOpen) {
+      setTutorialPosition(null);
+      return;
+    }
+
+    const step = wallTutorialSteps[tutorialStep];
+    const target = step?.target
+      ? document.querySelector(step.target)
+      : null;
+
+    if (target instanceof HTMLElement) {
+      target.classList.add('wall-tutorial-highlight');
+
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'center',
+      });
+    }
+
+    const calculatePosition = () => {
+      const dialog = document.querySelector(
+        '.wall-tutorial-dialog'
+      );
+
+      if (!(dialog instanceof HTMLElement)) return;
+
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      const margin = 18;
+      const gap = 18;
+
+      const dialogRect = dialog.getBoundingClientRect();
+      const dialogWidth = dialogRect.width;
+      const dialogHeight = dialogRect.height;
+
+      if (!(target instanceof HTMLElement)) {
+        setTutorialPosition({
+          top: margin,
+          left: Math.max(
+            margin,
+            viewportWidth - dialogWidth - margin,
+          ),
+        });
+        return;
+      }
+
+      const targetRect = target.getBoundingClientRect();
+
+
+      /*
+       * Etapas críticas:
+       * 4 e 5 precisam deixar o editor completamente visível.
+       * 6 precisa deixar o resumo/CTA completamente visível.
+       *
+       * tutorialStep é zero-based:
+       * passo 4 = 3
+       * passo 5 = 4
+       * passo 6 = 5
+       */
+      const criticalStep =
+        tutorialStep === 3 ||
+        tutorialStep === 4 ||
+        tutorialStep === 5;
+
+      if (criticalStep) {
+        const safeGap = 24;
+
+        const clampCritical = (
+          value: number,
+          min: number,
+          max: number,
+        ) => Math.min(Math.max(value, min), max);
+
+        let preferredTop: number;
+
+        if (tutorialStep === 5) {
+          /*
+           * PASSO 6:
+           * caixa acima do resumo/CTA.
+           */
+          preferredTop =
+            targetRect.top -
+            dialogHeight -
+            safeGap;
+        } else {
+          /*
+           * PASSOS 4 e 5:
+           * caixa abaixo do painel de ferramentas.
+           */
+          preferredTop =
+            targetRect.bottom +
+            safeGap;
+        }
+
+        let preferredLeft =
+          targetRect.left +
+          targetRect.width / 2 -
+          dialogWidth / 2;
+
+        preferredLeft = clampCritical(
+          preferredLeft,
+          margin,
+          Math.max(
+            margin,
+            viewportWidth - dialogWidth - margin,
+          ),
+        );
+
+        preferredTop = clampCritical(
+          preferredTop,
+          margin,
+          Math.max(
+            margin,
+            viewportHeight - dialogHeight - margin,
+          ),
+        );
+
+        /*
+         * Segurança extra:
+         * se a posição preferida ainda cruzar o alvo por falta
+         * de espaço vertical, move para o lado com mais espaço.
+         */
+        const proposedBottom =
+          preferredTop + dialogHeight;
+
+        const overlapsVertically =
+          proposedBottom > targetRect.top &&
+          preferredTop < targetRect.bottom;
+
+        const proposedRight =
+          preferredLeft + dialogWidth;
+
+        const overlapsHorizontally =
+          proposedRight > targetRect.left &&
+          preferredLeft < targetRect.right;
+
+        if (
+          overlapsVertically &&
+          overlapsHorizontally
+        ) {
+          const spaceRight =
+            viewportWidth -
+            targetRect.right -
+            safeGap;
+
+          const spaceLeft =
+            targetRect.left -
+            safeGap;
+
+          if (
+            spaceRight >= dialogWidth ||
+            spaceRight >= spaceLeft
+          ) {
+            preferredLeft =
+              targetRect.right + safeGap;
+          } else {
+            preferredLeft =
+              targetRect.left -
+              dialogWidth -
+              safeGap;
+          }
+
+          preferredLeft = clampCritical(
+            preferredLeft,
+            margin,
+            Math.max(
+              margin,
+              viewportWidth -
+                dialogWidth -
+                margin,
+            ),
+          );
+        }
+
+        setTutorialPosition({
+          top: preferredTop,
+          left: preferredLeft,
+        });
+
+        return;
+      }
+
+      const candidates = [
+        {
+          name: 'right',
+          top:
+            targetRect.top +
+            targetRect.height / 2 -
+            dialogHeight / 2,
+          left: targetRect.right + gap,
+        },
+        {
+          name: 'left',
+          top:
+            targetRect.top +
+            targetRect.height / 2 -
+            dialogHeight / 2,
+          left: targetRect.left - dialogWidth - gap,
+        },
+        {
+          name: 'bottom',
+          top: targetRect.bottom + gap,
+          left:
+            targetRect.left +
+            targetRect.width / 2 -
+            dialogWidth / 2,
+        },
+        {
+          name: 'top',
+          top: targetRect.top - dialogHeight - gap,
+          left:
+            targetRect.left +
+            targetRect.width / 2 -
+            dialogWidth / 2,
+        },
+      ];
+
+      const clamp = (
+        value: number,
+        min: number,
+        max: number,
+      ) =>
+        Math.min(Math.max(value, min), max);
+
+      const overlapArea = (
+        a: {
+          left: number;
+          top: number;
+          right: number;
+          bottom: number;
+        },
+        b: {
+          left: number;
+          top: number;
+          right: number;
+          bottom: number;
+        },
+      ) => {
+        const width = Math.max(
+          0,
+          Math.min(a.right, b.right) -
+            Math.max(a.left, b.left),
+        );
+
+        const height = Math.max(
+          0,
+          Math.min(a.bottom, b.bottom) -
+            Math.max(a.top, b.top),
+        );
+
+        return width * height;
+      };
+
+      const scored = candidates.map((candidate) => {
+        const left = clamp(
+          candidate.left,
+          margin,
+          Math.max(
+            margin,
+            viewportWidth - dialogWidth - margin,
+          ),
+        );
+
+        const top = clamp(
+          candidate.top,
+          margin,
+          Math.max(
+            margin,
+            viewportHeight - dialogHeight - margin,
+          ),
+        );
+
+        const rect = {
+          left,
+          top,
+          right: left + dialogWidth,
+          bottom: top + dialogHeight,
+        };
+
+        const overlap = overlapArea(rect, targetRect);
+
+        const overflow =
+          Math.max(0, margin - left) +
+          Math.max(0, margin - top) +
+          Math.max(
+            0,
+            rect.right - (viewportWidth - margin),
+          ) +
+          Math.max(
+            0,
+            rect.bottom - (viewportHeight - margin),
+          );
+
+        return {
+          ...candidate,
+          left,
+          top,
+          overlap,
+          overflow,
+        };
+      });
+
+      scored.sort((a, b) => {
+        if (a.overlap !== b.overlap) {
+          return a.overlap - b.overlap;
+        }
+
+        return a.overflow - b.overflow;
+      });
+
+      const best = scored[0];
+
+      setTutorialPosition({
+        top: best.top,
+        left: best.left,
+      });
+    };
+
+    const firstTimer = window.setTimeout(
+      calculatePosition,
+      360,
+    );
+
+    const secondTimer = window.setTimeout(
+      calculatePosition,
+      700,
+    );
+
+    window.addEventListener(
+      'resize',
+      calculatePosition,
+    );
+
+    return () => {
+      window.clearTimeout(firstTimer);
+      window.clearTimeout(secondTimer);
+      window.removeEventListener(
+        'resize',
+        calculatePosition,
+      );
+
+      if (target instanceof HTMLElement) {
+        target.classList.remove(
+          'wall-tutorial-highlight'
+        );
+      }
+    };
+  }, [tutorialOpen, tutorialStep]);
+
   return (
     <div className="wall-page">
       <Header />
+      <LiveWallTicker />
+
+      <div className="wall-tutorial-bar">
+        <button
+          type="button"
+          className="wall-tutorial-launch"
+          onClick={() => {
+            setTutorialStep(0);
+            setTutorialOpen(true);
+          }}
+          data-testid="button-wall-tutorial"
+        >
+          <span className="wall-tutorial-question">?</span>
+          Tutorial da parede
+        </button>
+
+        <span>
+          primeira vez aqui? veja como funciona em menos de 1 minuto
+        </span>
+      </div>
+
+      {tutorialOpen && (
+        <div
+          className="wall-tutorial-overlay"
+          role="presentation"
+        >
+          <div
+            className="wall-tutorial-dialog"
+            style={
+              tutorialPosition
+                ? {
+                    top: tutorialPosition.top,
+                    left: tutorialPosition.left,
+                    right: 'auto',
+                    bottom: 'auto',
+                  }
+                : undefined
+            }
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="wall-tutorial-title"
+          >
+            <div className="wall-tutorial-topline">
+              <span>
+                Tutorial da parede
+              </span>
+
+              <button
+                type="button"
+                onClick={closeWallTutorial}
+                aria-label="Fechar tutorial"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="wall-tutorial-progress">
+              <strong>
+                {tutorialStep + 1}
+              </strong>
+              <span>
+                de {wallTutorialSteps.length}
+              </span>
+
+              <div>
+                {wallTutorialSteps.map((_, index) => (
+                  <i
+                    key={index}
+                    className={
+                      index <= tutorialStep
+                        ? 'complete'
+                        : ''
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+
+            <h2 id="wall-tutorial-title">
+              {wallTutorialSteps[tutorialStep].title}
+            </h2>
+
+            <p>
+              {wallTutorialSteps[tutorialStep].text}
+            </p>
+
+            <div className="wall-tutorial-actions">
+              <button
+                type="button"
+                className="wall-tutorial-secondary"
+                onClick={() =>
+                  setTutorialStep((current) =>
+                    Math.max(0, current - 1)
+                  )
+                }
+                disabled={tutorialStep === 0}
+              >
+                Voltar
+              </button>
+
+              {tutorialStep <
+              wallTutorialSteps.length - 1 ? (
+                <button
+                  type="button"
+                  className="wall-tutorial-primary"
+                  onClick={() =>
+                    setTutorialStep((current) =>
+                      Math.min(
+                        wallTutorialSteps.length - 1,
+                        current + 1,
+                      )
+                    )
+                  }
+                >
+                  Próximo →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="wall-tutorial-primary"
+                  onClick={closeWallTutorial}
+                >
+                  Entendi, quero explorar
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="wall-tutorial-skip"
+              onClick={closeWallTutorial}
+            >
+              Pular tutorial
+            </button>
+          </div>
+        </div>
+      )}
+
       <main className="wall-main">
         <div className="wall-layout">
           <section className="canvas-card pixel-editor-card" data-testid="interactive-wall">
@@ -1862,7 +2606,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 <button onClick={() => zoomAt(cameraRef.current.scale / 1.25)} aria-label="Diminuir zoom"><Minus size={20} /></button>
               </div>
               {selectedCount === 0 && (
-                <div className="first-pixel-hint">Toque 2× no primeiro pixel para começar</div>
+                <div className="first-pixel-hint">Toque em um pixel para começar</div>
               )}
               <canvas
                 ref={canvasRef}

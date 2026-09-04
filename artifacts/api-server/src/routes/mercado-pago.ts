@@ -565,6 +565,115 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       return largest;
     }, null);
 
+    const recentPurchases = [...orders]
+      .reverse()
+      .slice(0, 10)
+      .map((order) => {
+        const profile = profileById.get(order.user_id);
+        const canShowProfile = profile?.public_profile === true;
+
+        return {
+          name: canShowProfile
+            ? profile?.display_name ||
+              (profile?.username
+                ? `@${profile.username}`
+                : "Comprador")
+            : "Comprador anônimo",
+          username:
+            canShowProfile && profile?.username
+              ? profile.username
+              : null,
+          pixel_count: Number(order.pixel_count || 0),
+          paid_at: order.paid_at ?? order.created_at,
+        };
+      });
+
+    const buildRankingForOrders = (
+      sourceOrders: typeof orders,
+    ) => {
+      const totals = new Map<
+        string,
+        {
+          pixels: number;
+          purchases: number;
+        }
+      >();
+
+      for (const order of sourceOrders) {
+        const current = totals.get(order.user_id) ?? {
+          pixels: 0,
+          purchases: 0,
+        };
+
+        current.pixels += Number(order.pixel_count || 0);
+        current.purchases += 1;
+
+        totals.set(order.user_id, current);
+      }
+
+      return [...totals.entries()]
+        .map(([userId, values]) => {
+          const profile = profileById.get(userId);
+          const canShowProfile =
+            profile?.public_profile === true;
+
+          return {
+            name: canShowProfile
+              ? profile?.display_name ||
+                (profile?.username
+                  ? `@${profile.username}`
+                  : "Comprador")
+              : "Comprador anônimo",
+            username:
+              canShowProfile && profile?.username
+                ? profile.username
+                : null,
+            avatar_emoji:
+              canShowProfile
+                ? profile?.avatar_emoji ?? null
+                : null,
+            avatar_path:
+              canShowProfile
+                ? profile?.avatar_path ?? null
+                : null,
+            pixels: values.pixels,
+            purchases: values.purchases,
+          };
+        })
+        .sort((a, b) => b.pixels - a.pixels)
+        .slice(0, 10);
+    };
+
+    const now = Date.now();
+
+    const weeklyOrders = orders.filter((order) => {
+      const timestamp = new Date(
+        order.paid_at ?? order.created_at,
+      ).getTime();
+
+      return (
+        Number.isFinite(timestamp) &&
+        timestamp >= now - 7 * 24 * 60 * 60 * 1000
+      );
+    });
+
+    const dailyOrders = orders.filter((order) => {
+      const timestamp = new Date(
+        order.paid_at ?? order.created_at,
+      ).getTime();
+
+      return (
+        Number.isFinite(timestamp) &&
+        timestamp >= now - 24 * 60 * 60 * 1000
+      );
+    });
+
+    const rankings = {
+      general: ranking,
+      weekly: buildRankingForOrders(weeklyOrders),
+      daily: buildRankingForOrders(dailyOrders),
+    };
+
     res.status(200).json({
       total_pixels: totalPixels,
       available_pixels: Math.max(0, 1_000_000 - totalPixels),
@@ -575,6 +684,8 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       buyer_count: buyerTotals.size,
       purchase_count: orders.length,
       ranking,
+      rankings,
+      recent_purchases: recentPurchases,
       records: {
         first_purchase: firstOrder
           ? {
