@@ -8,6 +8,7 @@ const supabasePublishableKey = process.env.VITE_SUPABASE_ANON_KEY || process.env
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const mercadoPagoAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN || "";
 const mercadoPagoWebhookSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET || "";
+const adminUserId = process.env.ADMIN_USER_ID || "";
 const appPublicUrl = (process.env.APP_PUBLIC_URL || "https://um-milhao-de-pixels-brasil--jhonymec2.replit.app").replace(/\/$/, "");
 
 type ReservationRow = {
@@ -91,6 +92,48 @@ async function loadAuthenticatedUser(accessToken: string) {
   const user = await response.json() as SupabaseAuthUser;
 
   if (!user?.id) return null;
+
+  return user;
+}
+
+async function requireAdmin(req: Request, res: Response) {
+  const accessToken = getBearerToken(req);
+
+  if (!accessToken) {
+    res.status(401).json({
+      message: "Entre na sua conta para acessar o painel administrativo.",
+    });
+    return null;
+  }
+
+  const user = await loadAuthenticatedUser(accessToken);
+
+  if (!user) {
+    res.status(401).json({
+      message: "Sua sessão expirou. Entre novamente.",
+    });
+    return null;
+  }
+
+  if (!adminUserId) {
+    req.log?.error("ADMIN_USER_ID is not configured");
+    res.status(503).json({
+      message: "O painel administrativo ainda não está configurado.",
+    });
+    return null;
+  }
+
+  if (user.id !== adminUserId) {
+    req.log?.warn(
+      { userId: user.id },
+      "Unauthorized admin access attempt",
+    );
+
+    res.status(403).json({
+      message: "Você não tem permissão para acessar esta área.",
+    });
+    return null;
+  }
 
   return user;
 }
@@ -440,6 +483,134 @@ router.get("/mercado-pago/status", async (req: Request, res: Response) => {
   } catch (error) {
     req.log?.error({ err: error, reservationId }, "Could not read Mercado Pago payment status");
     res.status(500).json({ message: "Não foi possível confirmar o pagamento agora." });
+  }
+});
+
+router.get("/mercado-pago/admin/overview", async (req: Request, res: Response) => {
+  try {
+    const admin = await requireAdmin(req, res);
+
+    if (!admin) return;
+
+    const orders = await serviceRoleGet<Array<{
+      id: string;
+      user_id: string;
+      status: string;
+      reservation_id: string;
+      pixel_count: number;
+      amount_cents: number;
+      currency: string;
+      provider: string | null;
+      provider_reference: string | null;
+      paid_at: string | null;
+      created_at: string;
+    }>>(
+      "wall_orders?select=id,user_id,status,reservation_id,pixel_count,amount_cents,currency,provider,provider_reference,paid_at,created_at&order=created_at.desc",
+    );
+
+    const paidOrders = orders.filter(
+      (order) => order.status === "paid",
+    );
+
+    const totalRevenueCents = paidOrders.reduce(
+      (sum, order) => sum + Number(order.amount_cents || 0),
+      0,
+    );
+
+    const soldPixels = paidOrders.reduce(
+      (sum, order) => sum + Number(order.pixel_count || 0),
+      0,
+    );
+
+    const buyerIds = new Set(
+      paidOrders
+        .map((order) => order.user_id)
+        .filter(Boolean),
+    );
+
+    const averageTicketCents =
+      paidOrders.length > 0
+        ? Math.round(totalRevenueCents / paidOrders.length)
+        : 0;
+
+    const largestPurchase =
+      paidOrders.reduce<(typeof paidOrders)[number] | null>(
+        (largest, order) => {
+          if (
+            !largest ||
+            Number(order.amount_cents || 0) >
+              Number(largest.amount_cents || 0)
+          ) {
+            return order;
+          }
+
+          return largest;
+        },
+        null,
+      );
+
+    const statusCounts = orders.reduce<Record<string, number>>(
+      (counts, order) => {
+        const status = order.status || "unknown";
+        counts[status] = (counts[status] || 0) + 1;
+        return counts;
+      },
+      {},
+    );
+
+    res.status(200).json({
+      admin_user_id: admin.id,
+
+      metrics: {
+        revenue_cents: totalRevenueCents,
+        sold_pixels: soldPixels,
+        available_pixels: Math.max(0, 1_000_000 - soldPixels),
+        occupied_percent: Number(
+          ((soldPixels / 1_000_000) * 100).toFixed(4),
+        ),
+        buyer_count: buyerIds.size,
+        purchase_count: paidOrders.length,
+        average_ticket_cents: averageTicketCents,
+      },
+
+      status_counts: statusCounts,
+
+      largest_purchase: largestPurchase
+        ? {
+            id: largestPurchase.id,
+            user_id: largestPurchase.user_id,
+            pixel_count: largestPurchase.pixel_count,
+            amount_cents: largestPurchase.amount_cents,
+            paid_at:
+              largestPurchase.paid_at ??
+              largestPurchase.created_at,
+          }
+        : null,
+
+      recent_orders: orders.slice(0, 50).map((order) => ({
+        id: order.id,
+        user_id: order.user_id,
+        reservation_id: order.reservation_id,
+        status: order.status,
+        pixel_count: Number(order.pixel_count || 0),
+        amount_cents: Number(order.amount_cents || 0),
+        currency: order.currency,
+        provider: order.provider,
+        provider_reference: order.provider_reference,
+        paid_at: order.paid_at,
+        created_at: order.created_at,
+      })),
+    });
+  } catch (error) {
+    req.log?.error(
+      { err: error },
+      "Could not load admin overview",
+    );
+
+    res.status(500).json({
+      message:
+        "Não foi possível carregar o painel administrativo agora.",
+    });
   }
 });
 

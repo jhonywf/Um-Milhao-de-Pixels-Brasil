@@ -4581,3 +4581,313 @@ button {
    FIM CONTADOR
    ========================================================= */
 
+
+/* =========================================================
+   ADMIN — UM MILHÃO DE PIXELS BRASIL
+   ========================================================= */
+
+.admin-page {
+  min-height: 100vh;
+  background: #090909;
+  color: #f5f4ef;
+  padding: 42px 24px 80px;
+}
+
+.admin-shell {
+  width: min(1380px, 100%);
+  margin: 0 auto;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid #343434;
+}
+
+.admin-topbar h1,
+.admin-panel h2,
+.admin-state h1 {
+  margin: 8px 0;
+  color: #f5f4ef;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.admin-topbar h1 {
+  font-size: clamp(32px, 5vw, 62px);
+}
+
+.admin-topbar p,
+.admin-state p,
+.admin-empty p {
+  color: #929292;
+}
+
+.admin-eyebrow {
+  color: #ff681d;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-left: 1px solid #343434;
+  border-top: 1px solid #343434;
+  margin: 32px 0;
+}
+
+.admin-metric {
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px;
+  background: #111111;
+  border-right: 1px solid #343434;
+  border-bottom: 1px solid #343434;
+}
+
+.admin-metric-featured {
+  background: #ff681d;
+  color: #090909;
+}
+
+.admin-metric > span {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.admin-metric strong {
+  font-size: clamp(28px, 4vw, 48px);
+  letter-spacing: -.05em;
+}
+
+.admin-metric small {
+  color: #777;
+}
+
+.admin-metric-featured small {
+  color: #3c1a09;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 20px;
+}
+
+.admin-panel {
+  background: #111111;
+  border: 1px solid #343434;
+}
+
+.admin-panel-heading,
+.admin-summary {
+  padding: 24px;
+}
+
+.admin-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #343434;
+}
+
+.admin-panel h2 {
+  font-size: 20px;
+}
+
+.admin-count {
+  min-width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: #ff681d;
+  color: #090909;
+  font-weight: 900;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 16px 18px;
+  text-align: left;
+  border-bottom: 1px solid #292929;
+}
+
+.admin-table th {
+  color: #777;
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+
+.admin-table td {
+  color: #deddd8;
+  font-size: 13px;
+}
+
+.admin-reference {
+  font-family: monospace;
+}
+
+.admin-status {
+  display: inline-flex;
+  padding: 6px 9px;
+  border: 1px solid #444;
+  text-transform: uppercase;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.admin-status-paid {
+  color: #ff681d;
+  border-color: #ff681d;
+}
+
+.admin-status-list {
+  margin-top: 20px;
+  border-top: 1px solid #343434;
+}
+
+.admin-status-list > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid #292929;
+}
+
+.admin-status-list span {
+  color: #999;
+}
+
+.admin-status-list strong {
+  color: #f5f4ef;
+}
+
+.admin-largest {
+  margin-top: 30px;
+  padding: 20px;
+  background: #ff681d;
+  color: #090909;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-largest span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+
+.admin-largest strong {
+  font-size: 32px;
+}
+
+.admin-largest small {
+  font-weight: 800;
+}
+
+.admin-empty {
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.admin-empty strong {
+  color: #f5f4ef;
+}
+
+.admin-state {
+  width: min(600px, 100%);
+  margin: 15vh auto 0;
+  padding: 34px;
+  background: #111;
+  border: 1px solid #343434;
+  box-shadow: 8px 8px 0 rgba(255, 104, 29, .18);
+}
+
+.admin-primary-button,
+.admin-secondary-button {
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 0;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.admin-primary-button {
+  background: #ff681d;
+  color: #090909;
+  border: 1px solid #ff681d;
+  margin-top: 20px;
+}
+
+.admin-secondary-button {
+  background: #151515;
+  color: #f5f4ef;
+  border: 1px solid #343434;
+  margin-top: 20px;
+}
+
+.admin-state .admin-secondary-button {
+  margin-left: 8px;
+}
+
+@media (max-width: 900px) {
+  .admin-page {
+    padding: 24px 14px 60px;
+  }
+
+  .admin-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-metric {
+    min-height: 125px;
+  }
+
+  .admin-state {
+    padding: 24px 18px;
+  }
+
+  .admin-state .admin-primary-button,
+  .admin-state .admin-secondary-button {
+    width: 100%;
+    margin-left: 0;
+  }
+}
