@@ -3056,3 +3056,369 @@ button {
   }
 }
 
+
+/* =========================================================
+   HALL DA FAMA 2.0
+   ========================================================= */
+
+.hall-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.hall-heading {
+  margin: 28px 0 20px;
+}
+
+.hall-heading h2 {
+  margin: 0;
+  color: #f5f4ef;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: .92;
+  letter-spacing: -.04em;
+}
+
+.hall-heading h2 span {
+  color: #ff681d;
+}
+
+.hall-heading p {
+  max-width: 420px;
+  margin: 16px 0 0;
+  color: #8e8e8e;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.hall-grid {
+  display: grid;
+  border-top: 1px solid #303030;
+}
+
+.hall-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 96px;
+  padding: 16px 0;
+  border-bottom: 1px solid #303030;
+}
+
+.hall-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #3a3a3a;
+  color: #ff681d;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.hall-copy {
+  min-width: 0;
+}
+
+.hall-copy small {
+  display: block;
+  margin-bottom: 5px;
+  color: #747474;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.hall-copy strong {
+  display: block;
+  overflow: hidden;
+  color: #f5f4ef;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hall-copy span {
+  display: block;
+  margin-top: 4px;
+  color: #999;
+  font-size: 10px;
+}
+
+.hall-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #ff681d;
+  font-size: 9px;
+  font-weight: 900;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hall-link:hover {
+  color: #f5f4ef;
+}
+
+.hall-item-live .hall-icon {
+  animation: hall-live-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes hall-live-pulse {
+  50% {
+    border-color: #ff681d;
+    box-shadow: 0 0 18px rgba(255, 104, 29, .26);
+  }
+}
+
+.hall-future {
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.hall-future span {
+  color: #ff681d;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.hall-future p {
+  margin: 6px 0 0;
+  color: #707070;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+@media (max-width: 620px) {
+  .hall-item {
+    grid-template-columns: 38px 1fr;
+  }
+
+  .hall-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .hall-link {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: -5px;
+  }
+
+  .hall-heading h2 {
+    font-size: 34px;
+  }
+}
+
+
+/* =========================================================
+   MAPA DA HOME — MESMO VISUAL DA PAREDE OFICIAL
+   ========================================================= */
+
+.hero-wall-link {
+  display: block;
+  width: 100%;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.hero-wall-link .pixel-mosaic,
+.hero-wall-link canvas {
+  background: #ffffff !important;
+}
+
+/*
+  Container externo do mini mapa.
+  Remove qualquer bege herdado da versão antiga.
+*/
+.hero-visual {
+  background: #090909 !important;
+}
+
+.hero-wall-link {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff !important;
+  border: 1px solid #ff681d !important;
+  box-shadow: 10px 10px 0 #ff681d;
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease;
+}
+
+.hero-wall-link:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 12px 12px 0 #ff681d;
+}
+
+/*
+  Grade visual semelhante à parede oficial.
+  O canvas real continua aparecendo por cima quando houver
+  pixels comprados.
+*/
+.hero-wall-link::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(180, 184, 190, .34) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(180, 184, 190, .34) 1px,
+      transparent 1px
+    );
+
+  background-size:
+    2.5% 100%,
+    100% 2.5%;
+}
+
+/* linhas principais suaves */
+.hero-wall-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(135, 140, 148, .28) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(135, 140, 148, .28) 1px,
+      transparent 1px
+    );
+
+  background-size:
+    10% 100%,
+    100% 10%;
+}
+
+/*
+  O conteúdo real fica acima da grade.
+*/
+.hero-wall-link > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Remove fundos antigos bege caso ainda existam */
+.hero-visual .pixel-mosaic,
+.hero-visual .pixel-mosaic-inner,
+.hero-visual .real-wall-mini-map,
+.hero-visual canvas {
+  background-color: transparent !important;
+}
+
+/*
+  No tablet/celular mantém o mapa grande e clicável.
+*/
+@media (max-width: 900px) {
+  .hero-wall-link {
+    width: 100%;
+  }
+}
+
+
+/* =========================================================
+   MINI MAPA DA HOME — FORÇA VISUAL DA PAREDE OFICIAL
+   ========================================================= */
+
+.hero-wall-link,
+.hero-wall-link .pixel-mosaic,
+.hero-wall-link canvas {
+  background: #fff !important;
+}
+
+/* remove qualquer tom quente herdado */
+.hero-wall-link,
+.hero-wall-link * {
+  --paper: #fff;
+  --wall-bg: #fff;
+}
+
+/*
+  Grade fina como na parede oficial.
+  Fica por cima do branco e abaixo do conteúdo real.
+*/
+.hero-wall-link::before {
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(184, 188, 194, .26) .7px,
+      transparent .7px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(184, 188, 194, .26) .7px,
+      transparent .7px
+    ) !important;
+
+  background-size:
+    2.5% 100%,
+    100% 2.5% !important;
+}
+
+.hero-wall-link::after {
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(145, 150, 158, .22) .8px,
+      transparent .8px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(145, 150, 158, .22) .8px,
+      transparent .8px
+    ) !important;
+
+  background-size:
+    10% 100%,
+    100% 10% !important;
+}
+
+
+/* =========================================================
+   MINIATURA REAL DA PAREDE — HOME
+   ========================================================= */
+
+.hero-visual .pixel-mosaic.compact {
+  background: #fff !important;
+  border: 1px solid #ff681d !important;
+  cursor: pointer;
+}
+
+.hero-visual .pixel-mosaic.compact canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  background: #fff !important;
+  image-rendering: pixelated;
+}
+
+/*
+ * Desliga a grade CSS artificial anterior.
+ * Agora a grade é desenhada no próprio canvas,
+ * junto com os pixels reais.
+ */
+.hero-wall-link::before,
+.hero-wall-link::after {
+  display: none !important;
+}
+

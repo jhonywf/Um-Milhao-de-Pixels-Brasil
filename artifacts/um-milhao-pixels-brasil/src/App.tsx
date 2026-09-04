@@ -249,7 +249,7 @@ function RealWallMiniMap() {
 
     const interval = window.setInterval(
       () => void load(),
-      30000,
+      10000,
     );
 
     return () => {
@@ -269,15 +269,69 @@ function RealWallMiniMap() {
 
     ctx.clearRect(0, 0, 1000, 1000);
 
-    ctx.fillStyle = '#fff7d6';
+    /* fundo exatamente branco */
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, 1000, 1000);
 
+    /*
+     * PIXELS REAIS
+     * Mesma fonte de dados da parede oficial.
+     */
     for (const pixel of pixels) {
       if (!pixel.color) continue;
 
       ctx.fillStyle = pixel.color;
       ctx.fillRect(pixel.x, pixel.y, 1, 1);
     }
+
+    /*
+     * GRADE DA VISÃO GERAL
+     *
+     * 10 x 10 pixels = divisão fina
+     * 100 x 100 pixels = divisão principal
+     *
+     * A grade é desenhada DEPOIS dos pixels para continuar
+     * visível mesmo quando existirem desenhos grandes.
+     */
+
+    ctx.save();
+
+    /* blocos de 10 pixels */
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(176, 181, 188, 0.42)';
+    ctx.lineWidth = 0.65;
+
+    for (let position = 10; position < 1000; position += 10) {
+      const p = position + 0.5;
+
+      ctx.moveTo(p, 0);
+      ctx.lineTo(p, 1000);
+
+      ctx.moveTo(0, p);
+      ctx.lineTo(1000, p);
+    }
+
+    ctx.stroke();
+
+    /* blocos principais de 100 pixels */
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(125, 131, 140, 0.52)';
+    ctx.lineWidth = 1;
+
+    for (let position = 100; position < 1000; position += 100) {
+      const p = position + 0.5;
+
+      ctx.moveTo(p, 0);
+      ctx.lineTo(p, 1000);
+
+      ctx.moveTo(0, p);
+      ctx.lineTo(1000, p);
+    }
+
+    ctx.stroke();
+
+    ctx.restore();
+
   }, [pixels]);
 
   return (
@@ -321,7 +375,7 @@ function RealWallMiniMap() {
             left: 12,
             bottom: 12,
             padding: '6px 8px',
-            background: '#fffaf0',
+            background: '#ffffff',
             border: '1px solid #211d42',
             fontSize: 10,
             fontWeight: 700,
@@ -383,16 +437,52 @@ type PublicWallStats = {
   }>;
   records: {
     first_purchase: {
+      order_id: string;
       pixel_count: number;
       paid_at: string;
+      name: string;
+      username: string | null;
+      bounds: {
+        min_x: number;
+        min_y: number;
+        max_x: number;
+        max_y: number;
+      } | null;
     } | null;
+
     latest_purchase: {
+      order_id: string;
       pixel_count: number;
       paid_at: string;
+      name: string;
+      username: string | null;
+      bounds: {
+        min_x: number;
+        min_y: number;
+        max_x: number;
+        max_y: number;
+      } | null;
     } | null;
+
     largest_purchase: {
+      order_id: string;
       pixel_count: number;
       paid_at: string;
+      name: string;
+      username: string | null;
+      bounds: {
+        min_x: number;
+        min_y: number;
+        max_x: number;
+        max_y: number;
+      } | null;
+    } | null;
+
+    largest_buyer: {
+      name: string;
+      username: string | null;
+      pixels: number;
+      purchases: number;
     } | null;
   };
 };
@@ -879,73 +969,178 @@ function DemoActivity() {
           </div>
         </div>
 
-        <div className="records-card">
+        <div
+          className="records-card hall-card"
+          data-testid="hall-da-fama"
+        >
           <div className="card-topline">
             <span>
-              <Zap size={16} /> recordes da parede
+              <Star size={16} /> hall da fama
             </span>
             <span>real</span>
           </div>
 
-          {stats?.records.largest_purchase ? (
-            <div className="record-big">
-              <span>maior compra</span>
+          <div className="hall-heading">
+            <h2>
+              Marcas que
+              <br />
+              <span>já viraram história.</span>
+            </h2>
 
-              <strong>
-                {stats.records.largest_purchase.pixel_count
-                  .toLocaleString('pt-BR')}
-                <small> pixels</small>
-              </strong>
+            <p>
+              Só entram aqui conquistas comprovadas pelas
+              compras reais da parede.
+            </p>
+          </div>
 
-              <em>
-                {formatDate(
-                  stats.records.largest_purchase.paid_at,
-                )}
-              </em>
+          {!stats || stats.purchase_count === 0 ? (
+            <div className="demo-notice">
+              O Hall da Fama começa com a primeira compra.
             </div>
           ) : (
-            <div className="record-big">
-              <span>maior compra</span>
-              <strong>—</strong>
-              <em>esperando a primeira marca</em>
+            <div className="hall-grid">
+              {stats.records.first_purchase && (
+                <article className="hall-item">
+                  <div className="hall-icon">01</div>
+
+                  <div className="hall-copy">
+                    <small>primeiro comprador</small>
+                    <strong>
+                      {stats.records.first_purchase.name}
+                    </strong>
+                    <span>
+                      {stats.records.first_purchase.pixel_count.toLocaleString(
+                        'pt-BR',
+                      )}{' '}
+                      pixels ·{' '}
+                      {formatDate(
+                        stats.records.first_purchase.paid_at,
+                      )}
+                    </span>
+                  </div>
+
+                  {stats.records.first_purchase.bounds && (
+                    <Link
+                      className="hall-link"
+                      href={`/parede?focus=${stats.records.first_purchase.bounds.min_x},${stats.records.first_purchase.bounds.min_y},${stats.records.first_purchase.bounds.max_x},${stats.records.first_purchase.bounds.max_y}`}
+                    >
+                      Ver na parede
+                      <ArrowRight size={14} />
+                    </Link>
+                  )}
+                </article>
+              )}
+
+              {stats.records.largest_buyer && (
+                <article className="hall-item">
+                  <div className="hall-icon">★</div>
+
+                  <div className="hall-copy">
+                    <small>maior comprador</small>
+                    <strong>
+                      {stats.records.largest_buyer.name}
+                    </strong>
+                    <span>
+                      {stats.records.largest_buyer.pixels.toLocaleString(
+                        'pt-BR',
+                      )}{' '}
+                      pixels em{' '}
+                      {stats.records.largest_buyer.purchases.toLocaleString(
+                        'pt-BR',
+                      )}{' '}
+                      {stats.records.largest_buyer.purchases === 1
+                        ? 'compra'
+                        : 'compras'}
+                    </span>
+                  </div>
+
+                  {stats.records.largest_buyer.username && (
+                    <Link
+                      className="hall-link"
+                      href={`/usuario/${stats.records.largest_buyer.username}`}
+                    >
+                      Ver perfil
+                      <ArrowRight size={14} />
+                    </Link>
+                  )}
+                </article>
+              )}
+
+              {stats.records.largest_purchase && (
+                <article className="hall-item">
+                  <div className="hall-icon">↑</div>
+
+                  <div className="hall-copy">
+                    <small>maior compra</small>
+                    <strong>
+                      {stats.records.largest_purchase.pixel_count.toLocaleString(
+                        'pt-BR',
+                      )}{' '}
+                      pixels
+                    </strong>
+                    <span>
+                      {stats.records.largest_purchase.name} ·{' '}
+                      {formatDate(
+                        stats.records.largest_purchase.paid_at,
+                      )}
+                    </span>
+                  </div>
+
+                  {stats.records.largest_purchase.bounds && (
+                    <Link
+                      className="hall-link"
+                      href={`/parede?focus=${stats.records.largest_purchase.bounds.min_x},${stats.records.largest_purchase.bounds.min_y},${stats.records.largest_purchase.bounds.max_x},${stats.records.largest_purchase.bounds.max_y}`}
+                    >
+                      Ver na parede
+                      <ArrowRight size={14} />
+                    </Link>
+                  )}
+                </article>
+              )}
+
+              {stats.records.latest_purchase && (
+                <article className="hall-item hall-item-live">
+                  <div className="hall-icon">●</div>
+
+                  <div className="hall-copy">
+                    <small>compra mais recente</small>
+                    <strong>
+                      {stats.records.latest_purchase.name}
+                    </strong>
+                    <span>
+                      {stats.records.latest_purchase.pixel_count.toLocaleString(
+                        'pt-BR',
+                      )}{' '}
+                      pixels ·{' '}
+                      {formatDate(
+                        stats.records.latest_purchase.paid_at,
+                      )}
+                    </span>
+                  </div>
+
+                  {stats.records.latest_purchase.bounds && (
+                    <Link
+                      className="hall-link"
+                      href={`/parede?focus=${stats.records.latest_purchase.bounds.min_x},${stats.records.latest_purchase.bounds.min_y},${stats.records.latest_purchase.bounds.max_x},${stats.records.latest_purchase.bounds.max_y}`}
+                    >
+                      Ver na parede
+                      <ArrowRight size={14} />
+                    </Link>
+                  )}
+                </article>
+              )}
             </div>
           )}
 
-          <div className="record-divider" />
-
-          <div className="record-small">
-            <span>primeira compra</span>
-
-            <b>
-              {stats?.records.first_purchase
-                ? `${stats.records.first_purchase.pixel_count.toLocaleString(
-                    'pt-BR',
-                  )} pixels · ${formatDate(
-                    stats.records.first_purchase.paid_at,
-                  )}`
-                : 'ainda não aconteceu'}
-            </b>
-          </div>
-
-          <div className="record-small">
-            <span>compra mais recente</span>
-
-            <b>
-              {stats?.records.latest_purchase
-                ? `${stats.records.latest_purchase.pixel_count.toLocaleString(
-                    'pt-BR',
-                  )} pixels · ${formatDate(
-                    stats.records.latest_purchase.paid_at,
-                  )}`
-                : 'esperando a primeira compra'}
-
-              {stats?.records.latest_purchase && (
-                <span className="live-dot" />
-              )}
-            </b>
+          <div className="hall-future">
+            <span>próximas conquistas</span>
+            <p>
+              Maior desenho e primeira empresa serão liberados
+              quando pudermos comprová-los com dados reais.
+            </p>
           </div>
         </div>
-      </div>
+        </div>
     </section>
   );
 }

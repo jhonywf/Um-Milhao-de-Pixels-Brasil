@@ -565,6 +565,94 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       return largest;
     }, null);
 
+    const notableOrderIds = [
+      firstOrder?.id,
+      latestOrder?.id,
+      largestOrder?.id,
+    ].filter((value): value is string => Boolean(value));
+
+    const boundsByOrder = new Map<
+      string,
+      {
+        min_x: number;
+        min_y: number;
+        max_x: number;
+        max_y: number;
+      }
+    >();
+
+    if (notableOrderIds.length > 0) {
+      const claimsQuery = new URLSearchParams({
+        select: "x,y,order_id",
+        status: "eq.purchased",
+        order_id: `in.(${[...new Set(notableOrderIds)].join(",")})`,
+      });
+
+      try {
+        const claims = await serviceRoleGet<Array<{
+          x: number;
+          y: number;
+          order_id: string | null;
+        }>>(
+          `wall_pixel_claims?${claimsQuery.toString()}`,
+        );
+
+        const grouped = new Map<
+          string,
+          Array<{ x: number; y: number }>
+        >();
+
+        for (const claim of claims) {
+          if (!claim.order_id) continue;
+
+          const list = grouped.get(claim.order_id) ?? [];
+          list.push({ x: claim.x, y: claim.y });
+          grouped.set(claim.order_id, list);
+        }
+
+        for (const [orderId, pixels] of grouped.entries()) {
+          if (pixels.length === 0) continue;
+
+          boundsByOrder.set(orderId, {
+            min_x: Math.min(...pixels.map((pixel) => pixel.x)),
+            min_y: Math.min(...pixels.map((pixel) => pixel.y)),
+            max_x: Math.max(...pixels.map((pixel) => pixel.x)),
+            max_y: Math.max(...pixels.map((pixel) => pixel.y)),
+          });
+        }
+      } catch {
+        // O Hall continua disponível mesmo se os bounds
+        // estiverem temporariamente indisponíveis.
+      }
+    }
+
+    const publicIdentityForOrder = (
+      order: (typeof orders)[number] | null,
+    ) => {
+      if (!order) {
+        return {
+          name: "Comprador anônimo",
+          username: null as string | null,
+        };
+      }
+
+      const profile = profileById.get(order.user_id);
+      const canShowProfile = profile?.public_profile === true;
+
+      return {
+        name: canShowProfile
+          ? profile?.display_name ||
+            (profile?.username
+              ? `@${profile.username}`
+              : "Comprador")
+          : "Comprador anônimo",
+        username:
+          canShowProfile && profile?.username
+            ? profile.username
+            : null,
+      };
+    };
+
     const recentPurchases = [...orders]
       .reverse()
       .slice(0, 10)
@@ -689,21 +777,41 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       records: {
         first_purchase: firstOrder
           ? {
+              order_id: firstOrder.id,
               pixel_count: firstOrder.pixel_count,
               paid_at: firstOrder.paid_at ?? firstOrder.created_at,
+              ...publicIdentityForOrder(firstOrder),
+              bounds: boundsByOrder.get(firstOrder.id) ?? null,
             }
           : null,
+
         latest_purchase: latestOrder
           ? {
+              order_id: latestOrder.id,
               pixel_count: latestOrder.pixel_count,
               paid_at: latestOrder.paid_at ?? latestOrder.created_at,
+              ...publicIdentityForOrder(latestOrder),
+              bounds: boundsByOrder.get(latestOrder.id) ?? null,
             }
           : null,
+
         largest_purchase: largestOrder
           ? {
+              order_id: largestOrder.id,
               pixel_count: largestOrder.pixel_count,
               paid_at:
                 largestOrder.paid_at ?? largestOrder.created_at,
+              ...publicIdentityForOrder(largestOrder),
+              bounds: boundsByOrder.get(largestOrder.id) ?? null,
+            }
+          : null,
+
+        largest_buyer: ranking[0]
+          ? {
+              name: ranking[0].name,
+              username: ranking[0].username,
+              pixels: ranking[0].pixels,
+              purchases: ranking[0].purchases,
             }
           : null,
       },
