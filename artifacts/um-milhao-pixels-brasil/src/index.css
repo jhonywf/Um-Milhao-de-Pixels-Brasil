@@ -4146,3 +4146,384 @@ button {
    FIM AUTH VISUAL 2.0
    ========================================================= */
 
+
+/* =========================================================
+   AJUSTES FINAIS — CONTA / PERFIL / DROPDOWN
+   Paleta: preto / branco / cinza / laranja
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   1. DROPDOWN DA CONTA
+   Remove azul/roxo de texto, bordas e sombras
+   --------------------------------------------------------- */
+
+.header-account-menu,
+.account-menu,
+.account-dropdown,
+[class*="account-menu"],
+[class*="account-dropdown"] {
+  background: #111111 !important;
+  background-color: #111111 !important;
+  color: #f5f4ef !important;
+
+  border: 1px solid #343434 !important;
+  border-color: #343434 !important;
+
+  box-shadow: 6px 6px 0 rgba(255, 104, 29, .18) !important;
+}
+
+.header-account-menu a,
+.header-account-menu button,
+.account-menu a,
+.account-menu button,
+.account-dropdown a,
+.account-dropdown button,
+[class*="account-menu"] a,
+[class*="account-menu"] button,
+[class*="account-dropdown"] a,
+[class*="account-dropdown"] button {
+  color: #f5f4ef !important;
+  border-color: transparent !important;
+}
+
+/* Links normais do menu */
+.header-account-menu a:not(.logout),
+.account-menu a:not(.logout),
+.account-dropdown a:not(.logout) {
+  color: #f5f4ef !important;
+}
+
+/* Hover */
+.header-account-menu a:hover,
+.header-account-menu button:hover,
+.account-menu a:hover,
+.account-menu button:hover,
+.account-dropdown a:hover,
+.account-dropdown button:hover {
+  background: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+/* Sair */
+.header-account-menu .logout,
+.account-menu .logout,
+.account-dropdown .logout,
+[class*="account-menu"] .logout,
+[class*="account-dropdown"] .logout {
+  color: #ff681d !important;
+}
+
+/* Botão da conta no header */
+.header-account {
+  border-color: #ff681d !important;
+  box-shadow: none !important;
+}
+
+.header-account:hover,
+.header-account:focus,
+.header-account[aria-expanded="true"] {
+  border-color: #ff681d !important;
+  box-shadow: 0 0 0 1px #ff681d !important;
+}
+
+/* ---------------------------------------------------------
+   2. ÁREA DE UPLOAD DA FOTO
+   Remove o cinza chapado antigo
+   --------------------------------------------------------- */
+
+.account-dialog input[type="file"],
+.profile-dialog input[type="file"],
+.account-dialog .file-upload,
+.account-dialog .upload-area,
+.account-dialog [class*="upload"],
+.profile-dialog .file-upload,
+.profile-dialog .upload-area,
+.profile-dialog [class*="upload"] {
+  background: #111111 !important;
+  background-color: #111111 !important;
+
+  color: #c8c8c8 !important;
+
+  border: 1px dashed #4a4a4a !important;
+  box-shadow: none !important;
+}
+
+/* Container externo da área de upload */
+.account-dialog label:has(input[type="file"]),
+.profile-dialog label:has(input[type="file"]) {
+  background: #111111 !important;
+  color: #c8c8c8 !important;
+  border-color: #4a4a4a !important;
+}
+
+/* Texto pequeno do upload */
+.account-dialog input[type="file"]::file-selector-button,
+.profile-dialog input[type="file"]::file-selector-button {
+  background: #1a1a1a !important;
+  color: #f5f4ef !important;
+
+  border: 1px solid #343434 !important;
+  padding: 8px 12px !important;
+  margin-right: 10px !important;
+
+  cursor: pointer;
+}
+
+.account-dialog input[type="file"]::file-selector-button:hover,
+.profile-dialog input[type="file"]::file-selector-button:hover {
+  background: #ff681d !important;
+  color: #090909 !important;
+  border-color: #ff681d !important;
+}
+
+/* ---------------------------------------------------------
+   3. BLOCO DE E-MAIL PRIVADO / VERIFICADO
+   Remove roxo
+   --------------------------------------------------------- */
+
+.account-dialog .private-email,
+.account-dialog .verified-email,
+.account-dialog .email-private,
+.account-dialog .profile-email,
+.account-dialog [class*="private-email"],
+.account-dialog [class*="verified-email"],
+.account-dialog [class*="profile-email"],
+.profile-dialog .private-email,
+.profile-dialog .verified-email,
+.profile-dialog .email-private,
+.profile-dialog .profile-email,
+.profile-dialog [class*="private-email"],
+.profile-dialog [class*="verified-email"],
+.profile-dialog [class*="profile-email"] {
+  background: #171717 !important;
+  background-color: #171717 !important;
+
+  color: #f5f4ef !important;
+
+  border: 1px solid #343434 !important;
+  box-shadow: none !important;
+}
+
+/* Caso esse bloco seja apenas uma div estilizada sem classe específica */
+.account-dialog [style*="background"],
+.profile-dialog [style*="background"] {
+  border-color: #343434;
+}
+
+/* Ícones e textos do bloco de e-mail */
+.account-dialog .private-email svg,
+.account-dialog .verified-email svg,
+.account-dialog .email-private svg,
+.account-dialog .profile-email svg,
+.profile-dialog .private-email svg,
+.profile-dialog .verified-email svg,
+.profile-dialog .email-private svg,
+.profile-dialog .profile-email svg {
+  color: #ff681d !important;
+  stroke: #ff681d !important;
+}
+
+.account-dialog .private-email small,
+.account-dialog .verified-email small,
+.account-dialog .email-private small,
+.account-dialog .profile-email small,
+.profile-dialog .private-email small,
+.profile-dialog .verified-email small,
+.profile-dialog .email-private small,
+.profile-dialog .profile-email small {
+  color: #8f8f8f !important;
+}
+
+/* ---------------------------------------------------------
+   4. REMOVE RESQUÍCIOS ROXO/AZUL DO PERFIL
+   --------------------------------------------------------- */
+
+.account-dialog,
+.profile-dialog {
+  border-color: #343434 !important;
+  box-shadow: 10px 10px 0 rgba(255, 104, 29, .18) !important;
+}
+
+.account-dialog input,
+.account-dialog select,
+.account-dialog textarea,
+.profile-dialog input,
+.profile-dialog select,
+.profile-dialog textarea {
+  border-color: #3a3a3a !important;
+}
+
+.account-dialog input:focus,
+.account-dialog select:focus,
+.account-dialog textarea:focus,
+.profile-dialog input:focus,
+.profile-dialog select:focus,
+.profile-dialog textarea:focus {
+  border-color: #ff681d !important;
+  box-shadow: 0 0 0 1px #ff681d !important;
+}
+
+/* =========================================================
+   FIM DOS AJUSTES
+   ========================================================= */
+
+
+/* =========================================================
+   REMOÇÃO FINAL DE AZUL/ROXO — CONTA E PERFIL
+   ========================================================= */
+
+/* DROPDOWN — fundo, borda e sombra */
+.header-account-menu,
+.account-menu,
+.account-dropdown,
+[class*="account-menu"],
+[class*="account-dropdown"] {
+  background: #111111 !important;
+  background-color: #111111 !important;
+
+  border: 1px solid #343434 !important;
+  outline: none !important;
+
+  box-shadow: 6px 6px 0 rgba(255, 104, 29, .18) !important;
+}
+
+/* Remove azul/roxo de QUALQUER texto interno do dropdown */
+.header-account-menu *:not(.logout),
+.account-menu *:not(.logout),
+.account-dropdown *:not(.logout),
+[class*="account-menu"] *:not(.logout),
+[class*="account-dropdown"] *:not(.logout) {
+  color: #f5f4ef !important;
+  border-color: #343434 !important;
+  text-decoration-color: #f5f4ef !important;
+}
+
+/* Links principais */
+.header-account-menu a,
+.account-menu a,
+.account-dropdown a,
+.header-account-menu button,
+.account-menu button,
+.account-dropdown button {
+  color: #f5f4ef !important;
+}
+
+/* Hover */
+.header-account-menu a:hover,
+.header-account-menu button:hover,
+.account-menu a:hover,
+.account-menu button:hover,
+.account-dropdown a:hover,
+.account-dropdown button:hover {
+  color: #ffffff !important;
+  background: #1a1a1a !important;
+}
+
+/* Sair permanece laranja */
+.header-account-menu .logout,
+.account-menu .logout,
+.account-dropdown .logout,
+.header-account-menu .logout *,
+.account-menu .logout *,
+.account-dropdown .logout * {
+  color: #ff681d !important;
+}
+
+/* Remove qualquer linha ou sombra roxa */
+.header-account-menu::before,
+.header-account-menu::after,
+.account-menu::before,
+.account-menu::after,
+.account-dropdown::before,
+.account-dropdown::after {
+  border-color: #343434 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* =========================================================
+   PERFIL — BLOCO DO E-MAIL PRIVADO
+   ========================================================= */
+
+/* Superfície do bloco */
+.account-dialog [class*="email"],
+.profile-dialog [class*="email"] {
+  border-color: #343434 !important;
+}
+
+/* Somente blocos informativos, sem alterar inputs */
+.account-dialog div[class*="email"],
+.profile-dialog div[class*="email"],
+.account-dialog section[class*="email"],
+.profile-dialog section[class*="email"] {
+  background: #171717 !important;
+  background-color: #171717 !important;
+  color: #f5f4ef !important;
+  box-shadow: none !important;
+}
+
+/* Remove azul/roxo dos textos internos */
+.account-dialog div[class*="email"] *,
+.profile-dialog div[class*="email"] *,
+.account-dialog section[class*="email"] *,
+.profile-dialog section[class*="email"] * {
+  color: #f5f4ef !important;
+}
+
+/* E-mail em destaque */
+.account-dialog div[class*="email"] strong,
+.account-dialog div[class*="email"] span,
+.profile-dialog div[class*="email"] strong,
+.profile-dialog div[class*="email"] span {
+  color: #f5f4ef !important;
+}
+
+/* Texto E-MAIL PRIVADO */
+.account-dialog div[class*="email"] small,
+.profile-dialog div[class*="email"] small {
+  color: #8f8f8f !important;
+}
+
+/* Ícone do e-mail */
+.account-dialog div[class*="email"] svg,
+.profile-dialog div[class*="email"] svg {
+  color: #ff681d !important;
+  stroke: #ff681d !important;
+}
+
+/* =========================================================
+   PERFIL — remove bordas/sombras roxas restantes
+   ========================================================= */
+
+.account-dialog,
+.profile-dialog,
+.account-dialog form,
+.profile-dialog form {
+  border-color: #343434 !important;
+}
+
+.account-dialog input,
+.account-dialog textarea,
+.account-dialog select,
+.profile-dialog input,
+.profile-dialog textarea,
+.profile-dialog select {
+  color: #f5f4ef !important;
+  border-color: #343434 !important;
+}
+
+.account-dialog input:focus,
+.account-dialog textarea:focus,
+.account-dialog select:focus,
+.profile-dialog input:focus,
+.profile-dialog textarea:focus,
+.profile-dialog select:focus {
+  border-color: #ff681d !important;
+  outline-color: #ff681d !important;
+  box-shadow: 0 0 0 1px #ff681d !important;
+}
+
+/* =========================================================
+   FIM
+   ========================================================= */
+

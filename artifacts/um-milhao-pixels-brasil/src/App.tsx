@@ -133,7 +133,7 @@ function Header() {
                 background: '#111111',
                   color: '#f5f4ef',
                 border: '1px solid #343434',
-                boxShadow: '6px 6px 0 #211d42',
+                boxShadow: '5px 5px 0 rgba(255, 104, 29, 0.18)',
                 zIndex: 1000,
                 padding: 8,
               }}
@@ -146,12 +146,10 @@ function Header() {
                   display: 'block',
                   padding: '12px 14px',
                   textDecoration: 'none',
-                  color: '#211d42',
+                  color: '#343434',
                   fontWeight: 700,
                 }}
-              >
-                Meus pixels
-              </Link>
+              ><span style={{ color: '#f5f4ef' }}>Meus pixels</span></Link>
 
               <button
                 type="button"
@@ -167,18 +165,16 @@ function Header() {
                   textAlign: 'left',
                   background: 'transparent',
                   border: 0,
-                  color: '#211d42',
+                  color: '#343434',
                   fontWeight: 700,
                   cursor: 'pointer',
                 }}
-              >
-                Editar perfil
-              </button>
+              ><span style={{ color: '#f5f4ef' }}>Editar perfil</span></button>
 
               <div
                 style={{
                   height: 1,
-                  background: '#211d42',
+                  background: '#343434',
                   opacity: 0.2,
                   margin: '4px 0',
                 }}
@@ -195,7 +191,7 @@ function Header() {
                   textAlign: 'left',
                   background: 'transparent',
                   border: 0,
-                  color: '#ef6b50',
+                  color: '#ff681d',
                   fontWeight: 800,
                   cursor: 'pointer',
                 }}
