@@ -4527,3 +4527,57 @@ button {
    FIM
    ========================================================= */
 
+
+/* =========================================================
+   CONTADOR DA RESERVA
+   ========================================================= */
+
+.reservation-countdown {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reservation-clock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 76px;
+  padding: 6px 10px;
+
+  background: #171717;
+  color: #f5f4ef;
+
+  border: 1px solid #343434;
+
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .08em;
+}
+
+.reservation-warning {
+  border-color: #ff681d !important;
+}
+
+.reservation-warning .reservation-clock {
+  background: #ff681d;
+  color: #090909;
+  border-color: #ff681d;
+}
+
+.reservation-expired {
+  background: #171717 !important;
+  color: #f5f4ef !important;
+  border-color: #ff681d !important;
+}
+
+.reservation-expired strong {
+  color: #ff681d;
+}
+
+/* =========================================================
+   FIM CONTADOR
+   ========================================================= */
+

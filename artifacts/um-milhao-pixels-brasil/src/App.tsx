@@ -2879,9 +2879,43 @@ function SelectionPanel({
   const [reserving, setReserving] = useState(false);
   const [openingCheckout, setOpeningCheckout] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [reservationSecondsLeft, setReservationSecondsLeft] = useState<number | null>(null);
   const { user, session, openAuth } = useAuth();
   const selectedCount = selectedPixels.length;
   const autoCheckoutStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (!lastReservation) {
+      setReservationSecondsLeft(null);
+      return;
+    }
+
+    const updateReservationClock = () => {
+      const expiresAt = new Date(lastReservation.expires_at).getTime();
+      const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      setReservationSecondsLeft(remaining);
+    };
+
+    updateReservationClock();
+
+    const interval = window.setInterval(updateReservationClock, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [lastReservation]);
+
+  const reservationExpired =
+    lastReservation !== null &&
+    reservationSecondsLeft !== null &&
+    reservationSecondsLeft <= 0;
+
+  const reservationClock =
+    reservationSecondsLeft === null
+      ? null
+      : `${String(Math.floor(reservationSecondsLeft / 60)).padStart(2, '0')}:${String(
+          reservationSecondsLeft % 60,
+        ).padStart(2, '0')}`;
 
   const openMercadoPagoCheckout = async (
     reservation: WallReservationSuccess,
@@ -2994,6 +3028,11 @@ function SelectionPanel({
   const handlePayment = async () => {
     if (!session || !lastReservation || openingCheckout) return;
 
+    if (reservationExpired) {
+      setPaymentError('Sua reserva expirou. Selecione novamente os pixels para continuar.');
+      return;
+    }
+
     await openMercadoPagoCheckout(
       lastReservation,
       session.access_token,
@@ -3041,12 +3080,46 @@ function SelectionPanel({
           {reservationError && <div className="demo-notice" role="alert">{reservationError}</div>}
           {lastReservation && (
             <>
-              <div className="demo-notice" role="status">
-                <Check size={15} /> {lastReservation.pixel_count} pixels reservados até {new Date(lastReservation.expires_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Valor confirmado pelo banco: R$ {(lastReservation.amount_cents / 100).toFixed(2).replace('.', ',')}.
+              <div
+                className={`demo-notice reservation-countdown ${
+                  reservationExpired
+                    ? 'reservation-expired'
+                    : reservationSecondsLeft !== null && reservationSecondsLeft <= 180
+                      ? 'reservation-warning'
+                      : ''
+                }`}
+                role="status"
+              >
+                {reservationExpired ? (
+                  <>
+                    <span>Reserva expirada.</span>
+                    <strong>Selecione novamente os pixels para continuar.</strong>
+                  </>
+                ) : (
+                  <>
+                    <Check size={15} />
+                    <span>{lastReservation.pixel_count} pixels reservados</span>
+                    {reservationClock && (
+                      <strong className="reservation-clock">{reservationClock}</strong>
+                    )}
+                    <span>
+                      Valor: R$ {(lastReservation.amount_cents / 100).toFixed(2).replace('.', ',')}
+                    </span>
+                  </>
+                )}
               </div>
-              <button className="selection-button" type="button" onClick={handlePayment} disabled={openingCheckout}>
-                {openingCheckout ? 'Abrindo Mercado Pago...' : 'Pagar com Mercado Pago'}
-                {!openingCheckout && <ArrowRight size={17} />}
+              <button
+                className="selection-button"
+                type="button"
+                onClick={handlePayment}
+                disabled={openingCheckout || reservationExpired}
+              >
+                {reservationExpired
+                  ? 'Reserva expirada'
+                  : openingCheckout
+                    ? 'Abrindo Mercado Pago...'
+                    : 'Pagar com Mercado Pago'}
+                {!openingCheckout && !reservationExpired && <ArrowRight size={17} />}
               </button>
               {paymentError && <div className="demo-notice" role="alert">{paymentError}</div>}
             </>
