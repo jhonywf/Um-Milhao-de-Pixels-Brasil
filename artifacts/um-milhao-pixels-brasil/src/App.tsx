@@ -47,9 +47,47 @@ const previewBlocks = [
 ] as const;
 
 function Header() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const isWall = location === '/parede';
-  const { user, profile, openAuth, openProfile } = useAuth();
+  const { user, profile, openAuth, openProfile, logout } = useAuth();
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(target)
+      ) {
+        setAccountMenuOpen(false);
+      }
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setAccountMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [accountMenuOpen]);
+
+  const handleLogout = async () => {
+    setAccountMenuOpen(false);
+    await logout();
+    setLocation('/');
+  };
+
   return (
     <header className="site-header" data-testid="header-site">
       <Link href="/" className="brand-lockup" data-testid="link-home">
@@ -63,12 +101,109 @@ function Header() {
         <a href="/#empresas" data-testid="link-empresas">Empresas</a>
       </nav>
       {user ? (
-        <Link href="/meus-pixels" className="header-account" data-testid="button-account">
-          <span className="header-account-avatar">
-            {profile?.avatar_path ? <img src={supabasePublicStorageUrl(profile.avatar_path)} alt="" /> : profile?.avatar_emoji ?? <UserRound size={14} />}
-          </span>
-          <span className="header-account-name">{profile?.username ? `@${profile.username}` : 'minha conta'}</span>
-        </Link>
+        <div
+          ref={accountMenuRef}
+          style={{ position: 'relative' }}
+        >
+          <button
+            className="header-account"
+            type="button"
+            onClick={() => setAccountMenuOpen((open) => !open)}
+            aria-haspopup="menu"
+            aria-expanded={accountMenuOpen}
+            data-testid="button-account"
+          >
+            <span className="header-account-avatar">
+              {profile?.avatar_path ? <img src={supabasePublicStorageUrl(profile.avatar_path)} alt="" /> : profile?.avatar_emoji ?? <UserRound size={14} />}
+            </span>
+            <span className="header-account-name">
+              {profile?.username ? `@${profile.username}` : 'minha conta'}
+            </span>
+            <ChevronDown size={14} />
+          </button>
+
+          {accountMenuOpen && (
+            <div
+              role="menu"
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 'calc(100% + 10px)',
+                width: 210,
+                background: '#fffaf0',
+                border: '2px solid #211d42',
+                boxShadow: '6px 6px 0 #211d42',
+                zIndex: 1000,
+                padding: 8,
+              }}
+            >
+              <Link
+                href="/meus-pixels"
+                role="menuitem"
+                onClick={() => setAccountMenuOpen(false)}
+                style={{
+                  display: 'block',
+                  padding: '12px 14px',
+                  textDecoration: 'none',
+                  color: '#211d42',
+                  fontWeight: 700,
+                }}
+              >
+                Meus pixels
+              </Link>
+
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setAccountMenuOpen(false);
+                  openProfile();
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '12px 14px',
+                  textAlign: 'left',
+                  background: 'transparent',
+                  border: 0,
+                  color: '#211d42',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Editar perfil
+              </button>
+
+              <div
+                style={{
+                  height: 1,
+                  background: '#211d42',
+                  opacity: 0.2,
+                  margin: '4px 0',
+                }}
+              />
+
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => void handleLogout()}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '12px 14px',
+                  textAlign: 'left',
+                  background: 'transparent',
+                  border: 0,
+                  color: '#ef6b50',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                }}
+              >
+                Sair
+              </button>
+            </div>
+          )}
+        </div>
       ) : (
         <button className="header-login" type="button" onClick={openAuth} data-testid="button-login">
           entrar
