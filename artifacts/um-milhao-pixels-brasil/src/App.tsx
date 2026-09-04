@@ -2851,6 +2851,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
             lastReservation={lastReservation}
             onReserved={handleReserved}
             onAvailabilityConflict={refreshPublicPixels}
+            onResetExpired={clearSelection}
           />
         </div>
         {wallSyncError && <div className="demo-notice" role="status">{wallSyncError} A proteção do banco continua ativa; tente atualizar a página.</div>}
@@ -2867,6 +2868,7 @@ function SelectionPanel({
   lastReservation,
   onReserved,
   onAvailabilityConflict,
+  onResetExpired,
 }: {
   selectedPixels: SelectedPixel[];
   selectedBlock: PixelBlock | null;
@@ -2874,6 +2876,7 @@ function SelectionPanel({
   lastReservation: WallReservationSuccess | null;
   onReserved: (reservation: WallReservationSuccess) => void;
   onAvailabilityConflict: () => Promise<void>;
+  onResetExpired: () => void;
 }) {
   const [reservationError, setReservationError] = useState<string | null>(null);
   const [reserving, setReserving] = useState(false);
@@ -3051,6 +3054,32 @@ function SelectionPanel({
     };
   }, []);
 
+  const handleExpiredReservationReset = async () => {
+    if (!reservationExpired) return;
+
+    window.localStorage.removeItem(
+      'pixel-wall-checkout-reservation',
+    );
+
+    window.sessionStorage.removeItem(
+      'pixel-wall-checkout-url',
+    );
+
+    clearPendingCheckoutIntent();
+    clearPendingPixelSelection();
+
+    setOpeningCheckout(false);
+    setPaymentError(null);
+    setReservationError(null);
+    setReservationSecondsLeft(null);
+
+    autoCheckoutStartedRef.current = false;
+
+    onResetExpired();
+
+    await onAvailabilityConflict();
+  };
+
   const handlePayment = async () => {
     if (!session || !lastReservation || openingCheckout) return;
 
@@ -3154,15 +3183,19 @@ function SelectionPanel({
               <button
                 className="selection-button"
                 type="button"
-                onClick={handlePayment}
-                disabled={openingCheckout || reservationExpired}
+                onClick={
+                  reservationExpired
+                    ? handleExpiredReservationReset
+                    : handlePayment
+                }
+                disabled={openingCheckout}
               >
                 {reservationExpired
-                  ? 'Reserva expirada'
+                  ? 'Selecionar novamente'
                   : openingCheckout
                     ? 'Abrindo Mercado Pago...'
                     : 'Voltar ao checkout'}
-                {!openingCheckout && !reservationExpired && <ArrowRight size={17} />}
+                {!openingCheckout && <ArrowRight size={17} />}
               </button>
               {paymentError && <div className="demo-notice" role="alert">{paymentError}</div>}
             </>
