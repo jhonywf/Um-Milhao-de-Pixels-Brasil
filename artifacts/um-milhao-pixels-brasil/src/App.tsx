@@ -236,18 +236,137 @@ function PixelMosaic({ compact = false }: { compact?: boolean }) {
   );
 }
 
+type PublicWallStats = {
+  total_pixels: number;
+  available_pixels: number;
+  occupied_percent: number;
+  total_amount_cents: number;
+  buyer_count: number;
+  purchase_count: number;
+  ranking: Array<{
+    name: string;
+    username: string | null;
+    avatar_emoji: string | null;
+    avatar_path: string | null;
+    pixels: number;
+    purchases: number;
+  }>;
+  records: {
+    first_purchase: {
+      pixel_count: number;
+      paid_at: string;
+    } | null;
+    latest_purchase: {
+      pixel_count: number;
+      paid_at: string;
+    } | null;
+    largest_purchase: {
+      pixel_count: number;
+      paid_at: string;
+    } | null;
+  };
+};
+
+async function loadPublicWallStats(): Promise<PublicWallStats> {
+  const response = await fetch(
+    '/api/payments/mercado-pago/public-stats',
+    {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error('Não foi possível carregar as estatísticas.');
+  }
+
+  return await response.json() as PublicWallStats;
+}
+
+function usePublicWallStats() {
+  const [stats, setStats] = useState<PublicWallStats | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const result = await loadPublicWallStats();
+
+        if (!cancelled) {
+          setStats(result);
+        }
+      } catch {
+        // A home continua utilizável mesmo se as estatísticas
+        // estiverem temporariamente indisponíveis.
+      }
+    };
+
+    void load();
+
+    const interval = window.setInterval(
+      () => void load(),
+      30000,
+    );
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  return stats;
+}
+
 function StatStrip() {
-  const stats = [
-    ['0', '/ 1.000.000', 'pixels ocupados'],
-    ['0%', '', 'completo'],
-    ['R$0', '', 'arrecadados'],
-    ['0', '', 'compradores'],
+  const stats = usePublicWallStats();
+
+  const formatMoney = (cents: number) =>
+    new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      maximumFractionDigits: 0,
+    }).format(cents / 100);
+
+  const items = [
+    [
+      stats ? stats.total_pixels.toLocaleString('pt-BR') : '—',
+      '/ 1.000.000',
+      'pixels ocupados',
+    ],
+    [
+      stats
+        ? `${stats.occupied_percent.toLocaleString('pt-BR', {
+            maximumFractionDigits: 4,
+          })}%`
+        : '—',
+      '',
+      'completo',
+    ],
+    [
+      stats ? formatMoney(stats.total_amount_cents) : '—',
+      '',
+      'arrecadados',
+    ],
+    [
+      stats ? stats.buyer_count.toLocaleString('pt-BR') : '—',
+      '',
+      'compradores',
+    ],
   ];
+
   return (
     <section className="stat-strip" data-testid="section-stats">
-      {stats.map(([value, suffix, label], index) => (
-        <div className="stat-item" key={label} data-testid={`stat-${index}`}>
-          <div><strong>{value}</strong><span>{suffix}</span></div>
+      {items.map(([value, suffix, label], index) => (
+        <div
+          className="stat-item"
+          key={label}
+          data-testid={`stat-${index}`}
+        >
+          <div>
+            <strong>{value}</strong>
+            <span>{suffix}</span>
+          </div>
           <small>{label}</small>
         </div>
       ))}
@@ -353,32 +472,149 @@ function Home() {
 }
 
 function DemoActivity() {
-  const ranking = [
-    ['01', 'Banco Amarelo', '168 × 98 px', '#ffcf33'],
-    ['02', 'Clube 1999', '128 × 182 px', '#9367d8'],
-    ['03', 'Rádio Livre', '214 × 88 px', '#5ac8b0'],
-  ];
+  const stats = usePublicWallStats();
+
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(new Date(value));
+
+  const ranking = stats?.ranking ?? [];
+
   return (
-    <section className="activity-section" id="ranking" data-testid="section-activity">
-      <div className="section-label">04 — primeiros sinais</div>
+    <section
+      className="activity-section"
+      id="ranking"
+      data-testid="section-activity"
+    >
+      <div className="section-label">
+        04 — primeiros sinais
+      </div>
+
       <div className="activity-grid">
         <div className="ranking-card">
-          <div className="card-topline"><span><Trophy size={16} /> ranking</span><span className="demo-chip dark-chip">somente demonstração</span></div>
-          <h2>Quem chegou<br /><span>primeiro?</span></h2>
+          <div className="card-topline">
+            <span>
+              <Trophy size={16} /> ranking
+            </span>
+            <span>ao vivo</span>
+          </div>
+
+          <h2>
+            Quem deixou
+            <br />
+            <span>mais marca?</span>
+          </h2>
+
           <div className="rank-list">
-            {ranking.map(([position, name, size, color]) => (
-              <div className="rank-row" key={position} data-testid={`rank-row-${position}`}>
-                <strong>{position}</strong><i style={{ backgroundColor: color }} /><div><b>{name}</b><small>{size}</small></div><ArrowRight size={16} />
+            {!stats ? (
+              <div className="demo-notice">
+                Carregando ranking...
               </div>
-            ))}
+            ) : ranking.length === 0 ? (
+              <div className="demo-notice">
+                O ranking começa com a primeira compra.
+              </div>
+            ) : (
+              ranking.slice(0, 5).map((entry, index) => (
+                <div
+                  className="rank-row"
+                  key={`${entry.username ?? entry.name}-${index}`}
+                  data-testid={`rank-row-${index + 1}`}
+                >
+                  <strong>{index + 1}</strong>
+
+                  <i
+                    style={{
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontStyle: 'normal',
+                    }}
+                  >
+                    {entry.avatar_emoji ?? ''}
+                  </i>
+
+                  <div>
+                    <b>{entry.name}</b>
+                    <small>
+                      {entry.pixels.toLocaleString('pt-BR')}{' '}
+                      {entry.pixels === 1 ? 'pixel' : 'pixels'}
+                    </small>
+                  </div>
+
+                  <ArrowRight size={16} />
+                </div>
+              ))
+            )}
           </div>
         </div>
+
         <div className="records-card">
-          <div className="card-topline"><span><Zap size={16} /> recordes da parede</span><span>demo</span></div>
-          <div className="record-big"><span>maior bloco</span><strong>214 <small>× 88</small></strong><em>Rádio Livre</em></div>
+          <div className="card-topline">
+            <span>
+              <Zap size={16} /> recordes da parede
+            </span>
+            <span>real</span>
+          </div>
+
+          {stats?.records.largest_purchase ? (
+            <div className="record-big">
+              <span>maior compra</span>
+
+              <strong>
+                {stats.records.largest_purchase.pixel_count
+                  .toLocaleString('pt-BR')}
+                <small> pixels</small>
+              </strong>
+
+              <em>
+                {formatDate(
+                  stats.records.largest_purchase.paid_at,
+                )}
+              </em>
+            </div>
+          ) : (
+            <div className="record-big">
+              <span>maior compra</span>
+              <strong>—</strong>
+              <em>esperando a primeira marca</em>
+            </div>
+          )}
+
           <div className="record-divider" />
-          <div className="record-small"><span>primeiro pixel marcado</span><b>coordenada 082,112</b></div>
-          <div className="record-small"><span>última visita</span><b>agora mesmo <span className="live-dot" /></b></div>
+
+          <div className="record-small">
+            <span>primeira compra</span>
+
+            <b>
+              {stats?.records.first_purchase
+                ? `${stats.records.first_purchase.pixel_count.toLocaleString(
+                    'pt-BR',
+                  )} pixels · ${formatDate(
+                    stats.records.first_purchase.paid_at,
+                  )}`
+                : 'ainda não aconteceu'}
+            </b>
+          </div>
+
+          <div className="record-small">
+            <span>compra mais recente</span>
+
+            <b>
+              {stats?.records.latest_purchase
+                ? `${stats.records.latest_purchase.pixel_count.toLocaleString(
+                    'pt-BR',
+                  )} pixels · ${formatDate(
+                    stats.records.latest_purchase.paid_at,
+                  )}`
+                : 'esperando a primeira compra'}
+              {stats?.records.latest_purchase && (
+                <span className="live-dot" />
+              )}
+            </b>
+          </div>
         </div>
       </div>
     </section>

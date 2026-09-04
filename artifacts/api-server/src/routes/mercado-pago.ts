@@ -443,6 +443,173 @@ router.get("/mercado-pago/status", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => {
+  try {
+    const orders = await serviceRoleGet<Array<{
+      id: string;
+      user_id: string;
+      pixel_count: number;
+      amount_cents: number;
+      paid_at: string | null;
+      created_at: string;
+    }>>(
+      "wall_orders?select=id,user_id,pixel_count,amount_cents,paid_at,created_at&status=eq.paid&order=paid_at.asc.nullslast,created_at.asc",
+    );
+
+    const totalPixels = orders.reduce(
+      (sum, order) => sum + Number(order.pixel_count || 0),
+      0,
+    );
+
+    const totalAmountCents = orders.reduce(
+      (sum, order) => sum + Number(order.amount_cents || 0),
+      0,
+    );
+
+    const buyerIds = [...new Set(
+      orders
+        .map((order) => order.user_id)
+        .filter(Boolean),
+    )];
+
+    const buyerTotals = new Map<
+      string,
+      {
+        pixels: number;
+        amount_cents: number;
+        purchases: number;
+      }
+    >();
+
+    for (const order of orders) {
+      const current = buyerTotals.get(order.user_id) ?? {
+        pixels: 0,
+        amount_cents: 0,
+        purchases: 0,
+      };
+
+      current.pixels += Number(order.pixel_count || 0);
+      current.amount_cents += Number(order.amount_cents || 0);
+      current.purchases += 1;
+
+      buyerTotals.set(order.user_id, current);
+    }
+
+    let profiles: Array<{
+      id: string;
+      username: string | null;
+      display_name: string | null;
+      avatar_emoji: string | null;
+      avatar_path: string | null;
+      public_profile: boolean | null;
+    }> = [];
+
+    if (buyerIds.length > 0) {
+      const profileQuery = new URLSearchParams({
+        select:
+          "id,username,display_name,avatar_emoji,avatar_path,public_profile",
+        id: `in.(${buyerIds.join(",")})`,
+      });
+
+      try {
+        profiles = await serviceRoleGet<typeof profiles>(
+          `profiles?${profileQuery.toString()}`,
+        );
+      } catch {
+        // Estatísticas continuam funcionando mesmo se algum perfil
+        // ainda não estiver preenchido.
+      }
+    }
+
+    const profileById = new Map(
+      profiles.map((profile) => [profile.id, profile]),
+    );
+
+    const ranking = [...buyerTotals.entries()]
+      .map(([userId, totals]) => {
+        const profile = profileById.get(userId);
+        const canShowProfile = profile?.public_profile === true;
+
+        return {
+          name: canShowProfile
+            ? profile?.display_name ||
+              (profile?.username ? `@${profile.username}` : "Comprador")
+            : "Comprador anônimo",
+          username:
+            canShowProfile && profile?.username
+              ? profile.username
+              : null,
+          avatar_emoji:
+            canShowProfile ? profile?.avatar_emoji ?? null : null,
+          avatar_path:
+            canShowProfile ? profile?.avatar_path ?? null : null,
+          pixels: totals.pixels,
+          purchases: totals.purchases,
+        };
+      })
+      .sort((a, b) => b.pixels - a.pixels)
+      .slice(0, 10);
+
+    const firstOrder = orders[0] ?? null;
+    const latestOrder = orders.length
+      ? orders[orders.length - 1]
+      : null;
+
+    const largestOrder = orders.reduce<
+      (typeof orders)[number] | null
+    >((largest, order) => {
+      if (!largest || order.pixel_count > largest.pixel_count) {
+        return order;
+      }
+
+      return largest;
+    }, null);
+
+    res.status(200).json({
+      total_pixels: totalPixels,
+      available_pixels: Math.max(0, 1_000_000 - totalPixels),
+      occupied_percent: Number(
+        ((totalPixels / 1_000_000) * 100).toFixed(4),
+      ),
+      total_amount_cents: totalAmountCents,
+      buyer_count: buyerTotals.size,
+      purchase_count: orders.length,
+      ranking,
+      records: {
+        first_purchase: firstOrder
+          ? {
+              pixel_count: firstOrder.pixel_count,
+              paid_at: firstOrder.paid_at ?? firstOrder.created_at,
+            }
+          : null,
+        latest_purchase: latestOrder
+          ? {
+              pixel_count: latestOrder.pixel_count,
+              paid_at: latestOrder.paid_at ?? latestOrder.created_at,
+            }
+          : null,
+        largest_purchase: largestOrder
+          ? {
+              pixel_count: largestOrder.pixel_count,
+              paid_at:
+                largestOrder.paid_at ?? largestOrder.created_at,
+            }
+          : null,
+      },
+    });
+  } catch (error) {
+    req.log?.error(
+      { err: error },
+      "Could not load public wall statistics",
+    );
+
+    res.status(500).json({
+      message:
+        "Não foi possível carregar as estatísticas da parede agora.",
+    });
+  }
+});
+
 router.get("/mercado-pago/my-purchases", async (req: Request, res: Response) => {
   const accessToken = getBearerToken(req);
 
