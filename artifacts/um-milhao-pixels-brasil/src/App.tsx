@@ -400,6 +400,8 @@ function PaymentReturnExperience() {
   const { session, openAuth } = useAuth();
   const [mode, setMode] = useState<'hidden' | 'checking' | 'paid' | 'pending' | 'failure' | 'error'>('hidden');
   const [pixelCount, setPixelCount] = useState(0);
+  const [amountCents, setAmountCents] = useState(0);
+  const [focusHref, setFocusHref] = useState('/parede');
   const [message, setMessage] = useState('');
 
   const cleanReturnUrl = () => {
@@ -443,10 +445,28 @@ function PaymentReturnExperience() {
         if (cancelled) return;
 
         setPixelCount(status.pixel_count);
+        setAmountCents(status.amount_cents);
 
         if (status.paid) {
           window.localStorage.removeItem('pixel-wall-checkout-reservation');
           setMode('paid');
+
+          try {
+            const purchases = await getMyPurchases(session.access_token);
+            const purchase = purchases.purchases.find(
+              (item) => item.reservation_id === reservationId,
+            );
+
+            if (purchase?.bounds) {
+              setFocusHref(
+                `/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`,
+              );
+            }
+          } catch {
+            // A compra já foi confirmada. Se a localização não carregar,
+            // mantemos o acesso normal à parede.
+          }
+
           return;
         }
 
@@ -485,15 +505,17 @@ function PaymentReturnExperience() {
 
   const share = async () => {
     const text = `Agora eu possuo ${pixelCount} pixels no Um Milhão de Pixels Brasil!`;
+    const shareUrl = `${window.location.origin}${focusHref}`;
+
     try {
       if (navigator.share) {
         await navigator.share({
           title: 'Um Milhão de Pixels Brasil',
           text,
-          url: window.location.origin,
+          url: shareUrl,
         });
       } else {
-        await navigator.clipboard.writeText(`${text} ${window.location.origin}`);
+        await navigator.clipboard.writeText(`${text} ${shareUrl}`);
         setMessage('Link copiado para compartilhar!');
       }
     } catch {
@@ -539,12 +561,125 @@ function PaymentReturnExperience() {
             <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#facc15', border: '2px solid #111' }}>
               <Check size={30} />
             </div>
-            <h2 style={{ fontSize: 34, lineHeight: 1, margin: '16px 0 10px' }}>VOCÊ AGORA POSSUI UM PEDAÇO DA INTERNET!</h2>
-            <p style={{ lineHeight: 1.55, margin: 0 }}>Pagamento confirmado. <b>{pixelCount} pixels</b> agora fazem parte permanentemente da parede.</p>
-            {message && <p style={{ marginTop: 12, fontWeight: 700 }}>{message}</p>}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 22 }}>
-              <button className="selection-button" type="button" onClick={close}>Ver meus pixels <ArrowRight size={17} /></button>
-              <button className="editor-customize" type="button" onClick={share}><Share2 size={16} /> Compartilhar</button>
+
+            <div
+              style={{
+                marginTop: 16,
+                fontSize: 12,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '.08em',
+                color: '#ef6b50',
+              }}
+            >
+              compra confirmada
+            </div>
+
+            <h2
+              style={{
+                fontSize: 34,
+                lineHeight: 1,
+                margin: '10px 0 12px',
+              }}
+            >
+              VOCÊ AGORA POSSUI UM PEDAÇO DA INTERNET!
+            </h2>
+
+            <p style={{ lineHeight: 1.55, margin: 0 }}>
+              Sua marca agora faz parte oficialmente do
+              Um Milhão de Pixels Brasil.
+            </p>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                border: '2px solid #211d42',
+                marginTop: 22,
+              }}
+            >
+              <div style={{ padding: 16 }}>
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: 11,
+                    textTransform: 'uppercase',
+                    opacity: 0.65,
+                    marginBottom: 5,
+                  }}
+                >
+                  pixels adquiridos
+                </span>
+                <strong style={{ fontSize: 25 }}>
+                  {pixelCount}
+                </strong>
+              </div>
+
+              <div
+                style={{
+                  padding: 16,
+                  borderLeft: '1px solid #211d42',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: 11,
+                    textTransform: 'uppercase',
+                    opacity: 0.65,
+                    marginBottom: 5,
+                  }}
+                >
+                  valor confirmado
+                </span>
+                <strong style={{ fontSize: 25 }}>
+                  {(amountCents / 100).toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })}
+                </strong>
+              </div>
+            </div>
+
+            {message && (
+              <p style={{ marginTop: 12, fontWeight: 700 }}>
+                {message}
+              </p>
+            )}
+
+            <div
+              style={{
+                display: 'grid',
+                gap: 10,
+                marginTop: 22,
+              }}
+            >
+              <button
+                className="selection-button"
+                type="button"
+                onClick={() => window.location.assign('/meus-pixels')}
+              >
+                Ver meus pixels
+                <ArrowRight size={17} />
+              </button>
+
+              <button
+                className="editor-customize"
+                type="button"
+                onClick={() => window.location.assign(focusHref)}
+              >
+                <Crosshair size={16} />
+                Ver na parede
+              </button>
+
+              <button
+                className="editor-customize"
+                type="button"
+                onClick={share}
+              >
+                <Share2 size={16} />
+                Compartilhar minha marca
+              </button>
             </div>
           </>
         )}
