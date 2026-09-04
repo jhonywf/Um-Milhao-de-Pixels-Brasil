@@ -98,19 +98,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         if (cancelled) return;
 
+        setSession(nextSession);
+
         if (nextSession && redirectResult?.returnTo && redirectResult.kind === 'oauth') {
           storeSession(nextSession);
-          window.location.replace(redirectResult.returnTo);
-          return;
-        }
 
-        setSession(nextSession);
+          window.history.replaceState(
+            {},
+            document.title,
+            redirectResult.returnTo,
+          );
+
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
         if (nextSession) {
           if (redirectResult?.kind === 'recovery') {
             setPasswordRecoveryOpen(true);
           } else {
-            const nextProfile = await hydrateProfile(nextSession);
-            if (!cancelled && !nextProfile) setProfileDialogOpen(true);
+            await hydrateProfile(nextSession);
           }
         }
       } catch (caught) {
@@ -162,9 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const nextSession = await signInWithPassword(email, password);
       setSession(nextSession);
-      const nextProfile = await hydrateProfile(nextSession);
+      await hydrateProfile(nextSession);
       setAuthDialogOpen(false);
-      if (!nextProfile) setProfileDialogOpen(true);
     } catch (caught) {
       setError(readableError(caught));
       throw caught;
@@ -180,7 +184,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setSession(response.session);
       setAuthDialogOpen(false);
-      setProfileDialogOpen(true);
       await hydrateProfile(response.session);
       return { needsEmailConfirmation: false };
     } catch (caught) {
