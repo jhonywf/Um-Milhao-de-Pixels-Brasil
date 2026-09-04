@@ -39,6 +39,63 @@ import { getMyPurchases, type MyPurchasesResponse } from '@/data/my-purchases-se
 
 const queryClient = new QueryClient();
 
+type AdminOrder = {
+  id: string;
+  user_id: string;
+  reservation_id: string;
+  status: string;
+  pixel_count: number;
+  amount_cents: number;
+  currency: string;
+  provider: string | null;
+  provider_reference: string | null;
+  paid_at: string | null;
+  created_at: string;
+};
+
+type AdminOverview = {
+  admin_user_id: string;
+  metrics: {
+    revenue_cents: number;
+    sold_pixels: number;
+    available_pixels: number;
+    occupied_percent: number;
+    buyer_count: number;
+    purchase_count: number;
+    average_ticket_cents: number;
+  };
+  status_counts: Record<string, number>;
+  largest_purchase: {
+    id: string;
+    user_id: string;
+    pixel_count: number;
+    amount_cents: number;
+    paid_at: string;
+  } | null;
+  recent_orders: AdminOrder[];
+};
+
+function formatAdminMoney(cents: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(cents / 100);
+}
+
+function formatAdminDate(value: string | null) {
+  if (!value) return '—';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return '—';
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+
 const previewBlocks = [
   [0, 2, 3, 2, '#ffcf33'], [4, 0, 2, 4, '#ef6b50'], [7, 1, 4, 2, '#5ac8b0'],
   [12, 0, 3, 4, '#9367d8'], [1, 6, 4, 3, '#f18b42'], [6, 5, 2, 5, '#a7d84c'],
@@ -3942,6 +3999,419 @@ function PublicPurchasePage() {
   );
 }
 
+
+function AdminPage() {
+  const { user, session, loading, openAuth } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const [overview, setOverview] =
+    useState<AdminOverview | null>(null);
+
+  const [adminLoading, setAdminLoading] =
+    useState(true);
+
+  const [adminError, setAdminError] =
+    useState<string | null>(null);
+
+  const [forbidden, setForbidden] =
+    useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!user || !session?.access_token) {
+      setAdminLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAdmin = async () => {
+      setAdminLoading(true);
+      setAdminError(null);
+      setForbidden(false);
+
+      try {
+        const response = await fetch(
+          '/api/payments/mercado-pago/admin/overview',
+          {
+            headers: {
+              Accept: 'application/json',
+              Authorization:
+                `Bearer ${session.access_token}`,
+            },
+            cache: 'no-store',
+          },
+        );
+
+        const payload =
+          await response.json().catch(() => null);
+
+        if (cancelled) return;
+
+        if (response.status === 403) {
+          setForbidden(true);
+          setOverview(null);
+          return;
+        }
+
+        if (response.status === 401) {
+          setAdminError(
+            'Sua sessão expirou. Entre novamente.',
+          );
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.message ||
+              'Não foi possível carregar o painel.',
+          );
+        }
+
+        setOverview(payload as AdminOverview);
+      } catch (error) {
+        if (!cancelled) {
+          setAdminError(
+            error instanceof Error
+              ? error.message
+              : 'Não foi possível carregar o painel.',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setAdminLoading(false);
+        }
+      }
+    };
+
+    void loadAdmin();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user, session?.access_token]);
+
+  if (loading || adminLoading) {
+    return (
+      <main className="admin-page">
+        <div className="admin-state">
+          <span className="admin-eyebrow">
+            PAINEL ADMINISTRATIVO
+          </span>
+          <h1>Carregando painel...</h1>
+          <p>Verificando sua sessão e permissões.</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="admin-page">
+        <div className="admin-state">
+          <span className="admin-eyebrow">
+            ACESSO RESTRITO
+          </span>
+          <h1>Entre na sua conta.</h1>
+          <p>
+            O painel só pode ser acessado pela
+            conta administradora.
+          </p>
+
+          <button
+            className="admin-primary-button"
+            type="button"
+            onClick={openAuth}
+          >
+            ENTRAR
+            <ArrowRight size={18} />
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (forbidden) {
+    return (
+      <main className="admin-page">
+        <div className="admin-state">
+          <span className="admin-eyebrow">
+            ACESSO NEGADO
+          </span>
+          <h1>Conta não autorizada.</h1>
+          <p>
+            Esta conta não possui permissão administrativa.
+          </p>
+
+          <button
+            className="admin-secondary-button"
+            type="button"
+            onClick={() => setLocation('/')}
+          >
+            VOLTAR AO SITE
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (adminError || !overview) {
+    return (
+      <main className="admin-page">
+        <div className="admin-state">
+          <span className="admin-eyebrow">
+            ERRO
+          </span>
+          <h1>Não foi possível abrir o painel.</h1>
+          <p>
+            {adminError ??
+              'Tente novamente em alguns instantes.'}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  const metrics = overview.metrics;
+
+  return (
+    <main className="admin-page">
+      <section className="admin-shell">
+        <div className="admin-topbar">
+          <div>
+            <span className="admin-eyebrow">
+              UM MILHÃO DE PIXELS BRASIL
+            </span>
+            <h1>PAINEL ADMINISTRATIVO</h1>
+            <p>
+              Visão geral das vendas e ocupação da parede.
+            </p>
+          </div>
+
+          <button
+            className="admin-secondary-button"
+            type="button"
+            onClick={() => setLocation('/')}
+          >
+            VER SITE
+            <ArrowRight size={16} />
+          </button>
+        </div>
+
+        <div className="admin-metrics">
+          <article className="admin-metric admin-metric-featured">
+            <span>FATURAMENTO</span>
+            <strong>
+              {formatAdminMoney(
+                metrics.revenue_cents,
+              )}
+            </strong>
+            <small>Pagamentos confirmados</small>
+          </article>
+
+          <article className="admin-metric">
+            <span>PIXELS VENDIDOS</span>
+            <strong>
+              {metrics.sold_pixels.toLocaleString('pt-BR')}
+            </strong>
+            <small>
+              {metrics.occupied_percent
+                .toLocaleString('pt-BR')}% ocupado
+            </small>
+          </article>
+
+          <article className="admin-metric">
+            <span>PIXELS DISPONÍVEIS</span>
+            <strong>
+              {metrics.available_pixels
+                .toLocaleString('pt-BR')}
+            </strong>
+            <small>de 1.000.000</small>
+          </article>
+
+          <article className="admin-metric">
+            <span>COMPRADORES</span>
+            <strong>
+              {metrics.buyer_count
+                .toLocaleString('pt-BR')}
+            </strong>
+            <small>Compradores únicos</small>
+          </article>
+
+          <article className="admin-metric">
+            <span>COMPRAS</span>
+            <strong>
+              {metrics.purchase_count
+                .toLocaleString('pt-BR')}
+            </strong>
+            <small>Pedidos pagos</small>
+          </article>
+
+          <article className="admin-metric">
+            <span>TICKET MÉDIO</span>
+            <strong>
+              {formatAdminMoney(
+                metrics.average_ticket_cents,
+              )}
+            </strong>
+            <small>Média por compra</small>
+          </article>
+        </div>
+
+        <div className="admin-grid">
+          <section className="admin-panel">
+            <div className="admin-panel-heading">
+              <div>
+                <span className="admin-eyebrow">
+                  PEDIDOS
+                </span>
+                <h2>ÚLTIMAS TRANSAÇÕES</h2>
+              </div>
+
+              <span className="admin-count">
+                {overview.recent_orders.length}
+              </span>
+            </div>
+
+            {overview.recent_orders.length === 0 ? (
+              <div className="admin-empty">
+                <strong>
+                  NENHUMA COMPRA AINDA
+                </strong>
+                <p>
+                  As transações aparecerão aqui
+                  quando os primeiros pixels forem vendidos.
+                </p>
+              </div>
+            ) : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>STATUS</th>
+                      <th>PIXELS</th>
+                      <th>VALOR</th>
+                      <th>DATA</th>
+                      <th>MERCADO PAGO</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {overview.recent_orders.map(
+                      (order) => (
+                        <tr key={order.id}>
+                          <td>
+                            <span
+                              className={
+                                'admin-status admin-status-' +
+                                order.status
+                              }
+                            >
+                              {order.status}
+                            </span>
+                          </td>
+
+                          <td>
+                            {order.pixel_count
+                              .toLocaleString('pt-BR')}
+                          </td>
+
+                          <td>
+                            {formatAdminMoney(
+                              order.amount_cents,
+                            )}
+                          </td>
+
+                          <td>
+                            {formatAdminDate(
+                              order.paid_at ??
+                                order.created_at,
+                            )}
+                          </td>
+
+                          <td className="admin-reference">
+                            {order.provider_reference ??
+                              '—'}
+                          </td>
+                        </tr>
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <aside className="admin-panel admin-summary">
+            <span className="admin-eyebrow">
+              RESUMO
+            </span>
+
+            <h2>STATUS DOS PEDIDOS</h2>
+
+            <div className="admin-status-list">
+              <div>
+                <span>Pagos</span>
+                <strong>
+                  {overview.status_counts.paid ?? 0}
+                </strong>
+              </div>
+
+              <div>
+                <span>Pendentes</span>
+                <strong>
+                  {overview.status_counts.pending ?? 0}
+                </strong>
+              </div>
+
+              <div>
+                <span>Cancelados</span>
+                <strong>
+                  {overview.status_counts.cancelled ?? 0}
+                </strong>
+              </div>
+
+              <div>
+                <span>Reembolsados</span>
+                <strong>
+                  {overview.status_counts.refunded ?? 0}
+                </strong>
+              </div>
+            </div>
+
+            <div className="admin-largest">
+              <span>MAIOR COMPRA</span>
+
+              {overview.largest_purchase ? (
+                <>
+                  <strong>
+                    {formatAdminMoney(
+                      overview
+                        .largest_purchase
+                        .amount_cents,
+                    )}
+                  </strong>
+
+                  <small>
+                    {overview
+                      .largest_purchase
+                      .pixel_count
+                      .toLocaleString('pt-BR')}{' '}
+                    pixels
+                  </small>
+                </>
+              ) : (
+                <strong>—</strong>
+              )}
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function Router() {
   return (
     <RoutedErrorBoundary>
@@ -3949,6 +4419,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/parede" component={WallPage} />
         <Route path="/meus-pixels" component={MyPixelsPage} />
+        <Route path="/admin" component={AdminPage} />
         <Route path="/obra/:orderId" component={PublicPurchasePage} />
         <Route component={NotFound} />
       </Switch>
