@@ -130,8 +130,9 @@ function Header() {
                 right: 0,
                 top: 'calc(100% + 10px)',
                 width: 210,
-                background: '#fffaf0',
-                border: '2px solid #211d42',
+                background: '#111111',
+                  color: '#f5f4ef',
+                border: '1px solid #343434',
                 boxShadow: '6px 6px 0 #211d42',
                 zIndex: 1000,
                 padding: 8,
@@ -1354,7 +1355,7 @@ function PaymentReturnExperience() {
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
-                border: '2px solid #211d42',
+                border: '1px solid #343434',
                 marginTop: 22,
               }}
             >
@@ -1378,7 +1379,7 @@ function PaymentReturnExperience() {
               <div
                 style={{
                   padding: 16,
-                  borderLeft: '1px solid #211d42',
+                  borderLeft: '1px solid #343434',
                 }}
               >
                 <span
@@ -3194,10 +3195,11 @@ function MyPixelsPage() {
           ) : !user || !session ? (
             <div
               style={{
-                border: '2px solid #211d42',
+                border: '1px solid #343434',
                 padding: '32px',
                 maxWidth: 620,
-                background: '#fffaf0',
+                background: '#111111',
+                  color: '#f5f4ef',
               }}
             >
               <h2 style={{ marginTop: 0 }}>
@@ -3232,9 +3234,10 @@ function MyPixelsPage() {
                   display: 'grid',
                   gridTemplateColumns:
                     'repeat(auto-fit, minmax(180px, 1fr))',
-                  border: '2px solid #211d42',
+                  border: '1px solid #343434',
                   marginBottom: 36,
-                  background: '#fffaf0',
+                  background: '#111111',
+                  color: '#f5f4ef',
                 }}
               >
                 <div style={{ padding: 24 }}>
@@ -3257,7 +3260,7 @@ function MyPixelsPage() {
                 <div
                   style={{
                     padding: 24,
-                    borderLeft: '1px solid #211d42',
+                    borderLeft: '1px solid #343434',
                   }}
                 >
                   <span
@@ -3279,7 +3282,7 @@ function MyPixelsPage() {
                 <div
                   style={{
                     padding: 24,
-                    borderLeft: '1px solid #211d42',
+                    borderLeft: '1px solid #343434',
                   }}
                 >
                   <span
@@ -3302,7 +3305,7 @@ function MyPixelsPage() {
               {data.purchases.length === 0 ? (
                 <div
                   style={{
-                    border: '2px dashed #211d42',
+                    border: '1px dashed #343434',
                     padding: 32,
                   }}
                 >
@@ -3333,8 +3336,9 @@ function MyPixelsPage() {
                     <article
                       key={purchase.order_id}
                       style={{
-                        border: '2px solid #211d42',
-                        background: '#fffaf0',
+                        border: '1px solid #343434',
+                        background: '#111111',
+                  color: '#f5f4ef',
                         padding: 26,
                         display: 'grid',
                         gap: 22,
