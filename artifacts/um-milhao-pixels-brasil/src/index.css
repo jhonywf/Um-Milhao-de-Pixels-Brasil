@@ -3422,3 +3422,174 @@ button {
   display: none !important;
 }
 
+
+/* =========================================================
+   PÁGINA PÚBLICA DA OBRA
+   ========================================================= */
+
+.public-art-main {
+  min-height: 75vh;
+  padding:
+    clamp(46px, 7vw, 100px)
+    clamp(20px, 6vw, 90px);
+}
+
+.public-art-layout {
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns:
+    minmax(0, .9fr)
+    minmax(360px, 1.1fr);
+  gap: clamp(38px, 7vw, 100px);
+  align-items: center;
+}
+
+.public-art-copy h1,
+.public-art-error h1 {
+  margin: 24px 0 0;
+  color: #f5f4ef;
+  font-size: clamp(54px, 7vw, 100px);
+  line-height: .85;
+  letter-spacing: -.055em;
+}
+
+.public-art-copy h1 em,
+.public-art-error h1 em {
+  color: #ff681d;
+  font-style: normal;
+}
+
+.public-art-owner {
+  margin: 28px 0;
+  color: #929292;
+  font-size: 17px;
+}
+
+.public-art-owner strong {
+  color: #f5f4ef;
+}
+
+.public-art-meta {
+  border-top: 1px solid #303030;
+  border-bottom: 1px solid #303030;
+}
+
+.public-art-meta > div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 20px;
+  padding: 14px 0;
+  border-bottom: 1px solid #242424;
+}
+
+.public-art-meta > div:last-child {
+  border-bottom: 0;
+}
+
+.public-art-meta span {
+  color: #777;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.public-art-meta strong {
+  color: #f5f4ef;
+  font-size: 13px;
+}
+
+.public-art-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.public-art-frame {
+  background: #111;
+  border: 1px solid #333;
+  box-shadow: 12px 12px 0 #ff681d;
+}
+
+.public-art-frame-top,
+.public-art-frame-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  color: #8c8c8c;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+
+.public-art-frame-bottom {
+  justify-content: flex-start;
+  color: #ff681d;
+}
+
+.public-art-canvas-wrap {
+  aspect-ratio: 1 / 1;
+  margin: 0 14px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #ff681d;
+}
+
+.public-art-canvas {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.public-art-error {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.public-art-error p {
+  max-width: 500px;
+  margin: 24px 0;
+  color: #999;
+}
+
+@media (max-width: 820px) {
+  .public-art-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .public-art-frame {
+    width: min(560px, 100%);
+    margin: 0 auto;
+  }
+
+  .public-art-copy h1,
+  .public-art-error h1 {
+    font-size: clamp(48px, 15vw, 76px);
+  }
+}
+
+@media (max-width: 520px) {
+  .public-art-main {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .public-art-meta > div {
+    grid-template-columns: 92px 1fr;
+  }
+
+  .public-art-actions {
+    display: grid;
+  }
+
+  .public-art-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

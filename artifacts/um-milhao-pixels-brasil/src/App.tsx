@@ -23,7 +23,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
+import { Link, Route, Switch, Router as WouterRouter, useLocation, useRoute } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -3406,17 +3406,34 @@ function MyPixelsPage() {
                         )}
                       </div>
 
-                      <Link
-                        href={
-                          purchase.bounds
-                            ? `/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`
-                            : '/parede'
-                        }
-                        className="button button-outline"
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: 10,
+                          flexWrap: 'wrap',
+                          justifyContent: 'flex-end',
+                        }}
                       >
-                        Ver na parede
-                        <ArrowRight size={17} />
-                      </Link>
+                        <Link
+                          href={`/obra/${purchase.order_id}`}
+                          className="button button-coral"
+                        >
+                          Página pública
+                          <Share2 size={17} />
+                        </Link>
+
+                        <Link
+                          href={
+                            purchase.bounds
+                              ? `/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`
+                              : '/parede'
+                          }
+                          className="button button-outline"
+                        >
+                          Ver na parede
+                          <ArrowRight size={17} />
+                        </Link>
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -3431,6 +3448,349 @@ function MyPixelsPage() {
   );
 }
 
+
+type PublicPurchase = {
+  order_id: string;
+  pixel_count: number;
+  paid_at: string;
+  owner: {
+    name: string;
+    username: string | null;
+    avatar_emoji: string | null;
+    avatar_path: string | null;
+  };
+  bounds: {
+    min_x: number;
+    min_y: number;
+    max_x: number;
+    max_y: number;
+  };
+  pixels: Array<{
+    x: number;
+    y: number;
+    color: string;
+  }>;
+};
+
+function PublicPurchaseCanvas({
+  purchase,
+}: {
+  purchase: PublicPurchase;
+}) {
+  const canvasRef =
+    useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const {
+      min_x,
+      min_y,
+      max_x,
+      max_y,
+    } = purchase.bounds;
+
+    const width = max_x - min_x + 1;
+    const height = max_y - min_y + 1;
+
+    const padding = Math.max(
+      2,
+      Math.ceil(Math.max(width, height) * 0.12),
+    );
+
+    const visibleWidth = width + padding * 2;
+    const visibleHeight = height + padding * 2;
+
+    canvas.width = Math.max(1, visibleWidth);
+    canvas.height = Math.max(1, visibleHeight);
+
+    ctx.imageSmoothingEnabled = false;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+
+    for (const pixel of purchase.pixels) {
+      ctx.fillStyle = pixel.color;
+
+      ctx.fillRect(
+        pixel.x - min_x + padding,
+        pixel.y - min_y + padding,
+        1,
+        1,
+      );
+    }
+  }, [purchase]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="public-art-canvas"
+      aria-label="Pixels desta obra"
+    />
+  );
+}
+
+function PublicPurchasePage() {
+  const [, params] =
+    useRoute('/obra/:orderId');
+
+  const orderId = params?.orderId ?? '';
+
+  const [purchase, setPurchase] =
+    useState<PublicPurchase | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  useEffect(() => {
+    if (!orderId) {
+      setError('Obra inválida.');
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    setLoading(true);
+    setError(null);
+
+    void fetch(
+      `/api/payments/mercado-pago/public-purchase/${encodeURIComponent(orderId)}`,
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+        cache: 'no-store',
+      },
+    )
+      .then(async (response) => {
+        const payload =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.message ||
+              'Não foi possível carregar essa obra.',
+          );
+        }
+
+        return payload as PublicPurchase;
+      })
+      .then((result) => {
+        if (!cancelled) {
+          setPurchase(result);
+        }
+      })
+      .catch((caught) => {
+        if (!cancelled) {
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : 'Não foi possível carregar essa obra.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId]);
+
+  const shareCurrentPage = async () => {
+    const url = window.location.href;
+
+    const title =
+      purchase
+        ? `${purchase.pixel_count} pixels no Um Milhão de Pixels Brasil`
+        : 'Um Milhão de Pixels Brasil';
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title,
+          text:
+            'Olha a marca que ficou registrada na parede.',
+          url,
+        });
+
+        return;
+      }
+
+      await navigator.clipboard.writeText(url);
+
+      window.alert(
+        'Link copiado para a área de transferência.',
+      );
+    } catch {
+      // Usuário pode cancelar o compartilhamento.
+    }
+  };
+
+  const date = (value: string) =>
+    new Intl.DateTimeFormat(
+      'pt-BR',
+      {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      },
+    ).format(new Date(value));
+
+  return (
+    <div className="app-shell public-art-page">
+      <Header />
+
+      <main className="public-art-main">
+        {loading ? (
+          <div className="demo-notice">
+            Carregando obra...
+          </div>
+        ) : error || !purchase ? (
+          <div className="public-art-error">
+            <span className="section-label">
+              OBRA
+            </span>
+
+            <h1>
+              NÃO FOI
+              <br />
+              <em>ENCONTRADA.</em>
+            </h1>
+
+            <p>
+              {error ||
+                'Essa obra não está disponível.'}
+            </p>
+
+            <Link
+              href="/parede"
+              className="button button-coral"
+            >
+              Explorar a parede
+              <ArrowRight size={18} />
+            </Link>
+          </div>
+        ) : (
+          <div className="public-art-layout">
+            <section className="public-art-copy">
+              <div className="section-label">
+                OBRA NA PAREDE — PERMANENTE
+              </div>
+
+              <h1>
+                UM PEDAÇO
+                <br />
+                DA <em>INTERNET.</em>
+              </h1>
+
+              <p className="public-art-owner">
+                por{' '}
+                <strong>
+                  {purchase.owner.name}
+                </strong>
+              </p>
+
+              <div className="public-art-meta">
+                <div>
+                  <span>pixels</span>
+                  <strong>
+                    {purchase.pixel_count.toLocaleString(
+                      'pt-BR',
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>registrado em</span>
+                  <strong>
+                    {date(purchase.paid_at)}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>coordenadas</span>
+                  <strong>
+                    {purchase.bounds.min_x},
+                    {purchase.bounds.min_y}
+                    {' → '}
+                    {purchase.bounds.max_x},
+                    {purchase.bounds.max_y}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="public-art-actions">
+                <Link
+                  href={`/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`}
+                  className="button button-coral"
+                >
+                  Ver na parede
+                  <Crosshair size={17} />
+                </Link>
+
+                <button
+                  type="button"
+                  className="button button-outline"
+                  onClick={shareCurrentPage}
+                >
+                  Compartilhar
+                  <Share2 size={17} />
+                </button>
+              </div>
+            </section>
+
+            <section className="public-art-frame">
+              <div className="public-art-frame-top">
+                <span>
+                  OBRA #{purchase.order_id
+                    .slice(0, 8)
+                    .toUpperCase()}
+                </span>
+
+                <span>
+                  {purchase.pixel_count.toLocaleString(
+                    'pt-BR',
+                  )}{' '}
+                  PIXELS
+                </span>
+              </div>
+
+              <div className="public-art-canvas-wrap">
+                <PublicPurchaseCanvas
+                  purchase={purchase}
+                />
+              </div>
+
+              <div className="public-art-frame-bottom">
+                UM MILHÃO DE PIXELS BRASIL
+              </div>
+            </section>
+          </div>
+        )}
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
 function Router() {
   return (
     <RoutedErrorBoundary>
@@ -3438,6 +3798,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/parede" component={WallPage} />
         <Route path="/meus-pixels" component={MyPixelsPage} />
+        <Route path="/obra/:orderId" component={PublicPurchasePage} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>

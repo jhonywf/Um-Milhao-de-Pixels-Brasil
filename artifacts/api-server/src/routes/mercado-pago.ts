@@ -829,6 +829,156 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
   }
 });
 
+
+router.get(
+  "/mercado-pago/public-purchase/:orderId",
+  async (req: Request, res: Response) => {
+    const orderId =
+      typeof req.params.orderId === "string"
+        ? req.params.orderId.trim()
+        : "";
+
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        orderId,
+      )
+    ) {
+      res.status(400).json({
+        message: "Obra inválida.",
+      });
+      return;
+    }
+
+    try {
+      const orderQuery = new URLSearchParams({
+        select:
+          "id,user_id,status,pixel_count,paid_at,created_at",
+        id: `eq.${orderId}`,
+        status: "eq.paid",
+        limit: "1",
+      });
+
+      const orders = await serviceRoleGet<Array<{
+        id: string;
+        user_id: string;
+        status: string;
+        pixel_count: number;
+        paid_at: string | null;
+        created_at: string;
+      }>>(
+        `wall_orders?${orderQuery.toString()}`,
+      );
+
+      const order = orders[0];
+
+      if (!order) {
+        res.status(404).json({
+          message: "Essa obra não foi encontrada.",
+        });
+        return;
+      }
+
+      const pixelQuery = new URLSearchParams({
+        select: "x,y,color",
+        order_id: `eq.${order.id}`,
+        status: "eq.purchased",
+        order: "y.asc,x.asc",
+      });
+
+      const pixels = await serviceRoleGet<Array<{
+        x: number;
+        y: number;
+        color: string | null;
+      }>>(
+        `wall_pixel_claims?${pixelQuery.toString()}`,
+      );
+
+      if (pixels.length === 0) {
+        res.status(404).json({
+          message: "Os pixels dessa obra não estão disponíveis.",
+        });
+        return;
+      }
+
+      const xs = pixels.map((pixel) => pixel.x);
+      const ys = pixels.map((pixel) => pixel.y);
+
+      const bounds = {
+        min_x: Math.min(...xs),
+        min_y: Math.min(...ys),
+        max_x: Math.max(...xs),
+        max_y: Math.max(...ys),
+      };
+
+      let owner = {
+        name: "Comprador anônimo",
+        username: null as string | null,
+        avatar_emoji: null as string | null,
+        avatar_path: null as string | null,
+      };
+
+      try {
+        const profileQuery = new URLSearchParams({
+          select:
+            "display_name,username,avatar_emoji,avatar_path,public_profile",
+          id: `eq.${order.user_id}`,
+          limit: "1",
+        });
+
+        const profiles = await serviceRoleGet<Array<{
+          display_name: string | null;
+          username: string | null;
+          avatar_emoji: string | null;
+          avatar_path: string | null;
+          public_profile: boolean | null;
+        }>>(
+          `profiles?${profileQuery.toString()}`,
+        );
+
+        const profile = profiles[0];
+
+        if (profile?.public_profile === true) {
+          owner = {
+            name:
+              profile.display_name ||
+              (profile.username
+                ? `@${profile.username}`
+                : "Comprador"),
+            username: profile.username ?? null,
+            avatar_emoji: profile.avatar_emoji ?? null,
+            avatar_path: profile.avatar_path ?? null,
+          };
+        }
+      } catch {
+        // Privacidade por padrão: continua anônimo.
+      }
+
+      res.status(200).json({
+        order_id: order.id,
+        pixel_count: Number(order.pixel_count || pixels.length),
+        paid_at: order.paid_at ?? order.created_at,
+        owner,
+        bounds,
+        pixels: pixels.map((pixel) => ({
+          x: pixel.x,
+          y: pixel.y,
+          color: pixel.color || "#111111",
+        })),
+      });
+    } catch (error) {
+      req.log?.error(
+        { err: error },
+        "Could not load public purchase",
+      );
+
+      res.status(500).json({
+        message:
+          "Não foi possível carregar essa obra agora.",
+      });
+    }
+  },
+);
+
 router.get("/mercado-pago/my-purchases", async (req: Request, res: Response) => {
   const accessToken = getBearerToken(req);
 
