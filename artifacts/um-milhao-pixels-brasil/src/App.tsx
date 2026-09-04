@@ -216,23 +216,121 @@ function Header() {
   );
 }
 
-function PixelMosaic({ compact = false }: { compact?: boolean }) {
+function RealWallMiniMap() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [pixels, setPixels] = useState<PublicWallPixel[]>([]);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const result = await loadPublicWallPixels();
+
+        if (!cancelled) {
+          setPixels(
+            result.filter(
+              (pixel) =>
+                pixel.status === 'purchased' &&
+                typeof pixel.color === 'string',
+            ),
+          );
+          setLoadFailed(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setLoadFailed(true);
+        }
+      }
+    };
+
+    void load();
+
+    const interval = window.setInterval(
+      () => void load(),
+      30000,
+    );
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.imageSmoothingEnabled = false;
+
+    ctx.clearRect(0, 0, 1000, 1000);
+
+    ctx.fillStyle = '#fff7d6';
+    ctx.fillRect(0, 0, 1000, 1000);
+
+    for (const pixel of pixels) {
+      if (!pixel.color) continue;
+
+      ctx.fillStyle = pixel.color;
+      ctx.fillRect(pixel.x, pixel.y, 1, 1);
+    }
+  }, [pixels]);
+
   return (
-    <div className={compact ? 'pixel-mosaic compact' : 'pixel-mosaic'} data-testid={compact ? 'visual-mosaic-hero' : 'visual-mosaic-preview'}>
-      {previewBlocks.map(([x, y, w, h, color], index) => (
+    <Link
+      href="/parede"
+      className="pixel-mosaic compact"
+      data-testid="visual-real-wall-hero"
+      aria-label="Abrir parede real"
+      style={{
+        display: 'block',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: 'pointer',
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={1000}
+        height={1000}
+        aria-label="Miniatura atual da parede"
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          imageRendering: 'pixelated',
+        }}
+      />
+
+      <div className="mosaic-coordinate coord-a">
+        000,000
+      </div>
+
+      <div className="mosaic-coordinate coord-b">
+        999,999
+      </div>
+
+      {loadFailed && (
         <div
-          key={`${x}-${y}`}
-          className="mosaic-block"
-          style={{ left: `${(x / 18) * 100}%`, top: `${(y / 15) * 100}%`, width: `${(w / 18) * 100}%`, height: `${(h / 15) * 100}%`, backgroundColor: color }}
-          data-testid={`mosaic-block-${index}`}
+          style={{
+            position: 'absolute',
+            left: 12,
+            bottom: 12,
+            padding: '6px 8px',
+            background: '#fffaf0',
+            border: '1px solid #211d42',
+            fontSize: 10,
+            fontWeight: 700,
+          }}
         >
-          {!compact && index === 2 && <span>VOCÊ<br />PODE ESTAR AQUI</span>}
+          atualizando parede...
         </div>
-      ))}
-      <div className="mosaic-coordinate coord-a">000,000</div>
-      <div className="mosaic-coordinate coord-b">999,999</div>
-      <span className="mosaic-scanline" aria-hidden="true" />
-    </div>
+      )}
+    </Link>
   );
 }
 
@@ -375,13 +473,15 @@ function StatStrip() {
 }
 
 function Home() {
+  const stats = usePublicWallStats();
+
   return (
     <div className="app-shell">
       <Header />
       <main>
         <section className="hero" data-testid="section-hero">
           <div className="hero-copy reveal">
-            <div className="eyebrow"><span className="eyebrow-dot" /> a maior parede digital do brasil <span className="demo-chip">fase demo</span></div>
+            <div className="eyebrow"><span className="eyebrow-dot" /> a maior parede digital do brasil</div>
             <h1>COMPRE UM<br /><em>PIXEL.</em><br />DEIXE SUA<br /><em>MARCA.</em></h1>
             <p className="hero-deck">Um milhão de pequenos espaços para criar uma memória coletiva na internet.</p>
             <div className="hero-actions">
@@ -391,17 +491,30 @@ function Home() {
             </div>
           </div>
           <div className="hero-visual reveal reveal-delay">
-            <div className="visual-caption"><span>O MAPA ESTÁ ABERTO</span><span>001 / 001</span></div>
-            <PixelMosaic compact />
-            <div className="hero-sticker"><Sparkles size={15} /> feito por todo mundo</div>
+            <div className="visual-caption">
+              <span>A PAREDE ESTÁ AO VIVO</span>
+              <span>
+                {stats
+                  ? `${stats.total_pixels.toLocaleString('pt-BR')} / 1.000.000`
+                  : 'CARREGANDO...'}
+              </span>
+            </div>
+
+            <RealWallMiniMap />
+
+            <div className="hero-sticker">
+              <Sparkles size={15} /> feito por todo mundo
+            </div>
           </div>
           <div className="hero-bottom-note">rolar para descobrir <ArrowDownRight size={17} /></div>
         </section>
 
         <StatStrip />
 
+        <DemoActivity />
+
         <section className="manifesto-section" data-testid="section-manifesto">
-          <div className="section-label">01 — o começo</div>
+          <div className="section-label">02 — o começo</div>
           <div className="manifesto-grid">
             <div>
               <p className="section-kicker">UM ESPAÇO PEQUENO.<br /><span>UMA IDEIA GIGANTE.</span></p>
@@ -417,7 +530,7 @@ function Home() {
         </section>
 
         <section className="how-section" id="como-funciona" data-testid="section-how">
-          <div className="section-label">02 — como funciona?</div>
+          <div className="section-label">03 — como funciona?</div>
           <div className="how-heading">
             <h2>É simples assim<span>.</span></h2>
             <p>Sem complicar. Escolha um lugar, imagine algo e deixe um sinal seu.</p>
@@ -439,21 +552,46 @@ function Home() {
           </div>
         </section>
 
-        <section className="preview-section" data-testid="section-wall-preview">
-          <div className="preview-copy">
-            <div className="section-label light">03 — a parede</div>
-            <h2>O primeiro<br /><span>quadradinho</span><br />é seu.</h2>
-            <p>Use dois dedos para passear. Clique numa área ocupada ou encontre um espaço livre. A parede inteira cabe aqui.</p>
-            <Link href="/parede" className="button button-coral" data-testid="button-open-wall">Abrir parede interativa <ArrowRight size={18} /></Link>
-          </div>
-          <div className="preview-art">
-            <div className="preview-art-label">VISÃO DE DEMONSTRAÇÃO <span>11 ÁREAS MARCADAS</span></div>
-            <PixelMosaic />
-            <div className="preview-legend"><span><i className="legend-free" /> espaço livre</span><span><i className="legend-used" /> demo ocupado</span></div>
+        <section
+          className="preview-section"
+          data-testid="section-wall-preview"
+          style={{
+            gridTemplateColumns: '1fr',
+          }}
+        >
+          <div
+            className="preview-copy"
+            style={{
+              maxWidth: 760,
+            }}
+          >
+            <div className="section-label light">
+              04 — a parede
+            </div>
+
+            <h2>
+              O primeiro
+              <br />
+              <span>quadradinho</span>
+              <br />
+              é seu.
+            </h2>
+
+            <p>
+              Explore a parede real, encontre um espaço livre
+              e deixe sua marca entre um milhão de pixels.
+            </p>
+
+            <Link
+              href="/parede"
+              className="button button-coral"
+              data-testid="button-open-wall"
+            >
+              Abrir parede interativa
+              <ArrowRight size={18} />
+            </Link>
           </div>
         </section>
-
-        <DemoActivity />
 
         <section className="company-section" id="empresas" data-testid="section-company">
           <div className="company-stamp">PARA<br />EMPRESAS</div>
@@ -490,7 +628,7 @@ function DemoActivity() {
       data-testid="section-activity"
     >
       <div className="section-label">
-        04 — primeiros sinais
+        01 — ranking e recordes
       </div>
 
       <div className="activity-grid">
