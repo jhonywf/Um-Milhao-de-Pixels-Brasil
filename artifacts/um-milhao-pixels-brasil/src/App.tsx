@@ -35,6 +35,7 @@ import { AuthDialogs } from '@/auth/auth-dialogs';
 import { supabasePublicStorageUrl } from '@/auth/auth-service';
 import { loadPublicWallPixels, reserveWallPixels, type PublicWallPixel, type WallReservationSuccess } from '@/data/wall-reservation-service';
 import { createMercadoPagoCheckout, getMercadoPagoPaymentStatus } from '@/data/payment-service';
+import { getMyPurchases, type MyPurchasesResponse } from '@/data/my-purchases-service';
 
 const queryClient = new QueryClient();
 
@@ -62,12 +63,12 @@ function Header() {
         <a href="/#empresas" data-testid="link-empresas">Empresas</a>
       </nav>
       {user ? (
-        <button className="header-account" type="button" onClick={openProfile} data-testid="button-account">
+        <Link href="/meus-pixels" className="header-account" data-testid="button-account">
           <span className="header-account-avatar">
             {profile?.avatar_path ? <img src={supabasePublicStorageUrl(profile.avatar_path)} alt="" /> : profile?.avatar_emoji ?? <UserRound size={14} />}
           </span>
-          <span className="header-account-name">{profile?.username ? `@${profile.username}` : 'seu perfil'}</span>
-        </button>
+          <span className="header-account-name">{profile?.username ? `@${profile.username}` : 'minha conta'}</span>
+        </Link>
       ) : (
         <button className="header-login" type="button" onClick={openAuth} data-testid="button-login">
           entrar
@@ -1312,12 +1313,377 @@ function SelectionPanel({
   );
 }
 
+function MyPixelsPage() {
+  const { user, session, loading, openAuth, openProfile } = useAuth();
+
+  const [data, setData] = useState<MyPurchasesResponse | null>(null);
+  const [loadingPurchases, setLoadingPurchases] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!session) {
+      setData(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    setLoadingPurchases(true);
+    setError(null);
+
+    void getMyPurchases(session.access_token)
+      .then((result) => {
+        if (!cancelled) setData(result);
+      })
+      .catch((caught) => {
+        if (!cancelled) {
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : 'Não foi possível carregar seus pixels agora.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPurchases(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  const money = (cents: number) =>
+    new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(cents / 100);
+
+  const date = (value: string | null) => {
+    if (!value) return 'Data não disponível';
+
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+  };
+
+  return (
+    <div className="app-shell">
+      <Header />
+
+      <main
+        style={{
+          minHeight: '70vh',
+          padding: 'clamp(32px, 6vw, 90px) clamp(20px, 7vw, 110px)',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: '0 auto',
+          }}
+        >
+          <div className="section-label">
+            MINHA CONTA — MINHAS COMPRAS
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              gap: 24,
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              flexWrap: 'wrap',
+              marginTop: 22,
+              marginBottom: 38,
+            }}
+          >
+            <div>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: 'clamp(42px, 7vw, 82px)',
+                  lineHeight: 0.9,
+                  letterSpacing: '-0.05em',
+                }}
+              >
+                MEUS<br />
+                <span style={{ color: '#ef6b50' }}>PIXELS.</span>
+              </h1>
+
+              <p
+                style={{
+                  maxWidth: 540,
+                  fontSize: 18,
+                  marginTop: 24,
+                }}
+              >
+                Tudo o que você já deixou na parede fica guardado aqui.
+              </p>
+            </div>
+
+            {user && (
+              <button
+                type="button"
+                className="button button-outline"
+                onClick={openProfile}
+              >
+                Editar perfil
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="demo-notice">
+              Carregando sua conta...
+            </div>
+          ) : !user || !session ? (
+            <div
+              style={{
+                border: '2px solid #211d42',
+                padding: '32px',
+                maxWidth: 620,
+                background: '#fffaf0',
+              }}
+            >
+              <h2 style={{ marginTop: 0 }}>
+                Entre para ver seus pixels.
+              </h2>
+
+              <p>
+                Suas compras ficam vinculadas à conta usada no pagamento.
+              </p>
+
+              <button
+                type="button"
+                className="button button-coral"
+                onClick={openAuth}
+              >
+                Entrar na minha conta
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          ) : loadingPurchases ? (
+            <div className="demo-notice">
+              Carregando suas compras...
+            </div>
+          ) : error ? (
+            <div className="demo-notice" role="alert">
+              {error}
+            </div>
+          ) : data ? (
+            <>
+              <section
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns:
+                    'repeat(auto-fit, minmax(180px, 1fr))',
+                  border: '2px solid #211d42',
+                  marginBottom: 36,
+                  background: '#fffaf0',
+                }}
+              >
+                <div style={{ padding: 24 }}>
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: 12,
+                      textTransform: 'uppercase',
+                      marginBottom: 8,
+                    }}
+                  >
+                    pixels que são seus
+                  </span>
+
+                  <strong style={{ fontSize: 38 }}>
+                    {data.total_pixels}
+                  </strong>
+                </div>
+
+                <div
+                  style={{
+                    padding: 24,
+                    borderLeft: '1px solid #211d42',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: 12,
+                      textTransform: 'uppercase',
+                      marginBottom: 8,
+                    }}
+                  >
+                    compras realizadas
+                  </span>
+
+                  <strong style={{ fontSize: 38 }}>
+                    {data.purchase_count}
+                  </strong>
+                </div>
+
+                <div
+                  style={{
+                    padding: 24,
+                    borderLeft: '1px solid #211d42',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: 12,
+                      textTransform: 'uppercase',
+                      marginBottom: 8,
+                    }}
+                  >
+                    valor total
+                  </span>
+
+                  <strong style={{ fontSize: 28 }}>
+                    {money(data.total_amount_cents)}
+                  </strong>
+                </div>
+              </section>
+
+              {data.purchases.length === 0 ? (
+                <div
+                  style={{
+                    border: '2px dashed #211d42',
+                    padding: 32,
+                  }}
+                >
+                  <h2 style={{ marginTop: 0 }}>
+                    Você ainda não possui pixels.
+                  </h2>
+
+                  <p>
+                    Escolha um espaço na parede e deixe sua primeira marca.
+                  </p>
+
+                  <Link
+                    href="/parede"
+                    className="button button-yellow"
+                  >
+                    Comprar meus primeiros pixels
+                    <ArrowRight size={18} />
+                  </Link>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: 18,
+                  }}
+                >
+                  {data.purchases.map((purchase, index) => (
+                    <article
+                      key={purchase.order_id}
+                      style={{
+                        border: '2px solid #211d42',
+                        background: '#fffaf0',
+                        padding: 26,
+                        display: 'grid',
+                        gap: 22,
+                        gridTemplateColumns:
+                          'minmax(0, 1fr) auto',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.08em',
+                          }}
+                        >
+                          Compra #{data.purchase_count - index}
+                        </span>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 20,
+                            flexWrap: 'wrap',
+                            alignItems: 'baseline',
+                            marginTop: 10,
+                          }}
+                        >
+                          <strong style={{ fontSize: 30 }}>
+                            {purchase.pixel_count} pixels
+                          </strong>
+
+                          <strong
+                            style={{
+                              fontSize: 20,
+                              color: '#ef6b50',
+                            }}
+                          >
+                            {money(purchase.amount_cents)}
+                          </strong>
+                        </div>
+
+                        <div
+                          style={{
+                            marginTop: 10,
+                            fontSize: 14,
+                            opacity: 0.75,
+                          }}
+                        >
+                          {date(
+                            purchase.paid_at ??
+                              purchase.created_at,
+                          )}
+                        </div>
+
+                        {purchase.bounds && (
+                          <div
+                            style={{
+                              marginTop: 8,
+                              fontSize: 13,
+                            }}
+                          >
+                            Área: {purchase.bounds.min_x},
+                            {purchase.bounds.min_y}
+                            {' → '}
+                            {purchase.bounds.max_x},
+                            {purchase.bounds.max_y}
+                          </div>
+                        )}
+                      </div>
+
+                      <Link
+                        href="/parede"
+                        className="button button-outline"
+                      >
+                        Ver na parede
+                        <ArrowRight size={17} />
+                      </Link>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : null}
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
 function Router() {
   return (
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/parede" component={WallPage} />
+        <Route path="/meus-pixels" component={MyPixelsPage} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>
