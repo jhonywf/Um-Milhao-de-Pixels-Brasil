@@ -1,0 +1,82 @@
+[1mdiff --git a/artifacts/api-server/src/routes/mercado-pago.ts b/artifacts/api-server/src/routes/mercado-pago.ts[m
+[1mindex f6060aa..404e5c9 100644[m
+[1m--- a/artifacts/api-server/src/routes/mercado-pago.ts[m
+[1m+++ b/artifacts/api-server/src/routes/mercado-pago.ts[m
+[36m@@ -736,13 +736,13 @@[m [mrouter.get("/mercado-pago/public-stats", async (req: Request, res: Response) =>[m
+       display_name: string | null;[m
+       avatar_emoji: string | null;[m
+       avatar_path: string | null;[m
+[31m-      public_profile: boolean | null;[m
+[32m+[m[32m      consent_public_profile: boolean | null;[m
+     }> = [];[m
+ [m
+     if (buyerIds.length > 0) {[m
+       const profileQuery = new URLSearchParams({[m
+         select:[m
+[31m-          "id,username,display_name,avatar_emoji,avatar_path,public_profile",[m
+[32m+[m[32m          "id,username,display_name,avatar_emoji,avatar_path,consent_public_profile",[m
+         id: `in.(${buyerIds.join(",")})`,[m
+       });[m
+ [m
+[36m@@ -763,7 +763,7 @@[m [mrouter.get("/mercado-pago/public-stats", async (req: Request, res: Response) =>[m
+     const ranking = [...buyerTotals.entries()][m
+       .map(([userId, totals]) => {[m
+         const profile = profileById.get(userId);[m
+[31m-        const canShowProfile = profile?.public_profile === true;[m
+[32m+[m[32m        const canShowProfile = profile?.consent_public_profile === true;[m
+ [m
+         return {[m
+           name: canShowProfile[m
+[36m@@ -872,7 +872,7 @@[m [mrouter.get("/mercado-pago/public-stats", async (req: Request, res: Response) =>[m
+       }[m
+ [m
+       const profile = profileById.get(order.user_id);[m
+[31m-      const canShowProfile = profile?.public_profile === true;[m
+[32m+[m[32m      const canShowProfile = profile?.consent_public_profile === true;[m
+ [m
+       return {[m
+         name: canShowProfile[m
+[36m@@ -893,7 +893,7 @@[m [mrouter.get("/mercado-pago/public-stats", async (req: Request, res: Response) =>[m
+       .slice(0, 10)[m
+       .map((order) => {[m
+         const profile = profileById.get(order.user_id);[m
+[31m-        const canShowProfile = profile?.public_profile === true;[m
+[32m+[m[32m        const canShowProfile = profile?.consent_public_profile === true;[m
+ [m
+         return {[m
+           name: canShowProfile[m
+[36m@@ -938,7 +938,7 @@[m [mrouter.get("/mercado-pago/public-stats", async (req: Request, res: Response) =>[m
+         .map(([userId, values]) => {[m
+           const profile = profileById.get(userId);[m
+           const canShowProfile =[m
+[31m-            profile?.public_profile === true;[m
+[32m+[m[32m            profile?.consent_public_profile === true;[m
+ [m
+           return {[m
+             name: canShowProfile[m
+[36m@@ -1155,7 +1155,7 @@[m [mrouter.get([m
+       try {[m
+         const profileQuery = new URLSearchParams({[m
+           select:[m
+[31m-            "display_name,username,avatar_emoji,avatar_path,public_profile",[m
+[32m+[m[32m            "display_name,username,avatar_emoji,avatar_path,consent_public_profile",[m
+           id: `eq.${order.user_id}`,[m
+           limit: "1",[m
+         });[m
+[36m@@ -1165,14 +1165,14 @@[m [mrouter.get([m
+           username: string | null;[m
+           avatar_emoji: string | null;[m
+           avatar_path: string | null;[m
+[31m-          public_profile: boolean | null;[m
+[32m+[m[32m          consent_public_profile: boolean | null;[m
+         }>>([m
+           `profiles?${profileQuery.toString()}`,[m
+         );[m
+ [m
+         const profile = profiles[0];[m
+ [m
+[31m-        if (profile?.public_profile === true) {[m
+[32m+[m[32m        if (profile?.consent_public_profile === true) {[m
+           owner = {[m
+             name:[m
+               profile.display_name ||[m
