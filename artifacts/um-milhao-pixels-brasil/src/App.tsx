@@ -1236,7 +1236,7 @@ function Footer() {
       <div className="footer-brand"><span className="brand-pixel" aria-hidden="true"><i /><i /><i /><i /></span><span>UM MILHÃO<br /><b>DE PIXELS</b></span></div>
       <p>Uma parede. Um milhão de histórias.</p>
       <div className="footer-links"><a href="#como-funciona" data-testid="link-footer-how">Como funciona</a><Link href="/parede" data-testid="link-footer-wall">A parede</Link><a href="#ranking" data-testid="link-footer-ranking">Ranking</a><a href="#empresas" data-testid="link-footer-company">Empresas</a><button onClick={() => window.alert('Contato em breve.')} data-testid="button-footer-contact">Contato</button><Link href="/termos" data-testid="link-footer-terms">Termos de uso</Link><Link href="/privacidade" data-testid="link-footer-privacy">Privacidade</Link></div>
-      <div className="footer-bottom"><span>© 2026 Um Milhão de Pixels Brasil</span><a href="https://instagram.com" target="_blank" rel="noreferrer" data-testid="link-instagram"><Instagram size={17} /> Instagram</a></div>
+      <div className="footer-bottom"><span>© 2026 Um Milhão de Pixels Brasil</span><a href="https://www.instagram.com/ummilhaodepixelsbrasil/" target="_blank" rel="noreferrer" data-testid="link-instagram"><Instagram size={17} /> Instagram</a></div>
     </footer>
   );
 }
@@ -2543,6 +2543,52 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setSelectedPixels(next);
   };
 
+  const focusPixelForEditing = (
+    pixelX: number,
+    pixelY: number,
+  ) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const rect = stage.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    const currentScale = cameraRef.current.scale;
+
+    /*
+     * Queremos aproximadamente 35–45 pixels visíveis
+     * na menor dimensão ao redor do pixel escolhido.
+     */
+    const targetScale = Math.min(
+      maxZoom,
+      Math.max(
+        currentScale,
+        Math.min(rect.width, rect.height) / 42,
+      ),
+    );
+
+    /*
+     * Só faz o zoom automático se a visão atual estiver
+     * realmente distante. Se o usuário já ampliou a parede,
+     * não interfere na escolha dele.
+     */
+    if (currentScale >= targetScale * 0.72) {
+      return;
+    }
+
+    const centerX = pixelX + 0.5;
+    const centerY = pixelY + 0.5;
+
+    const nextCamera = {
+      x: -(centerX - 500) * targetScale,
+      y: -(centerY - 500) * targetScale,
+      scale: targetScale,
+    };
+
+    cameraRef.current = nextCamera;
+    setCamera(nextCamera);
+  };
+
   const zoomAt = (nextScale: number, clientX?: number, clientY?: number) => {
     const bounded = Math.min(maxZoom, Math.max(minZoom, nextScale));
     if (clientX === undefined || clientY === undefined) {
@@ -3548,6 +3594,11 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                         pixel.x,
                         pixel.y,
                         'add',
+                      );
+
+                      focusPixelForEditing(
+                        pixel.x,
+                        pixel.y,
                       );
 
                       setSelectionNudgeOpen(true);
