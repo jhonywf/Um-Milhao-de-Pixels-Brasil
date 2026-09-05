@@ -2639,7 +2639,31 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const action: 'add' | 'erase' | 'recolor' = recolorMode ? 'recolor' : tool === 'erase' ? 'erase' : 'add';
     if (action === 'add' && claimedAt(x, y)) return;
 
+    const selectedKey = `${x}:${y}`;
+    const isAlreadySelected =
+      selectedPixels.has(selectedKey);
+
     if (event.pointerType === 'touch') {
+      if (
+        action === 'add' &&
+        !occupied &&
+        isAlreadySelected
+      ) {
+        pendingTouchRef.current = {
+          pointerId: event.pointerId,
+          startedAt: performance.now(),
+          startX: event.clientX,
+          startY: event.clientY,
+          x,
+          y,
+          action: 'erase',
+          occupied: null,
+          moved: false,
+        };
+
+        return;
+      }
+
       if (
         action === 'add' &&
         !occupied &&
@@ -2685,6 +2709,15 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     if (occupied) {
       setSelectedBlock(occupied);
       setAvailablePixelPrompt(null);
+      return;
+    }
+
+    if (
+      action === 'add' &&
+      isAlreadySelected
+    ) {
+      updatePixel(x, y, 'erase');
+      setSelectionNudgeOpen(false);
       return;
     }
 
@@ -2929,13 +2962,13 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     },
     {
       title: 'Selecione seus pixels',
-      text: 'Toque em um pixel livre e escolha Selecionar pixel. Depois, toque e arraste para criar retângulos inteiros de uma vez. Você pode repetir o gesto em outros lugares para montar letras, formas e desenhos.',
+      text: 'Toque em um pixel livre e escolha Selecionar pixel. Depois, toque e arraste para criar retângulos inteiros de uma vez. Você pode repetir o gesto em outros lugares e, se selecionar um pixel por engano, basta tocar nele novamente para desselecioná-lo.',
       target: '[data-testid="pixel-editor-bar"]',
       placement: 'top-right',
     },
     {
       title: 'Edite sua seleção',
-      text: 'Use Selecionar, Apagar e Mover. Depois toque em Personalizar para escolher as cores dos pixels selecionados.',
+      text: 'No modo Selecionar, toque novamente em um pixel já marcado para removê-lo rapidamente. Use Apagar quando quiser remover vários pixels, Mover para navegar e Personalizar para escolher as cores da sua arte.',
       target: '[data-testid="pixel-editor-bar"]',
       placement: 'top-right',
     },
@@ -3678,7 +3711,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
           />
         </div>
         {wallSyncError && <div className="demo-notice" role="status">{wallSyncError} A proteção do banco continua ativa; tente atualizar a página.</div>}
-        <div className="wall-bottom-note"><Grid2X2 size={17} /> Selecione pixels independentes para criar letras, símbolos e desenhos. Ao continuar, sua seleção fica reservada por 15 minutos.</div>
+        <div className="wall-bottom-note"><Grid2X2 size={17} /> Toque e arraste para selecionar vários pixels. Toque novamente em um pixel selecionado para removê-lo. Ao continuar, sua seleção fica reservada por 15 minutos.</div>
       </main>
     </div>
   );
