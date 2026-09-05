@@ -1720,6 +1720,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [isDragging, setIsDragging] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [selectionCustomized, setSelectionCustomized] = useState(false);
+  const [selectionNudgeOpen, setSelectionNudgeOpen] = useState(false);
   const [activeColor, setActiveColor] = useState('#ef4444');
   const [customColor, setCustomColor] = useState('#ff681d');
   const [customColorActive, setCustomColorActive] = useState(false);
@@ -2215,22 +2216,22 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       const y = originY + pixel.y * camera.scale;
       const size = Math.max(1, camera.scale);
 
-      if (selectionCustomized) {
-        ctx.fillStyle = pixel.color;
-      } else {
-        ctx.fillStyle = 'rgba(90, 160, 255, 0.22)';
-      }
+      ctx.fillStyle = selectionCustomized
+        ? pixel.color
+        : 'rgba(90, 160, 255, 0.22)';
 
       ctx.fillRect(x, y, size, size);
 
-      if (camera.scale >= 3) {
-        ctx.strokeStyle = selectionCustomized
-          ? 'rgba(22, 135, 255, 0.72)'
-          : 'rgba(22, 135, 255, 0.58)';
+      /*
+       * Antes da personalização, mantemos apenas uma indicação
+       * discreta de que cada célula faz parte da seleção.
+       */
+      if (!selectionCustomized && camera.scale >= 3) {
+        ctx.strokeStyle = 'rgba(22, 135, 255, 0.42)';
 
         ctx.lineWidth = Math.max(
-          0.65,
-          Math.min(1.4, camera.scale * 0.065),
+          0.55,
+          Math.min(1.05, camera.scale * 0.05),
         );
 
         ctx.strokeRect(
@@ -2241,6 +2242,71 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
         );
       }
     });
+
+    /*
+     * Depois que o usuário aplica uma cor, desenhamos SOMENTE
+     * o contorno externo da seleção.
+     *
+     * As linhas entre pixels vizinhos não são desenhadas.
+     */
+    if (selectionCustomized && selectedPixels.size > 0) {
+      const selectedKeys = new Set(selectedPixels.keys());
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(22, 135, 255, 0.92)';
+      ctx.lineWidth = Math.max(
+        1,
+        Math.min(2.2, camera.scale * 0.09),
+      );
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      selectedPixels.forEach((pixel) => {
+        const x =
+          originX + pixel.x * camera.scale;
+
+        const y =
+          originY + pixel.y * camera.scale;
+
+        const size = camera.scale;
+
+        const top =
+          `${pixel.x}:${pixel.y - 1}`;
+
+        const right =
+          `${pixel.x + 1}:${pixel.y}`;
+
+        const bottom =
+          `${pixel.x}:${pixel.y + 1}`;
+
+        const left =
+          `${pixel.x - 1}:${pixel.y}`;
+
+        if (!selectedKeys.has(top)) {
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + size, y);
+        }
+
+        if (!selectedKeys.has(right)) {
+          ctx.moveTo(x + size, y);
+          ctx.lineTo(x + size, y + size);
+        }
+
+        if (!selectedKeys.has(bottom)) {
+          ctx.moveTo(x + size, y + size);
+          ctx.lineTo(x, y + size);
+        }
+
+        if (!selectedKeys.has(left)) {
+          ctx.moveTo(x, y + size);
+          ctx.lineTo(x, y);
+        }
+      });
+
+      ctx.stroke();
+      ctx.restore();
+    }
 
     /*
      * PIXEL EM PRÉ-SELEÇÃO
@@ -2581,6 +2647,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       ) {
         const base = new Map(selectedPixels);
 
+        setSelectionNudgeOpen(false);
+
         rectangleSelectRef.current = {
           pointerId: event.pointerId,
           startX: x,
@@ -2806,6 +2874,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setAvailablePixelPrompt(null);
     setSelectionArmed(false);
     setSelectionCustomized(false);
+    setSelectionNudgeOpen(false);
     rectangleSelectRef.current = null;
     setCustomizeOpen(false);
     setRecolorMode(false);
@@ -3447,6 +3516,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                         pixel.y,
                         'add',
                       );
+
+                      setSelectionNudgeOpen(true);
                     }}
                   >
                     <Paintbrush size={17} />
@@ -3454,6 +3525,67 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                   </button>
                 </div>
               )}
+
+              {selectionNudgeOpen &&
+                selectedCount > 0 &&
+                !customizeOpen && (
+                  <div
+                    className="selection-next-step"
+                    role="dialog"
+                    aria-label="Próximo passo da seleção"
+                  >
+                    <button
+                      type="button"
+                      className="selection-next-step-close"
+                      onClick={() =>
+                        setSelectionNudgeOpen(false)
+                      }
+                      aria-label="Fechar"
+                    >
+                      <X size={17} />
+                    </button>
+
+                    <span>
+                      {selectedCount === 1
+                        ? '1 PIXEL SELECIONADO'
+                        : `${selectedCount} PIXELS SELECIONADOS`}
+                    </span>
+
+                    <strong>
+                      E agora?
+                    </strong>
+
+                    <p>
+                      Continue selecionando para criar sua área ou personalize as cores.
+                    </p>
+
+                    <div className="selection-next-step-actions">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectionNudgeOpen(false);
+                          setSelectionArmed(true);
+                          setTool('select');
+                        }}
+                      >
+                        <Plus size={16} />
+                        SELECIONAR MAIS
+                      </button>
+
+                      <button
+                        type="button"
+                        className="primary"
+                        onClick={() => {
+                          setSelectionNudgeOpen(false);
+                          setCustomizeOpen(true);
+                        }}
+                      >
+                        <Paintbrush size={16} />
+                        PERSONALIZAR
+                      </button>
+                    </div>
+                  </div>
+                )}
 
               <canvas
                 ref={canvasRef}
@@ -3476,7 +3608,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
               <div className="pixel-editor-total"><strong>{selectedCount}</strong><span>pixels</span><strong>R${selectedCount.toFixed(2).replace('.', ',')}</strong></div>
               <div className="pixel-editor-actions">
                 <button className="editor-clear" onClick={clearSelection} disabled={!selectedCount || !!lastReservation}>Limpar</button>
-                <button className="editor-customize" onClick={() => setCustomizeOpen(true)} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
+                <button className="editor-customize" onClick={() => { setSelectionNudgeOpen(false); setCustomizeOpen(true); }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
               </div>
             </div>
 
