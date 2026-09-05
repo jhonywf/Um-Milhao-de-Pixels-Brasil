@@ -736,13 +736,13 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       display_name: string | null;
       avatar_emoji: string | null;
       avatar_path: string | null;
-      public_profile: boolean | null;
+      consent_public_profile: boolean | null;
     }> = [];
 
     if (buyerIds.length > 0) {
       const profileQuery = new URLSearchParams({
         select:
-          "id,username,display_name,avatar_emoji,avatar_path,public_profile",
+          "id,username,display_name,avatar_emoji,avatar_path,consent_public_profile",
         id: `in.(${buyerIds.join(",")})`,
       });
 
@@ -763,7 +763,7 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
     const ranking = [...buyerTotals.entries()]
       .map(([userId, totals]) => {
         const profile = profileById.get(userId);
-        const canShowProfile = profile?.public_profile === true;
+        const canShowProfile = profile?.consent_public_profile === true;
 
         return {
           name: canShowProfile
@@ -872,7 +872,7 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       }
 
       const profile = profileById.get(order.user_id);
-      const canShowProfile = profile?.public_profile === true;
+      const canShowProfile = profile?.consent_public_profile === true;
 
       return {
         name: canShowProfile
@@ -893,7 +893,7 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       .slice(0, 10)
       .map((order) => {
         const profile = profileById.get(order.user_id);
-        const canShowProfile = profile?.public_profile === true;
+        const canShowProfile = profile?.consent_public_profile === true;
 
         return {
           name: canShowProfile
@@ -938,7 +938,7 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
         .map(([userId, values]) => {
           const profile = profileById.get(userId);
           const canShowProfile =
-            profile?.public_profile === true;
+            profile?.consent_public_profile === true;
 
           return {
             name: canShowProfile
@@ -1155,7 +1155,7 @@ router.get(
       try {
         const profileQuery = new URLSearchParams({
           select:
-            "display_name,username,avatar_emoji,avatar_path,public_profile",
+            "display_name,username,avatar_emoji,avatar_path,consent_public_profile",
           id: `eq.${order.user_id}`,
           limit: "1",
         });
@@ -1165,14 +1165,14 @@ router.get(
           username: string | null;
           avatar_emoji: string | null;
           avatar_path: string | null;
-          public_profile: boolean | null;
+          consent_public_profile: boolean | null;
         }>>(
           `profiles?${profileQuery.toString()}`,
         );
 
         const profile = profiles[0];
 
-        if (profile?.public_profile === true) {
+        if (profile?.consent_public_profile === true) {
           owner = {
             name:
               profile.display_name ||
