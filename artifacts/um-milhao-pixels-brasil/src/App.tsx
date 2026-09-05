@@ -2771,6 +2771,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       action === 'add' &&
       !selectionArmed
     ) {
+      focusPixelForEditing(x, y);
       setAvailablePixelPrompt({ x, y });
       return;
     }
@@ -2907,6 +2908,11 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
           pending.action === 'add' &&
           !selectionArmed
         ) {
+          focusPixelForEditing(
+            pending.x,
+            pending.y,
+          );
+
           setAvailablePixelPrompt({
             x: pending.x,
             y: pending.y,
@@ -3594,11 +3600,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                         pixel.x,
                         pixel.y,
                         'add',
-                      );
-
-                      focusPixelForEditing(
-                        pixel.x,
-                        pixel.y,
                       );
 
                       setSelectionNudgeOpen(true);

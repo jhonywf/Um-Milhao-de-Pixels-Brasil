@@ -5665,3 +5665,38 @@ body::before {
     width: calc(100% - 24px) !important;
   }
 }
+
+
+/* MOBILE_EDITOR_FONT_READABILITY_V1 */
+
+@media (max-width: 620px) {
+
+  /*
+   * Mantém a barra compacta, mas aumenta a leitura de:
+   * Selecionar / Apagar / Mover / Limpar / Personalizar.
+   */
+  .pixel-editor-tools button {
+    font-size: 8.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: .01em !important;
+  }
+
+  .pixel-editor-actions button {
+    font-size: 8.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: .01em !important;
+  }
+
+  .pixel-editor-tools button svg,
+  .pixel-editor-actions button svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .pixel-editor-tools button,
+  .pixel-editor-actions button {
+    font-size: 8px !important;
+  }
+}
