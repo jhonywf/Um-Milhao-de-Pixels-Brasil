@@ -1235,8 +1235,8 @@ function Footer() {
     <footer className="site-footer" data-testid="footer-site">
       <div className="footer-brand"><span className="brand-pixel" aria-hidden="true"><i /><i /><i /><i /></span><span>UM MILHÃO<br /><b>DE PIXELS</b></span></div>
       <p>Uma parede. Um milhão de histórias.</p>
-      <div className="footer-links"><a href="#como-funciona" data-testid="link-footer-how">Como funciona</a><Link href="/parede" data-testid="link-footer-wall">A parede</Link><a href="#ranking" data-testid="link-footer-ranking">Ranking</a><a href="#empresas" data-testid="link-footer-company">Empresas</a><button onClick={() => window.alert('Contato em breve.')} data-testid="button-footer-contact">Contato</button><a href="#termos" data-testid="link-footer-terms">Termos de uso</a><a href="#privacidade" data-testid="link-footer-privacy">Privacidade</a></div>
-      <div className="footer-bottom"><span>© 2024 Um Milhão de Pixels Brasil <span className="footer-demo">/ projeto em demonstração</span></span><a href="https://instagram.com" target="_blank" rel="noreferrer" data-testid="link-instagram"><Instagram size={17} /> Instagram</a></div>
+      <div className="footer-links"><a href="#como-funciona" data-testid="link-footer-how">Como funciona</a><Link href="/parede" data-testid="link-footer-wall">A parede</Link><a href="#ranking" data-testid="link-footer-ranking">Ranking</a><a href="#empresas" data-testid="link-footer-company">Empresas</a><button onClick={() => window.alert('Contato em breve.')} data-testid="button-footer-contact">Contato</button><Link href="/termos" data-testid="link-footer-terms">Termos de uso</Link><Link href="/privacidade" data-testid="link-footer-privacy">Privacidade</Link></div>
+      <div className="footer-bottom"><span>© 2026 Um Milhão de Pixels Brasil</span><a href="https://instagram.com" target="_blank" rel="noreferrer" data-testid="link-instagram"><Instagram size={17} /> Instagram</a></div>
     </footer>
   );
 }
@@ -5209,12 +5209,304 @@ function AdminPage() {
   );
 }
 
+
+function LegalPageLayout({
+  title,
+  updatedAt,
+  children,
+}: {
+  title: string;
+  updatedAt: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="legal-page">
+      <Header />
+
+      <main className="legal-main">
+        <div className="legal-heading">
+          <span>UM MILHÃO DE PIXELS BRASIL</span>
+          <h1>{title}</h1>
+          <p>Última atualização: {updatedAt}</p>
+        </div>
+
+        <article className="legal-document">
+          {children}
+        </article>
+
+        <div className="legal-back">
+          <Link href="/">← Voltar ao início</Link>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function TermsPage() {
+  return (
+    <LegalPageLayout
+      title="Termos de Uso"
+      updatedAt="5 de setembro de 2026"
+    >
+      <section>
+        <h2>1. Sobre o projeto</h2>
+        <p>
+          O Um Milhão de Pixels Brasil é uma plataforma digital que
+          disponibiliza uma parede virtual formada por 1.000.000 de pixels.
+          Usuários podem selecionar espaços disponíveis, personalizá-los e
+          adquiri-los mediante pagamento.
+        </p>
+      </section>
+
+      <section>
+        <h2>2. Aceitação dos termos</h2>
+        <p>
+          Ao criar uma conta, selecionar pixels, efetuar uma compra ou utilizar
+          os recursos da plataforma, você declara ter lido e concordado com
+          estes Termos de Uso e com a Política de Privacidade.
+        </p>
+      </section>
+
+      <section>
+        <h2>3. Conta do usuário</h2>
+        <p>
+          O usuário é responsável pela veracidade das informações fornecidas,
+          pela segurança de sua conta e pelo uso realizado por meio dela.
+          Não é permitido utilizar contas de terceiros sem autorização.
+        </p>
+      </section>
+
+      <section>
+        <h2>4. Seleção, reserva e compra de pixels</h2>
+        <p>
+          Pixels disponíveis podem ser selecionados livremente. Antes do
+          pagamento, a plataforma poderá realizar uma reserva temporária dos
+          pixels escolhidos. A reserva não representa aquisição definitiva.
+        </p>
+        <p>
+          A propriedade do espaço virtual somente é confirmada após a
+          confirmação do pagamento pelo meio de pagamento utilizado pela
+          plataforma.
+        </p>
+      </section>
+
+      <section>
+        <h2>5. Preço e pagamento</h2>
+        <p>
+          O preço vigente é informado na própria plataforma antes da
+          confirmação da compra. O processamento do pagamento é realizado por
+          provedor externo de pagamentos, atualmente o Mercado Pago.
+        </p>
+        <p>
+          O usuário deve conferir a quantidade de pixels e o valor total antes
+          de concluir o pagamento.
+        </p>
+      </section>
+
+      <section>
+        <h2>6. Conteúdo publicado nos pixels</h2>
+        <p>
+          O usuário é responsável pelas cores, desenhos, nomes, perfis, links e
+          demais conteúdos que decidir associar à sua participação na
+          plataforma.
+        </p>
+        <p>
+          É proibido publicar conteúdo ilegal, fraudulento, discriminatório,
+          ameaçador, que viole direitos de terceiros, propriedade intelectual,
+          privacidade ou qualquer legislação aplicável.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. Moderação</h2>
+        <p>
+          A plataforma poderá ocultar, restringir ou remover conteúdos que
+          violem estes termos, a legislação ou direitos de terceiros, sem que
+          isso implique obrigação de monitoramento prévio de todo conteúdo.
+        </p>
+      </section>
+
+      <section>
+        <h2>8. Disponibilidade do serviço</h2>
+        <p>
+          Empregamos esforços para manter a plataforma disponível e segura,
+          mas poderão ocorrer interrupções para manutenção, atualização,
+          problemas de infraestrutura ou eventos fora de nosso controle.
+        </p>
+      </section>
+
+      <section>
+        <h2>9. Fraudes e abuso</h2>
+        <p>
+          Tentativas de manipular pagamentos, reservas, ranking, autenticação,
+          disponibilidade de pixels ou qualquer mecanismo de segurança poderão
+          resultar em bloqueio da conta e adoção das medidas cabíveis.
+        </p>
+      </section>
+
+      <section>
+        <h2>10. Alterações</h2>
+        <p>
+          Estes termos poderão ser atualizados para refletir mudanças na
+          plataforma, na legislação ou na operação do serviço. A versão vigente
+          estará sempre disponível nesta página.
+        </p>
+      </section>
+
+      <section>
+        <h2>11. Legislação aplicável</h2>
+        <p>
+          Estes termos são regidos pelas leis da República Federativa do
+          Brasil, inclusive pelas normas de proteção ao consumidor e demais
+          normas aplicáveis à relação entre a plataforma e seus usuários.
+        </p>
+      </section>
+    </LegalPageLayout>
+  );
+}
+
+function PrivacyPage() {
+  return (
+    <LegalPageLayout
+      title="Política de Privacidade"
+      updatedAt="5 de setembro de 2026"
+    >
+      <section>
+        <h2>1. Objetivo desta política</h2>
+        <p>
+          Esta Política de Privacidade explica como o Um Milhão de Pixels
+          Brasil trata dados pessoais utilizados para autenticação, criação de
+          perfil, compra de pixels, funcionamento da parede e segurança da
+          plataforma.
+        </p>
+      </section>
+
+      <section>
+        <h2>2. Dados que podemos tratar</h2>
+        <p>
+          Dependendo de como você utiliza o serviço, podemos tratar dados como
+          nome ou nome de exibição, endereço de e-mail, nome de usuário, foto
+          ou avatar, cidade, site, redes sociais e informações fornecidas
+          voluntariamente no perfil.
+        </p>
+        <p>
+          Também podem ser tratados identificadores técnicos necessários para
+          autenticação, segurança, prevenção de fraude e funcionamento da
+          sessão.
+        </p>
+      </section>
+
+      <section>
+        <h2>3. Autenticação</h2>
+        <p>
+          O acesso pode ocorrer por e-mail e senha ou por provedor de
+          autenticação, como Google. Quando um provedor externo é utilizado,
+          determinados dados necessários à autenticação podem ser
+          compartilhados entre o provedor e a plataforma.
+        </p>
+      </section>
+
+      <section>
+        <h2>4. Pagamentos</h2>
+        <p>
+          Os pagamentos são processados por provedor externo, atualmente o
+          Mercado Pago. A plataforma recebe informações necessárias para
+          identificar e confirmar a transação, mas não precisa armazenar os
+          dados completos do meio de pagamento utilizado pelo comprador.
+        </p>
+      </section>
+
+      <section>
+        <h2>5. Finalidades do tratamento</h2>
+        <p>
+          Os dados podem ser utilizados para criar e manter sua conta,
+          autenticar seu acesso, executar compras e reservas, exibir seus
+          pixels, manter históricos, oferecer recursos de perfil, prevenir
+          fraude, proteger a plataforma e cumprir obrigações legais.
+        </p>
+      </section>
+
+      <section>
+        <h2>6. Perfil e informações públicas</h2>
+        <p>
+          Informações de perfil somente devem ser exibidas publicamente quando
+          o usuário tiver escolhido ou autorizado essa exibição de acordo com
+          as opções disponíveis na plataforma.
+        </p>
+        <p>
+          O endereço de e-mail utilizado para autenticação não é destinado à
+          exposição pública no site.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. Marketing</h2>
+        <p>
+          Comunicações promocionais dependem das preferências e consentimentos
+          disponibilizados ao usuário. O consentimento para marketing é
+          separado das autorizações necessárias para utilização da plataforma.
+        </p>
+      </section>
+
+      <section>
+        <h2>8. Compartilhamento de dados</h2>
+        <p>
+          Dados podem ser processados por fornecedores necessários ao
+          funcionamento do serviço, como serviços de autenticação,
+          infraestrutura, banco de dados e pagamentos, dentro das finalidades
+          necessárias à operação da plataforma.
+        </p>
+      </section>
+
+      <section>
+        <h2>9. Segurança</h2>
+        <p>
+          Utilizamos medidas técnicas e organizacionais destinadas a proteger
+          os dados e a plataforma contra acesso não autorizado, alteração,
+          perda e uso indevido. Nenhum sistema conectado à internet, porém,
+          pode garantir risco absolutamente zero.
+        </p>
+      </section>
+
+      <section>
+        <h2>10. Retenção</h2>
+        <p>
+          Os dados são mantidos pelo período necessário para as finalidades
+          descritas nesta política, cumprimento de obrigações legais,
+          exercício regular de direitos, segurança e prevenção de fraude.
+        </p>
+      </section>
+
+      <section>
+        <h2>11. Direitos do titular</h2>
+        <p>
+          Nos termos da Lei Geral de Proteção de Dados Pessoais (LGPD), o
+          titular poderá exercer os direitos aplicáveis ao seu caso, incluindo
+          confirmação de tratamento, acesso, correção e demais direitos
+          previstos em lei.
+        </p>
+      </section>
+
+      <section>
+        <h2>12. Alterações desta política</h2>
+        <p>
+          Esta política poderá ser atualizada conforme a evolução da
+          plataforma ou mudanças legais. A versão vigente e sua data de
+          atualização permanecerão disponíveis nesta página.
+        </p>
+      </section>
+    </LegalPageLayout>
+  );
+}
+
 function Router() {
   return (
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/parede" component={WallPage} />
+        <Route path="/termos" component={TermsPage} />
+        <Route path="/privacidade" component={PrivacyPage} />
         <Route path="/meus-pixels" component={MyPixelsPage} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/obra/:orderId" component={PublicPurchasePage} />
