@@ -1718,6 +1718,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [isDragging, setIsDragging] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [activeColor, setActiveColor] = useState('#ef4444');
+  const [customColor, setCustomColor] = useState('#ff681d');
+  const [customColorActive, setCustomColorActive] = useState(false);
   const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
   const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
   const publicPixelBucketsRef = useRef(
@@ -3179,7 +3181,43 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 <div className="pixel-customizer-body">
                   <p>Escolha uma cor. Você pode aplicar em todos ou pintar somente os pixels que quiser.</p>
                   <div className="pixel-palette">
-                    {PIXEL_PALETTE.map((color) => <button key={color} className={activeColor === color ? 'active' : ''} style={{ backgroundColor: color }} onClick={() => setActiveColor(color)} aria-label={`Cor ${color}`} />)}
+                    {PIXEL_PALETTE.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={activeColor === color && !customColorActive ? 'active' : ''}
+                      onClick={() => {
+                        setActiveColor(color);
+                        setCustomColorActive(false);
+                      }}
+                      aria-label={`Cor ${color}`}
+                    >
+                      <span
+                        className="pixel-swatch-fill"
+                        style={{ backgroundColor: color }}
+                      />
+                    </button>
+                  ))}
+                  <label
+                    className={`pixel-custom-color ${customColorActive ? 'active' : ''}`}
+                    aria-label="Escolher uma cor personalizada"
+                    title="Cor personalizada"
+                  >
+                    <span className="pixel-custom-rainbow" />
+                    <Paintbrush className="pixel-custom-color-icon" size={13} />
+                    <input
+                      type="color"
+                      value={customColor}
+                      className="pixel-custom-color-input"
+                      onChange={(event) => {
+                        const color = event.target.value;
+                        setCustomColor(color);
+                        setActiveColor(color);
+                        setCustomColorActive(true);
+                      }}
+                      aria-label="Seletor de cor personalizada"
+                    />
+                  </label>
                   </div>
                   <div className="customizer-actions">
                     <button className="customizer-primary" onClick={() => fillAll(activeColor)}>Aplicar aos {selectedCount} pixels</button>
