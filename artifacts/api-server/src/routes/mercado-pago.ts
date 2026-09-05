@@ -296,6 +296,48 @@ async function findOrderByReservation(reservationId: string) {
   return rows[0] ?? null;
 }
 
+async function findMercadoPagoPaymentByReservation(
+  reservationId: string,
+): Promise<MercadoPagoPayment | null> {
+  const params = new URLSearchParams({
+    external_reference: reservationId,
+    status: "approved",
+    sort: "date_created",
+    criteria: "desc",
+    limit: "10",
+    offset: "0",
+  });
+
+  const response = await fetch(
+    `https://api.mercadopago.com/v1/payments/search?${params.toString()}`,
+    {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${mercadoPagoAccessToken}`,
+      },
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`MERCADO_PAGO_PAYMENT_SEARCH_FAILED:${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    results?: MercadoPagoPayment[];
+  };
+
+  const payments = Array.isArray(payload.results) ? payload.results : [];
+
+  return (
+    payments.find(
+      (payment) =>
+        String(payment.external_reference ?? "") === reservationId &&
+        payment.status === "approved",
+    ) ?? null
+  );
+}
+
 async function loadMercadoPagoPayment(paymentId: string) {
   const response = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`, {
     headers: {
@@ -532,9 +574,95 @@ router.get("/mercado-pago/status", async (req: Request, res: Response) => {
       return;
     }
 
-    const order = await findOrderByReservation(
+    let order = await findOrderByReservation(
       reservation.id,
     );
+
+    if (
+      order?.status !== "paid" &&
+      (reservation.status === "active" || reservation.status === "expired")
+    ) {
+      const paymentCandidate =
+        await findMercadoPagoPaymentByReservation(reservation.id);
+
+      if (paymentCandidate?.id != null) {
+        const payment = await loadMercadoPagoPayment(
+          String(paymentCandidate.id),
+        );
+
+        const paymentReservationId = String(
+          payment.external_reference ?? "",
+        );
+
+        const paymentAmountCents = Math.round(
+          Number(payment.transaction_amount) * 100,
+        );
+
+        const approvedAt =
+          typeof payment.date_approved === "string"
+            ? payment.date_approved
+            : "";
+
+        const approvedAtMs = Date.parse(approvedAt);
+        const reservationExpiresAtMs = Date.parse(
+          reservation.expires_at,
+        );
+
+        const approvedBeforeReservationExpired =
+          Number.isFinite(approvedAtMs) &&
+          Number.isFinite(reservationExpiresAtMs) &&
+          approvedAtMs <= reservationExpiresAtMs;
+
+        const paymentIsValid =
+          payment.status === "approved" &&
+          paymentReservationId === reservation.id &&
+          payment.currency_id === "BRL" &&
+          Number.isFinite(paymentAmountCents) &&
+          paymentAmountCents === reservation.amount_cents &&
+          approvedAt.length > 0 &&
+          approvedBeforeReservationExpired;
+
+        if (paymentIsValid) {
+          req.log?.info(
+            {
+              reservationId: reservation.id,
+              paymentId: payment.id,
+            },
+            "Reconciling approved Mercado Pago payment from status endpoint",
+          );
+
+          await finalizeReservation(
+            reservation.id,
+            String(payment.id),
+            paymentAmountCents,
+            approvedAt,
+          );
+
+          order = await findOrderByReservation(
+            reservation.id,
+          );
+
+          res.status(200).json({
+            reservation_id: reservation.id,
+            reservation_status: "converted",
+            pixel_count: reservation.pixel_count,
+            amount_cents: reservation.amount_cents,
+            order_status: order?.status ?? "paid",
+            paid: true,
+            reconciled: true,
+          });
+          return;
+        }
+
+        req.log?.warn(
+          {
+            reservationId: reservation.id,
+            paymentId: payment.id,
+          },
+          "Mercado Pago payment found but failed reconciliation validation",
+        );
+      }
+    }
 
     res.status(200).json({
       reservation_id: reservation.id,
