@@ -200,8 +200,9 @@ export async function restoreSession() {
     try {
       return await refreshSession(normalized.refresh_token);
     } catch {
-      storeSession(null);
-      return null;
+      // Do not destroy a persisted session because of a temporary
+      // refresh/network failure. Keep it available for a later retry.
+      return normalized;
     }
   }
 
@@ -211,8 +212,9 @@ export async function restoreSession() {
     storeSession(session);
     return session;
   } catch {
-    storeSession(null);
-    return null;
+    // A temporary validation/network failure must not behave like logout.
+    // Explicit signOut() remains responsible for clearing local storage.
+    return normalized;
   }
 }
 
