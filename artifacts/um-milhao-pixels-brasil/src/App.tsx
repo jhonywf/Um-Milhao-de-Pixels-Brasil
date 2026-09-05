@@ -1719,6 +1719,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [selectionArmed, setSelectionArmed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [selectionCustomized, setSelectionCustomized] = useState(false);
   const [activeColor, setActiveColor] = useState('#ef4444');
   const [customColor, setCustomColor] = useState('#ff681d');
   const [customColorActive, setCustomColorActive] = useState(false);
@@ -2213,14 +2214,66 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       const x = originX + pixel.x * camera.scale;
       const y = originY + pixel.y * camera.scale;
       const size = Math.max(1, camera.scale);
-      ctx.fillStyle = pixel.color;
+
+      if (selectionCustomized) {
+        ctx.fillStyle = pixel.color;
+      } else {
+        ctx.fillStyle = 'rgba(90, 160, 255, 0.22)';
+      }
+
       ctx.fillRect(x, y, size, size);
-      if (camera.scale >= 4) {
-        ctx.strokeStyle = '#1687ff';
-        ctx.lineWidth = Math.max(1.5, camera.scale * 0.13);
-        ctx.strokeRect(x + 0.6, y + 0.6, Math.max(1, size - 1.2), Math.max(1, size - 1.2));
+
+      if (camera.scale >= 3) {
+        ctx.strokeStyle = selectionCustomized
+          ? 'rgba(22, 135, 255, 0.72)'
+          : 'rgba(22, 135, 255, 0.58)';
+
+        ctx.lineWidth = Math.max(
+          0.65,
+          Math.min(1.4, camera.scale * 0.065),
+        );
+
+        ctx.strokeRect(
+          x + 0.5,
+          y + 0.5,
+          Math.max(1, size - 1),
+          Math.max(1, size - 1),
+        );
       }
     });
+
+    /*
+     * PIXEL EM PRÉ-SELEÇÃO
+     * Ao tocar em um pixel livre, ele já fica destacado
+     * antes de confirmar "Selecionar pixel".
+     */
+    if (availablePixelPrompt) {
+      const x =
+        originX +
+        availablePixelPrompt.x * camera.scale;
+
+      const y =
+        originY +
+        availablePixelPrompt.y * camera.scale;
+
+      const size = Math.max(1, camera.scale);
+
+      ctx.fillStyle = 'rgba(90, 160, 255, 0.24)';
+      ctx.fillRect(x, y, size, size);
+
+      ctx.strokeStyle = 'rgba(22, 135, 255, 0.9)';
+      ctx.lineWidth = Math.max(
+        0.8,
+        Math.min(1.6, camera.scale * 0.07),
+      );
+
+      ctx.strokeRect(
+        x + 0.5,
+        y + 0.5,
+        Math.max(1, size - 1),
+        Math.max(1, size - 1),
+      );
+    }
 
     if (selectedBlock) {
       const x = originX + selectedBlock.x * camera.scale;
@@ -2232,7 +2285,15 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       ctx.strokeRect(x - 3, y - 3, selectedBlock.width * camera.scale + 6, selectedBlock.height * camera.scale + 6);
       ctx.restore();
     }
-  }, [blocks, camera, publicPixels, selectedBlock, selectedPixels]);
+  }, [
+    blocks,
+    camera,
+    publicPixels,
+    selectedBlock,
+    selectedPixels,
+    availablePixelPrompt,
+    selectionCustomized,
+  ]);
 
   const fitInitialView = useCallback(() => {
     const stage = stageRef.current;
@@ -2336,8 +2397,28 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       if (action === 'erase') next.delete(key);
       else if (action === 'recolor') {
         const pixel = next.get(key);
-        if (pixel) next.set(key, { ...pixel, color: activeColor });
-      } else if (!next.has(key)) next.set(key, { x, y, color: activeColor });
+
+        if (pixel) {
+          next.set(
+            key,
+            {
+              ...pixel,
+              color: activeColor,
+            },
+          );
+
+          setSelectionCustomized(true);
+        }
+      } else if (!next.has(key)) {
+        next.set(
+          key,
+          {
+            x,
+            y,
+            color: activeColor,
+          },
+        );
+      }
       return next;
     });
   };
@@ -2724,6 +2805,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setSelectedBlock(null);
     setAvailablePixelPrompt(null);
     setSelectionArmed(false);
+    setSelectionCustomized(false);
     rectangleSelectRef.current = null;
     setCustomizeOpen(false);
     setRecolorMode(false);
@@ -2733,6 +2815,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const fillAll = (color: string) => {
     if (lastReservation) return;
     setActiveColor(color);
+    setSelectionCustomized(true);
     setSelectedPixels((current) => {
       const next = new Map<string, SelectedPixel>();
       current.forEach((pixel, key) => next.set(key, { ...pixel, color }));
@@ -2745,6 +2828,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setLastReservation(reservation);
     setCustomizeOpen(false);
     setRecolorMode(false);
+    setAvailablePixelPrompt(null);
   };
 
 
