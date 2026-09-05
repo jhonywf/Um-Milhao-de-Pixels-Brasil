@@ -1,0 +1,23 @@
+===== SUPABASE CLIENT =====
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:36:const oauthFlowStorageKey = 'um-milhao-pixels.oauth-flow';
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:37:const oauthReturnStorageKey = 'um-milhao-pixels.oauth-return-to';
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:47:    window.localStorage.setItem(oauthFlowStorageKey, JSON.stringify(flow));
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:49:    window.localStorage.removeItem(oauthFlowStorageKey);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:55:    const raw = window.localStorage.getItem(oauthFlowStorageKey);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:241:  window.localStorage.setItem(oauthReturnStorageKey, returnTo);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:343:      const storedReturnTo = window.localStorage.getItem(oauthReturnStorageKey);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:344:      window.localStorage.removeItem(oauthReturnStorageKey);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:377:    const storedReturnTo = window.localStorage.getItem(oauthReturnStorageKey);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:378:    window.localStorage.removeItem(oauthReturnStorageKey);
+
+===== AUTH / SESSION =====
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:17:  signOut,
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:58:  const [session, setSession] = useState<AuthSession | null>(null);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:101:        setSession(nextSession);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:141:        setSession(nextSession);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:145:        setSession(null);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:169:      setSession(nextSession);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:185:      setSession(response.session);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:229:    if (session) await signOut(session.access_token);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:230:    setSession(null);
+./artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:228:export async function signOut(accessToken: string) {
