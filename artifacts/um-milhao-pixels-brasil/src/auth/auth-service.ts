@@ -265,11 +265,15 @@ export async function startGoogleSignIn() {
 export async function requestPasswordReset(email: string) {
   const { verifier, challenge } = await createPkcePair();
   storePkceFlow({ verifier, kind: 'recovery', createdAt: Date.now() });
+
+  const recoveryRedirectUrl = new URL(appRedirectUrl());
+  recoveryRedirectUrl.searchParams.set('recovery', '1');
+
   await supabaseRequest('/auth/v1/recover', {
     method: 'POST',
     body: {
       email,
-      redirect_to: appRedirectUrl(),
+      redirect_to: recoveryRedirectUrl.toString(),
       code_challenge: challenge,
       code_challenge_method: 's256',
     },
@@ -348,7 +352,12 @@ export async function readOAuthSessionFromUrl(): Promise<AuthRedirectResult | nu
       method: 'POST',
       body: { auth_code: code, code_verifier: flow.verifier },
     }));
-    const kind: AuthRedirectResult['kind'] = flow.kind === 'recovery' ? 'recovery' : 'oauth';
+    const isRecovery =
+      flow.kind === 'recovery' ||
+      url.searchParams.get('recovery') === '1';
+
+    const kind: AuthRedirectResult['kind'] =
+      isRecovery ? 'recovery' : 'oauth';
     storePkceFlow(null);
 
     let returnTo: string | undefined;
@@ -364,6 +373,7 @@ export async function readOAuthSessionFromUrl(): Promise<AuthRedirectResult | nu
     url.searchParams.delete('code');
     url.searchParams.delete('state');
     url.searchParams.delete('sb_flow_id');
+    url.searchParams.delete('recovery');
     window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
     return { session, kind, returnTo };
   }
@@ -382,7 +392,11 @@ export async function readOAuthSessionFromUrl(): Promise<AuthRedirectResult | nu
     token_type: hash.get('token_type') ?? 'bearer',
     user: { id: '' },
   });
-  const kind = hash.get('type') === 'recovery' ? 'recovery' : 'oauth';
+  const kind =
+    hash.get('type') === 'recovery' ||
+    url.searchParams.get('recovery') === '1'
+      ? 'recovery'
+      : 'oauth';
   storePkceFlow(null);
 
   let returnTo: string | undefined;
