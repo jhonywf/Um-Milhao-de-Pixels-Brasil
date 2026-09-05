@@ -226,10 +226,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session]);
 
   const logout = useCallback(async () => {
-    if (session) await signOut(session.access_token);
+    const accessToken = session?.access_token;
+
+    // Logout local primeiro: a interface deve responder imediatamente.
     setSession(null);
     setProfile(null);
     setProfileDialogOpen(false);
+    storeSession(null);
+
+    // Depois tentamos revogar a sessao remotamente.
+    // Falha de rede nao deve impedir o logout local.
+    if (accessToken) {
+      try {
+        await signOut(accessToken);
+      } catch {
+        // Sessao local ja foi removida com seguranca.
+      }
+    }
   }, [session]);
 
   const updateProfile = useCallback(async (input: ProfileInput) => {

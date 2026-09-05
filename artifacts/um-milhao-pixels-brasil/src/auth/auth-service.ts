@@ -95,7 +95,18 @@ async function createPkcePair() {
 }
 
 function appRedirectUrl() {
-  return new URL(appBasePath, window.location.origin).toString();
+  const productionOrigin =
+    'https://um-milhao-de-pixels-brasil--jhonymec2.replit.app';
+
+  const isLocalDevelopment =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1';
+
+  const origin = isLocalDevelopment
+    ? window.location.origin
+    : productionOrigin;
+
+  return new URL(appBasePath, origin).toString();
 }
 
 function getStoredSession(): AuthSession | null {
