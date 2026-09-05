@@ -4996,3 +4996,98 @@ button {
   pointer-events: auto !important;
   z-index: 3 !important;
 }
+
+
+/* PIXEL_AVAILABILITY_AND_RECTANGLE_SELECTION_V1 */
+
+/* Safari/iPhone: elimina qualquer faixa bege acima do cabeçalho */
+html,
+body,
+#root {
+  background-color: #090909 !important;
+}
+
+.wall-page {
+  background-color: #090909 !important;
+}
+
+/* Convite exibido ao tocar em um pixel livre */
+.available-pixel-prompt {
+  position: absolute;
+  z-index: 35;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: min(440px, calc(100% - 28px));
+  padding: 18px;
+  background: #111111;
+  border: 1px solid #343434;
+  box-shadow: 6px 6px 0 rgba(255, 104, 29, .22);
+  color: #f5f4ef;
+  font-family: var(--app-font-mono);
+}
+
+.available-pixel-prompt > span {
+  display: block;
+  padding-right: 34px;
+  margin-bottom: 9px;
+  color: #ff681d;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.available-pixel-prompt > strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #f5f4ef;
+  font-family: var(--app-font-serif);
+  font-size: clamp(21px, 5vw, 28px);
+  line-height: 1;
+}
+
+.available-pixel-prompt > p {
+  margin: 0 0 15px;
+  color: #a8a8a8;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.available-pixel-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #343434;
+  background: #191919;
+  color: #f5f4ef;
+  cursor: pointer;
+}
+
+.available-pixel-select {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid #ff681d;
+  background: #ff681d;
+  color: #090909;
+  font: 800 11px var(--app-font-mono);
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+
+@media (max-width: 620px) {
+  .available-pixel-prompt {
+    bottom: 12px;
+    width: calc(100% - 20px);
+    padding: 16px;
+  }
+}

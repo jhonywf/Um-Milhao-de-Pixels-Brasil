@@ -1715,6 +1715,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [tool, setTool] = useState<PixelTool>('select');
   const [selectedPixels, setSelectedPixels] = useState<Map<string, SelectedPixel>>(() => loadPendingPixelSelection());
   const [selectedBlock, setSelectedBlock] = useState<PixelBlock | null>(null);
+  const [availablePixelPrompt, setAvailablePixelPrompt] = useState<{ x: number; y: number } | null>(null);
+  const [selectionArmed, setSelectionArmed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [activeColor, setActiveColor] = useState('#ef4444');
@@ -1735,6 +1737,12 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
   const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
+  const rectangleSelectRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    base: Map<string, SelectedPixel>;
+  } | null>(null);
   const pendingTouchRef = useRef<{
     pointerId: number;
     startedAt: number;
@@ -2343,6 +2351,51 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     }
   };
 
+  const applyRectangleSelection = (
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    base: Map<string, SelectedPixel>,
+  ) => {
+    if (lastReservation) return;
+
+    const minX = Math.max(0, Math.min(startX, endX));
+    const maxX = Math.min(999, Math.max(startX, endX));
+    const minY = Math.max(0, Math.min(startY, endY));
+    const maxY = Math.min(999, Math.max(startY, endY));
+
+    const next = new Map(base);
+    const maxSelection = 100000;
+
+    outer:
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        if (next.size >= maxSelection) break outer;
+
+        if (
+          occupiedAt(x + 0.5, y + 0.5) ||
+          claimedAt(x, y)
+        ) {
+          continue;
+        }
+
+        const key = `${x}:${y}`;
+
+        if (!next.has(key)) {
+          next.set(key, {
+            x,
+            y,
+            color: activeColor,
+          });
+        }
+      }
+    }
+
+    setSelectedBlock(null);
+    setSelectedPixels(next);
+  };
+
   const zoomAt = (nextScale: number, clientX?: number, clientY?: number) => {
     const bounded = Math.min(maxZoom, Math.max(minZoom, nextScale));
     if (clientX === undefined || clientY === undefined) {
@@ -2412,6 +2465,14 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
     if (pointersRef.current.size >= 2) {
       gestureRef.current.multiTouch = true;
+
+      if (rectangleSelectRef.current) {
+        setSelectedPixels(
+          new Map(rectangleSelectRef.current.base),
+        );
+        rectangleSelectRef.current = null;
+      }
+
       paintRef.current = null;
       pendingTouchRef.current = null;
       startPinch();
@@ -2432,6 +2493,32 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     if (action === 'add' && claimedAt(x, y)) return;
 
     if (event.pointerType === 'touch') {
+      if (
+        action === 'add' &&
+        !occupied &&
+        selectionArmed
+      ) {
+        const base = new Map(selectedPixels);
+
+        rectangleSelectRef.current = {
+          pointerId: event.pointerId,
+          startX: x,
+          startY: y,
+          base,
+        };
+
+        applyRectangleSelection(
+          x,
+          y,
+          x,
+          y,
+          base,
+        );
+
+        setAvailablePixelPrompt(null);
+        return;
+      }
+
       pendingTouchRef.current = {
         pointerId: event.pointerId,
         startedAt: performance.now(),
@@ -2448,6 +2535,15 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
     if (occupied) {
       setSelectedBlock(occupied);
+      setAvailablePixelPrompt(null);
+      return;
+    }
+
+    if (
+      action === 'add' &&
+      !selectionArmed
+    ) {
+      setAvailablePixelPrompt({ x, y });
       return;
     }
 
@@ -2461,6 +2557,14 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
     if (pointersRef.current.size >= 2) {
       gestureRef.current.multiTouch = true;
+
+      if (rectangleSelectRef.current) {
+        setSelectedPixels(
+          new Map(rectangleSelectRef.current.base),
+        );
+        rectangleSelectRef.current = null;
+      }
+
       pendingTouchRef.current = null;
       paintRef.current = null;
       setIsDragging(true);
@@ -2476,6 +2580,40 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       const nextCamera = { ...cameraRef.current, x: dragRef.current.originX + dx, y: dragRef.current.originY + dy };
       cameraRef.current = nextCamera;
       setCamera(nextCamera);
+      setIsDragging(true);
+      return;
+    }
+
+    const rectangleSelection =
+      rectangleSelectRef.current;
+
+    if (
+      rectangleSelection &&
+      rectangleSelection.pointerId === event.pointerId
+    ) {
+      const world = screenToWorld(
+        event.clientX,
+        event.clientY,
+      );
+
+      const endX = Math.max(
+        0,
+        Math.min(999, Math.floor(world.x)),
+      );
+
+      const endY = Math.max(
+        0,
+        Math.min(999, Math.floor(world.y)),
+      );
+
+      applyRectangleSelection(
+        rectangleSelection.startX,
+        rectangleSelection.startY,
+        endX,
+        endY,
+        rectangleSelection.base,
+      );
+
       setIsDragging(true);
       return;
     }
@@ -2521,6 +2659,14 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
     pointersRef.current.delete(event.pointerId);
 
+    if (
+      rectangleSelectRef.current?.pointerId === event.pointerId
+    ) {
+      rectangleSelectRef.current = null;
+      setSelectionArmed(true);
+      setAvailablePixelPrompt(null);
+    }
+
     if (pending && !wasMultiTouch) {
       pendingTouchRef.current = null;
 
@@ -2529,6 +2675,14 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       if (!pending.moved) {
         if (pending.occupied) {
           setSelectedBlock(pending.occupied);
+        } else if (
+          pending.action === 'add' &&
+          !selectionArmed
+        ) {
+          setAvailablePixelPrompt({
+            x: pending.x,
+            y: pending.y,
+          });
         } else {
           updatePixel(
             pending.x,
@@ -2548,6 +2702,16 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
   const onPointerCancel = (event: PointerEvent<HTMLCanvasElement>) => {
     pointersRef.current.delete(event.pointerId);
+
+    if (
+      rectangleSelectRef.current?.pointerId === event.pointerId
+    ) {
+      setSelectedPixels(
+        new Map(rectangleSelectRef.current.base),
+      );
+      rectangleSelectRef.current = null;
+    }
+
     if (pendingTouchRef.current?.pointerId === event.pointerId) pendingTouchRef.current = null;
     paintRef.current = null;
     pinchRef.current = null;
@@ -2558,6 +2722,9 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const clearSelection = () => {
     setSelectedPixels(new Map());
     setSelectedBlock(null);
+    setAvailablePixelPrompt(null);
+    setSelectionArmed(false);
+    rectangleSelectRef.current = null;
     setCustomizeOpen(false);
     setRecolorMode(false);
     setLastReservation(null);
@@ -2597,7 +2764,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     },
     {
       title: 'Mova a parede',
-      text: 'No celular ou tablet, arraste com um dedo para navegar. Arrastar nunca seleciona pixels. No computador, use a ferramenta Mover quando quiser navegar.',
+      text: 'No celular ou tablet, arraste com um dedo para navegar enquanto estiver explorando. Depois de entrar no modo Selecionar, arrastar cria blocos de pixels. Use Mover quando quiser navegar sem selecionar.',
       target: '[data-testid="canvas-pixel-wall"]',
       placement: 'bottom-right',
     },
@@ -2609,7 +2776,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     },
     {
       title: 'Selecione seus pixels',
-      text: 'Toque em um pixel livre para selecioná-lo. Continue tocando em outros espaços para montar letras, desenhos, símbolos ou qualquer composição.',
+      text: 'Toque em um pixel livre e escolha Selecionar pixel. Depois, toque e arraste para criar retângulos inteiros de uma vez. Você pode repetir o gesto em outros lugares para montar letras, formas e desenhos.',
       target: '[data-testid="pixel-editor-bar"]',
       placement: 'top-right',
     },
@@ -3147,9 +3314,63 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 <span className="floating-zoom-divider" />
                 <button onClick={() => zoomAt(cameraRef.current.scale / 1.25)} aria-label="Diminuir zoom"><Minus size={20} /></button>
               </div>
-              {selectedCount === 0 && (
+              {selectedCount === 0 && !availablePixelPrompt && (
                 <div className="first-pixel-hint">Toque em um pixel para começar</div>
               )}
+
+              {availablePixelPrompt && (
+                <div
+                  className="available-pixel-prompt"
+                  role="dialog"
+                  aria-label="Pixel disponível"
+                >
+                  <button
+                    type="button"
+                    className="available-pixel-close"
+                    onClick={() =>
+                      setAvailablePixelPrompt(null)
+                    }
+                    aria-label="Fechar"
+                  >
+                    <X size={18} />
+                  </button>
+
+                  <span>
+                    PIXEL DISPONÍVEL · {availablePixelPrompt.x},{availablePixelPrompt.y}
+                  </span>
+
+                  <strong>
+                    Este pixel pode ser seu
+                  </strong>
+
+                  <p>
+                    Comece por ele e arraste para selecionar vários pixels de uma vez.
+                  </p>
+
+                  <button
+                    type="button"
+                    className="available-pixel-select"
+                    onClick={() => {
+                      const pixel = availablePixelPrompt;
+
+                      setSelectionArmed(true);
+                      setTool('select');
+                      setRecolorMode(false);
+                      setAvailablePixelPrompt(null);
+
+                      updatePixel(
+                        pixel.x,
+                        pixel.y,
+                        'add',
+                      );
+                    }}
+                  >
+                    <Paintbrush size={17} />
+                    SELECIONAR PIXEL →
+                  </button>
+                </div>
+              )}
+
               <canvas
                 ref={canvasRef}
                 onPointerDown={onPointerDown}
@@ -3164,7 +3385,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
             <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
               <div className="pixel-editor-tools">
-                <button className={tool === 'select' && !recolorMode ? 'active' : ''} onClick={() => { setTool('select'); setRecolorMode(false); }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
+                <button className={tool === 'select' && !recolorMode ? 'active' : ''} onClick={() => { setTool('select'); setRecolorMode(false); setSelectionArmed(true); setAvailablePixelPrompt(null); }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
                 <button className={tool === 'erase' ? 'active' : ''} onClick={() => { setTool('erase'); setRecolorMode(false); }} disabled={!!lastReservation}><Eraser size={17} /> Apagar</button>
                 <button className={tool === 'pan' ? 'active' : ''} onClick={() => { setTool('pan'); setRecolorMode(false); }}><Hand size={17} /> Mover</button>
               </div>
