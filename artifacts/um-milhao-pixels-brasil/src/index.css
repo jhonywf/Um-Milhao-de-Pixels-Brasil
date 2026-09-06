@@ -5906,3 +5906,35 @@ body::before {
     line-height: 1.5 !important;
   }
 }
+
+/* WALL_BOTTOM_NOTE_READABILITY_V1 */
+.wall-bottom-note {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+
+@media (max-width: 620px) {
+  .wall-bottom-note {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+  }
+}
+
+/* SELECTION_PANEL_FOOT_READABILITY_V1 */
+.selection-panel .panel-foot {
+  font-size: 10px !important;
+}
+
+.selection-panel .panel-foot a {
+  font-size: 10px !important;
+}
+
+@media (max-width: 620px) {
+  .selection-panel .panel-foot {
+    font-size: 9px !important;
+  }
+
+  .selection-panel .panel-foot a {
+    font-size: 9px !important;
+  }
+}
