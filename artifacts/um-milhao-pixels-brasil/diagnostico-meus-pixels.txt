@@ -1,0 +1,1213 @@
+
+===== TRECHO =====
+191:         >
+192:           <button
+193:             className="header-account"
+194:             type="button"
+195:             onClick={() => setAccountMenuOpen((open) => !open)}
+196:             aria-haspopup="menu"
+197:             aria-expanded={accountMenuOpen}
+198:             data-testid="button-account"
+199:           >
+200:             <span className="header-account-avatar">
+201:               {profile?.avatar_path ? <img src={supabasePublicStorageUrl(profile.avatar_path)} alt="" /> : profile?.avatar_emoji ?? <UserRound size={14} />}
+202:             </span>
+203:             <span className="header-account-name">
+204:               {profile?.username ? `@${profile.username}` : 'minha conta'}
+205:             </span>
+206:             <ChevronDown size={14} />
+207:           </button>
+208: 
+209:           {accountMenuOpen && (
+210:             <div
+211:               role="menu"
+212:               style={{
+213:                 position: 'absolute',
+214:                 right: 0,
+215:                 top: 'calc(100% + 10px)',
+216:                 width: 210,
+217:                 background: '#111111',
+218:                   color: '#f5f4ef',
+219:                 border: '1px solid #343434',
+220:                 boxShadow: '5px 5px 0 rgba(255, 104, 29, 0.18)',
+221:                 zIndex: 1000,
+222:                 padding: 8,
+223:               }}
+224:             >
+225:               <Link
+226:                 href="/meus-pixels"
+227:                 role="menuitem"
+228:                 onClick={() => setAccountMenuOpen(false)}
+229:                 style={{
+230:                   display: 'block',
+231:                   padding: '12px 14px',
+232:                   textDecoration: 'none',
+233:                   color: '#343434',
+234:                   fontWeight: 700,
+235:                 }}
+236:               ><span style={{ color: '#f5f4ef' }}>Meus pixels</span></Link>
+237: 
+238:               <button
+239:                 type="button"
+240:                 role="menuitem"
+241:                 onClick={() => {
+242:                   setAccountMenuOpen(false);
+243:                   openProfile();
+244:                 }}
+245:                 style={{
+246:                   display: 'block',
+247:                   width: '100%',
+248:                   padding: '12px 14px',
+249:                   textAlign: 'left',
+250:                   background: 'transparent',
+251:                   border: 0,
+252:                   color: '#343434',
+253:                   fontWeight: 700,
+254:                   cursor: 'pointer',
+255:                 }}
+256:               ><span style={{ color: '#f5f4ef' }}>Editar perfil</span></button>
+257: 
+258:               <div
+259:                 style={{
+260:                   height: 1,
+261:                   background: '#343434',
+262:                   opacity: 0.2,
+263:                   margin: '4px 0',
+264:                 }}
+265:               />
+266: 
+267:               <button
+268:                 type="button"
+269:                 role="menuitem"
+270:                 onClick={() => void handleLogout()}
+271:                 style={{
+272:                   display: 'block',
+273:                   width: '100%',
+274:                   padding: '12px 14px',
+275:                   textAlign: 'left',
+276:                   background: 'transparent',
+277:                   border: 0,
+278:                   color: '#ff681d',
+279:                   fontWeight: 800,
+280:                   cursor: 'pointer',
+281:                 }}
+282:               >
+283:                 Sair
+284:               </button>
+285:             </div>
+286:           )}
+287:         </div>
+288:       ) : (
+289:         <button className="header-login" type="button" onClick={openAuth} data-testid="button-login">
+290:           entrar
+291:         </button>
+292:       )}
+293:       <Link href="/parede" className="header-cta" data-testid="link-header-cta">
+294:         <span>Comprar pixels</span><ArrowRight size={17} />
+295:       </Link>
+296:     </header>
+297:   );
+298: }
+299: 
+300: function RealWallMiniMap() {
+301:   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+302:   const [pixels, setPixels] = useState<PublicWallPixel[]>([]);
+303:   const [loadFailed, setLoadFailed] = useState(false);
+304: 
+305:   useEffect(() => {
+306:     let cancelled = false;
+307: 
+308:     const load = async () => {
+309:       try {
+310:         const result = await loadPublicWallPixels();
+311: 
+312:         if (!cancelled) {
+313:           setPixels(
+314:             result.filter(
+315:               (pixel) =>
+
+===== TRECHO =====
+1097:             <p>
+1098:               Só entram aqui conquistas comprovadas pelas
+1099:               compras reais da parede.
+1100:             </p>
+1101:           </div>
+1102: 
+1103:           {!stats || stats.purchase_count === 0 ? (
+1104:             <div className="demo-notice">
+1105:               O Hall da Fama começa com a primeira compra.
+1106:             </div>
+1107:           ) : (
+1108:             <div className="hall-grid">
+1109:               {stats.records.first_purchase && (
+1110:                 <article className="hall-item">
+1111:                   <div className="hall-icon">01</div>
+1112: 
+1113:                   <div className="hall-copy">
+1114:                     <small>primeiro comprador</small>
+1115:                     <strong>
+1116:                       {stats.records.first_purchase.name}
+1117:                     </strong>
+1118:                     <span>
+1119:                       {stats.records.first_purchase.pixel_count.toLocaleString(
+1120:                         'pt-BR',
+1121:                       )}{' '}
+1122:                       pixels ·{' '}
+1123:                       {formatDate(
+1124:                         stats.records.first_purchase.paid_at,
+1125:                       )}
+1126:                     </span>
+1127:                   </div>
+1128: 
+1129:                   {stats.records.first_purchase.bounds && (
+1130:                     <Link
+1131:                       className="hall-link"
+1132:                       href={`/parede?focus=${stats.records.first_purchase.bounds.min_x},${stats.records.first_purchase.bounds.min_y},${stats.records.first_purchase.bounds.max_x},${stats.records.first_purchase.bounds.max_y}`}
+1133:                     >
+1134:                       Ver na parede
+1135:                       <ArrowRight size={14} />
+1136:                     </Link>
+1137:                   )}
+1138:                 </article>
+1139:               )}
+1140: 
+1141:               {stats.records.largest_buyer && (
+1142:                 <article className="hall-item">
+1143:                   <div className="hall-icon">★</div>
+1144: 
+1145:                   <div className="hall-copy">
+1146:                     <small>maior comprador</small>
+1147:                     <strong>
+1148:                       {stats.records.largest_buyer.name}
+1149:                     </strong>
+1150:                     <span>
+1151:                       {stats.records.largest_buyer.pixels.toLocaleString(
+1152:                         'pt-BR',
+1153:                       )}{' '}
+1154:                       pixels em{' '}
+1155:                       {stats.records.largest_buyer.purchases.toLocaleString(
+1156:                         'pt-BR',
+1157:                       )}{' '}
+1158:                       {stats.records.largest_buyer.purchases === 1
+1159:                         ? 'compra'
+1160:                         : 'compras'}
+1161:                     </span>
+1162:                   </div>
+1163: 
+1164:                   {stats.records.largest_buyer.username && (
+1165:                     <Link
+1166:                       className="hall-link"
+1167:                       href={`/usuario/${stats.records.largest_buyer.username}`}
+1168:                     >
+1169:                       Ver perfil
+1170:                       <ArrowRight size={14} />
+1171:                     </Link>
+1172:                   )}
+1173:                 </article>
+1174:               )}
+1175: 
+1176:               {stats.records.largest_purchase && (
+1177:                 <article className="hall-item">
+1178:                   <div className="hall-icon">↑</div>
+1179: 
+1180:                   <div className="hall-copy">
+1181:                     <small>maior compra</small>
+1182:                     <strong>
+1183:                       {stats.records.largest_purchase.pixel_count.toLocaleString(
+1184:                         'pt-BR',
+1185:                       )}{' '}
+1186:                       pixels
+1187:                     </strong>
+1188:                     <span>
+1189:                       {stats.records.largest_purchase.name} ·{' '}
+1190:                       {formatDate(
+1191:                         stats.records.largest_purchase.paid_at,
+1192:                       )}
+1193:                     </span>
+1194:                   </div>
+1195: 
+1196:                   {stats.records.largest_purchase.bounds && (
+1197:                     <Link
+1198:                       className="hall-link"
+1199:                       href={`/parede?focus=${stats.records.largest_purchase.bounds.min_x},${stats.records.largest_purchase.bounds.min_y},${stats.records.largest_purchase.bounds.max_x},${stats.records.largest_purchase.bounds.max_y}`}
+1200:                     >
+1201:                       Ver na parede
+1202:                       <ArrowRight size={14} />
+1203:                     </Link>
+1204:                   )}
+1205:                 </article>
+1206:               )}
+1207: 
+1208:               {stats.records.latest_purchase && (
+1209:                 <article className="hall-item hall-item-live">
+1210:                   <div className="hall-icon">●</div>
+1211: 
+1212:                   <div className="hall-copy">
+1213:                     <small>compra mais recente</small>
+1214:                     <strong>
+1215:                       {stats.records.latest_purchase.name}
+1216:                     </strong>
+1217:                     <span>
+1218:                       {stats.records.latest_purchase.pixel_count.toLocaleString(
+1219:                         'pt-BR',
+1220:                       )}{' '}
+1221:                       pixels ·{' '}
+1222:                       {formatDate(
+1223:                         stats.records.latest_purchase.paid_at,
+1224:                       )}
+1225:                     </span>
+1226:                   </div>
+1227: 
+1228:                   {stats.records.latest_purchase.bounds && (
+1229:                     <Link
+1230:                       className="hall-link"
+1231:                       href={`/parede?focus=${stats.records.latest_purchase.bounds.min_x},${stats.records.latest_purchase.bounds.min_y},${stats.records.latest_purchase.bounds.max_x},${stats.records.latest_purchase.bounds.max_y}`}
+1232:                     >
+1233:                       Ver na parede
+1234:                       <ArrowRight size={14} />
+1235:                     </Link>
+1236:                   )}
+1237:                 </article>
+1238:               )}
+1239:             </div>
+1240:           )}
+1241: 
+1242:           <div className="hall-future">
+1243:             <span>próximas conquistas</span>
+1244:             <p>
+1245:               Maior desenho e primeira empresa serão liberados
+1246:               quando pudermos comprová-los com dados reais.
+1247:             </p>
+1248:           </div>
+1249:         </div>
+1250:         </div>
+1251:     </section>
+1252:   );
+1253: }
+1254: 
+1255: function Footer() {
+1256:   return (
+1257:     <footer className="site-footer" data-testid="footer-site">
+1258:       <div className="footer-brand"><span className="brand-pixel" aria-hidden="true"><i /><i /><i /><i /></span><span>UM MILHÃO<br /><b>DE PIXELS</b></span></div>
+1259:       <p>Uma parede. Um milhão de histórias.</p>
+1260:       <div className="footer-links"><a href="#como-funciona" data-testid="link-footer-how">Como funciona</a><Link href="/parede" data-testid="link-footer-wall">A parede</Link><a href="#ranking" data-testid="link-footer-ranking">Ranking</a><a href="#empresas" data-testid="link-footer-company">Empresas</a><button onClick={() => window.alert('Contato em breve.')} data-testid="button-footer-contact">Contato</button><Link href="/termos" data-testid="link-footer-terms">Termos de uso</Link><Link href="/privacidade" data-testid="link-footer-privacy">Privacidade</Link></div>
+1261:       <div className="footer-bottom"><span>© 2026 Um Milhão de Pixels Brasil</span><a href="https://www.instagram.com/ummilhaodepixelsbrasil/" target="_blank" rel="noreferrer" data-testid="link-instagram"><Instagram size={17} /> Instagram</a></div>
+1262:     </footer>
+1263:   );
+1264: }
+1265: 
+1266: function PaymentReturnExperience() {
+1267:   const { session, openAuth } = useAuth();
+1268:   const [mode, setMode] = useState<'hidden' | 'checking' | 'paid' | 'pending' | 'failure' | 'error'>('hidden');
+1269:   const [pixelCount, setPixelCount] = useState(0);
+1270:   const [amountCents, setAmountCents] = useState(0);
+1271:   const [focusHref, setFocusHref] = useState('/parede');
+1272:   const [message, setMessage] = useState('');
+1273: 
+1274:   const cleanReturnUrl = () => {
+1275:     window.history.replaceState({}, '', '/parede');
+1276:   };
+1277: 
+1278:   useEffect(() => {
+1279:     const params = new URLSearchParams(window.location.search);
+1280:     const paymentReturn = params.get('payment');
+1281:     if (!paymentReturn) return;
+1282: 
+1283:     if (paymentReturn === 'failure') {
+1284:       setMode('failure');
+1285:       return;
+1286:     }
+1287: 
+1288:     const reservationId =
+1289:       window.localStorage.getItem('pixel-wall-checkout-reservation') ||
+1290:       params.get('external_reference') ||
+1291:       '';
+1292: 
+1293:     if (!reservationId) {
+1294:       setMode('error');
+1295:       setMessage('Não encontramos a reserva desta compra. Entre na sua conta e atualize a parede.');
+1296:       return;
+1297:     }
+1298: 
+1299:     if (!session) {
+1300:       setMode('pending');
+1301:       setMessage('Entre na mesma conta usada na compra para confirmar seus pixels.');
+1302:       return;
+1303:     }
+1304: 
+1305:     let cancelled = false;
+1306:     let attempts = 0;
+1307:     setMode('checking');
+1308: 
+1309:     const check = async () => {
+1310:       try {
+1311:         const status = await getMercadoPagoPaymentStatus(reservationId, session.access_token);
+1312:         if (cancelled) return;
+1313: 
+1314:         setPixelCount(status.pixel_count);
+1315:         setAmountCents(status.amount_cents);
+1316: 
+1317:         if (status.paid) {
+1318:           window.localStorage.removeItem('pixel-wall-checkout-reservation');
+1319:           setMode('paid');
+1320: 
+1321:           try {
+1322:             const purchases = await getMyPurchases(session.access_token);
+1323:             const purchase = purchases.purchases.find(
+1324:               (item) => item.reservation_id === reservationId,
+1325:             );
+1326: 
+1327:             if (purchase?.bounds) {
+1328:               setFocusHref(
+1329:                 `/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`,
+1330:               );
+1331:             }
+1332:           } catch {
+1333:             // A compra já foi confirmada. Se a localização não carregar,
+1334:             // mantemos o acesso normal à parede.
+1335:           }
+1336: 
+1337:           return;
+1338:         }
+1339: 
+1340:         attempts += 1;
+1341:         if (attempts >= 24) {
+1342:           setMode('pending');
+1343:           setMessage('O pagamento ainda está sendo confirmado. Seus pixels serão atualizados automaticamente após a confirmação segura.');
+1344:           return;
+1345:         }
+1346: 
+1347:         window.setTimeout(check, 1500);
+1348:       } catch (caught) {
+1349:         if (cancelled) return;
+1350: 
+1351:         attempts += 1;
+1352:         if (attempts >= 6) {
+1353:           setMode('error');
+1354:           setMessage(caught instanceof Error ? caught.message : 'Não foi possível confirmar o pagamento agora.');
+1355:           return;
+1356:         }
+1357: 
+1358:         window.setTimeout(check, 1500);
+1359:       }
+1360:     };
+1361: 
+1362:     void check();
+1363:     return () => { cancelled = true; };
+1364:   }, [session]);
+1365: 
+1366:   if (mode === 'hidden') return null;
+1367: 
+1368:   const close = () => {
+1369:     cleanReturnUrl();
+1370:     setMode('hidden');
+1371:   };
+1372: 
+1373:   const share = async () => {
+1374:     const text = `Agora eu possuo ${pixelCount} pixels no Um Milhão de Pixels Brasil!`;
+1375:     const shareUrl = `${window.location.origin}${focusHref}`;
+1376: 
+1377:     try {
+1378:       if (navigator.share) {
+1379:         await navigator.share({
+1380:           title: 'Um Milhão de Pixels Brasil',
+1381:           text,
+1382:           url: shareUrl,
+1383:         });
+1384:       } else {
+1385:         await navigator.clipboard.writeText(`${text} ${shareUrl}`);
+1386:         setMessage('Link copiado para compartilhar!');
+1387:       }
+1388:     } catch {
+1389:       // O usuário pode cancelar o compartilhamento sem alterar a compra.
+1390:     }
+1391:   };
+1392: 
+1393:   return (
+1394:     <div
+1395:       role="dialog"
+1396:       aria-modal="true"
+1397:       aria-label="Status do pagamento"
+1398:       style={{
+1399:         position: 'fixed',
+1400:         inset: 0,
+1401:         zIndex: 80,
+1402:         background: 'rgba(0,0,0,.82)',
+1403:         display: 'grid',
+1404:         placeItems: 'center',
+1405:         padding: 18,
+1406:       }}
+1407:     >
+1408:       <div style={{
+1409:         width: 'min(520px, 100%)',
+1410:         background: '#111111',
+1411:         color: '#f5f4ef',
+1412:         border: '2px solid #3a3a3a',
+1413:         boxShadow: '8px 8px 0 #000000',
+1414:         padding: 24,
+1415:       }}>
+1416:         {mode === 'checking' && (
+1417:           <>
+1418:             <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em' }}>Mercado Pago</div>
+
+===== TRECHO =====
+1494:                   style={{
+1495:                     display: 'block',
+1496:                     fontSize: 11,
+1497:                     textTransform: 'uppercase',
+1498:                     opacity: 0.65,
+1499:                     marginBottom: 5,
+1500:                   }}
+1501:                 >
+1502:                   valor confirmado
+1503:                 </span>
+1504:                 <strong style={{ fontSize: 25 }}>
+1505:                   {(amountCents / 100).toLocaleString('pt-BR', {
+1506:                     style: 'currency',
+1507:                     currency: 'BRL',
+1508:                   })}
+1509:                 </strong>
+1510:               </div>
+1511:             </div>
+1512: 
+1513:             {message && (
+1514:               <p style={{ marginTop: 12, fontWeight: 700 }}>
+1515:                 {message}
+1516:               </p>
+1517:             )}
+1518: 
+1519:             <div
+1520:               style={{
+1521:                 display: 'grid',
+1522:                 gap: 10,
+1523:                 marginTop: 22,
+1524:               }}
+1525:             >
+1526:               <button
+1527:                 className="selection-button"
+1528:                 type="button"
+1529:                 onClick={() => window.location.assign('/meus-pixels')}
+1530:               >
+1531:                 Ver meus pixels
+1532:                 <ArrowRight size={17} />
+1533:               </button>
+1534: 
+1535:               <button
+1536:                 className="editor-customize"
+1537:                 type="button"
+1538:                 onClick={() => window.location.assign(focusHref)}
+1539:               >
+1540:                 <Crosshair size={16} />
+1541:                 Ver na parede
+1542:               </button>
+1543: 
+1544:               <button
+1545:                 className="editor-customize"
+1546:                 type="button"
+1547:                 onClick={share}
+1548:               >
+1549:                 <Share2 size={16} />
+1550:                 Compartilhar minha marca
+1551:               </button>
+1552:             </div>
+1553:           </>
+1554:         )}
+1555: 
+1556:         {mode === 'pending' && (
+1557:           <>
+1558:             <h2 style={{ fontSize: 30, lineHeight: 1, margin: '0 0 12px' }}>Pagamento em confirmação</h2>
+1559:             <p style={{ lineHeight: 1.55 }}>{message || 'Estamos aguardando a confirmação do Mercado Pago.'}</p>
+1560:             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
+1561:               {!session && <button className="selection-button" type="button" onClick={openAuth}>Entrar na minha conta</button>}
+1562:               <button className="editor-customize" type="button" onClick={close}>Voltar para a parede</button>
+1563:               
+1564:             </div>
+1565:           </>
+1566:         )}
+1567: 
+1568:         {mode === 'failure' && (
+1569:           <>
+1570:             <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#ff681d', border: '2px solid #f5f4ef', color: '#111111' }}>
+1571:               <X size={28} />
+1572:             </div>
+1573:             <h2 style={{ fontSize: 30, lineHeight: 1, margin: '16px 0 10px' }}>Pagamento não concluído</h2>
+1574:             <p style={{ lineHeight: 1.55 }}>Nenhum pixel foi marcado como comprado. Você pode voltar à parede e tentar novamente enquanto sua reserva estiver disponível.</p>
+1575:             <button className="selection-button" type="button" onClick={close} style={{ marginTop: 18 }}>Voltar para a parede</button>
+1576:           </>
+1577:         )}
+1578: 
+1579:         {mode === 'error' && (
+1580:           <>
+1581:             <h2 style={{ fontSize: 30, lineHeight: 1, margin: '0 0 12px' }}>Não conseguimos confirmar agora</h2>
+1582:             <p style={{ lineHeight: 1.55 }}>{message}</p>
+1583:             <button className="selection-button" type="button" onClick={close} style={{ marginTop: 18 }}>Voltar para a parede</button>
+1584:           </>
+1585:         )}
+1586:       </div>
+1587:     </div>
+1588:   );
+1589: }
+1590: 
+1591: function WallPage() {
+1592:   return (
+1593:     <>
+1594:       <PaymentReturnExperience />
+1595:       <WallCanvas blocks={getPixelBlocks()} />
+1596:     </>
+1597:   );
+1598: }
+1599: 
+1600: type SelectedPixel = { x: number; y: number; color: string };
+1601: 
+1602: const pendingPixelSelectionKey = 'um-milhao-pixels.pending-selection';
+1603: const pendingPixelSelectionMaxAgeMs = 30 * 60 * 1000;
+1604: 
+1605: function savePendingPixelSelection(pixels: SelectedPixel[]) {
+1606:   if (typeof window === 'undefined') return;
+1607: 
+1608:   window.localStorage.setItem(
+1609:     pendingPixelSelectionKey,
+1610:     JSON.stringify({
+1611:       savedAt: Date.now(),
+1612:       pixels,
+1613:     }),
+1614:   );
+1615: }
+1616: 
+1617: function loadPendingPixelSelection(): Map<string, SelectedPixel> {
+1618:   const result = new Map<string, SelectedPixel>();
+
+===== TRECHO =====
+1663:   }
+1664: }
+1665: 
+1666: function clearPendingPixelSelection() {
+1667:   if (typeof window === 'undefined') return;
+1668:   window.localStorage.removeItem(pendingPixelSelectionKey);
+1669: }
+1670: 
+1671: const pendingCheckoutIntentKey = 'um-milhao-pixels.pending-checkout';
+1672: 
+1673: function markPendingCheckoutIntent() {
+1674:   if (typeof window === 'undefined') return;
+1675:   window.localStorage.setItem(pendingCheckoutIntentKey, '1');
+1676: }
+1677: 
+1678: function hasPendingCheckoutIntent() {
+1679:   if (typeof window === 'undefined') return false;
+1680:   return window.localStorage.getItem(pendingCheckoutIntentKey) === '1';
+1681: }
+1682: 
+1683: function clearPendingCheckoutIntent() {
+1684:   if (typeof window === 'undefined') return;
+1685:   window.localStorage.removeItem(pendingCheckoutIntentKey);
+1686: }
+1687: 
+1688: type WallFocusBounds = {
+1689:   minX: number;
+1690:   minY: number;
+1691:   maxX: number;
+1692:   maxY: number;
+1693: };
+1694: 
+1695: function readWallFocusBounds(): WallFocusBounds | null {
+1696:   if (typeof window === 'undefined') return null;
+1697: 
+1698:   const raw = new URLSearchParams(window.location.search).get('focus');
+1699:   if (!raw) return null;
+1700: 
+1701:   const values = raw.split(',').map((value) => Number(value));
+1702: 
+1703:   if (
+1704:     values.length !== 4 ||
+1705:     values.some((value) => !Number.isInteger(value))
+1706:   ) {
+1707:     return null;
+1708:   }
+1709: 
+1710:   const [minX, minY, maxX, maxY] = values;
+1711: 
+1712:   if (
+1713:     minX < 0 ||
+1714:     minY < 0 ||
+1715:     maxX >= 1000 ||
+1716:     maxY >= 1000 ||
+1717:     minX > maxX ||
+1718:     minY > maxY
+1719:   ) {
+1720:     return null;
+1721:   }
+1722: 
+1723:   return { minX, minY, maxX, maxY };
+1724: }
+1725: 
+1726: type PixelTool = 'select' | 'erase' | 'pan';
+1727: 
+1728: const PIXEL_PALETTE = [
+1729:   '#ef4444', '#f97316', '#f59e0b', '#facc15', '#a3e635', '#22c55e', '#15803d',
+1730:   '#14b8a6', '#06b6d4', '#38bdf8', '#3b82f6', '#1d4ed8', '#9333ea', '#db2777',
+1731:   '#7c5c4f', '#ffffff', '#8b8b8b', '#3f3f46', '#111111',
+1732: ];
+1733: 
+1734: function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
+1735:   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+1736:   const stageRef = useRef<HTMLDivElement | null>(null);
+1737:   const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
+1738:   const [tool, setTool] = useState<PixelTool>('select');
+1739:   const [selectedPixels, setSelectedPixels] = useState<Map<string, SelectedPixel>>(() => loadPendingPixelSelection());
+1740:   const [selectedBlock, setSelectedBlock] = useState<PixelBlock | null>(null);
+1741:   const [availablePixelPrompt, setAvailablePixelPrompt] = useState<{ x: number; y: number } | null>(null);
+1742:   const [selectionArmed, setSelectionArmed] = useState(false);
+1743:   const [isDragging, setIsDragging] = useState(false);
+1744:   const [customizeOpen, setCustomizeOpen] = useState(false);
+1745: 
+1746:   const [imageEditorOpen, setImageEditorOpen] = useState(false);
+1747:   const [imageSizePickerOpen, setImageSizePickerOpen] = useState(false);
+1748:   const [customImageSize, setCustomImageSize] = useState("50");
+1749:   const [imageSizeError, setImageSizeError] = useState<string | null>(null);
+1750:   const [imageEditorError, setImageEditorError] = useState<string | null>(null);
+1751:   const [imageFileName, setImageFileName] = useState("");
+1752:   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+1753:   const [imagePixelPreview, setImagePixelPreview] = useState<string | null>(null);
+1754:   const [imagePixelColors, setImagePixelColors] = useState<string[]>([]);
+1755: 
+1756:   const [selectionCustomized, setSelectionCustomized] = useState(false);
+1757:   const [imageMoveMode, setImageMoveMode] = useState(false);
+1758:   const [selectionNudgeOpen, setSelectionNudgeOpen] = useState(false);
+1759:   const [clearMenuOpen, setClearMenuOpen] = useState(false);
+1760:   const [eraseAreaMode, setEraseAreaMode] = useState(false);
+1761:   const [activeColor, setActiveColor] = useState('#ef4444');
+1762:   const [customColor, setCustomColor] = useState('#ff681d');
+1763:   const [customColorActive, setCustomColorActive] = useState(false);
+1764:   const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
+1765:   const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
+1766:   const publicPixelBucketsRef = useRef(
+1767:     new Map<string, PublicWallPixel[]>(),
+1768:   );
+1769:   const publicPixelBucketSize = 50;
+1770:   const [wallSyncError, setWallSyncError] = useState<string | null>(null);
+1771: 
+1772:   const wallSyncInFlightRef = useRef(false);
+1773:   const wallLastSyncAtRef = useRef(0);
+1774: 
+1775:   const cameraRef = useRef(camera);
+1776:   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+1777:   const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
+1778:   const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
+1779:   const rectangleSelectRef = useRef<{
+1780:     pointerId: number;
+1781:     startX: number;
+1782:     startY: number;
+1783:     base: Map<string, SelectedPixel>;
+1784:   } | null>(null);
+1785: 
+1786:   const imageMoveRef = useRef<{
+1787:     pointerId: number;
+
+===== TRECHO =====
+5636:                         {purchase.bounds && (
+5637:                           <div
+5638:                             style={{
+5639:                               marginTop: 8,
+5640:                               fontSize: 13,
+5641:                             }}
+5642:                           >
+5643:                             Área: {purchase.bounds.min_x},
+5644:                             {purchase.bounds.min_y}
+5645:                             {' → '}
+5646:                             {purchase.bounds.max_x},
+5647:                             {purchase.bounds.max_y}
+5648:                           </div>
+5649:                         )}
+5650:                       </div>
+5651: 
+5652:                       <div
+5653:                         style={{
+5654:                           display: 'flex',
+5655:                           gap: 10,
+5656:                           flexWrap: 'wrap',
+5657:                           justifyContent: 'flex-end',
+5658:                         }}
+5659:                       >
+5660:                         <Link
+5661:                           href={`/obra/${purchase.order_id}`}
+5662:                           className="button button-coral"
+5663:                         >
+5664:                           Página pública
+5665:                           <Share2 size={17} />
+5666:                         </Link>
+5667: 
+5668:                         <Link
+5669:                           href={
+5670:                             purchase.bounds
+5671:                               ? `/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`
+5672:                               : '/parede'
+5673:                           }
+5674:                           className="button button-outline"
+5675:                         >
+5676:                           Ver na parede
+5677:                           <ArrowRight size={17} />
+5678:                         </Link>
+5679:                       </div>
+5680:                     </article>
+5681:                   ))}
+5682:                 </div>
+5683:               )}
+5684:             </>
+5685:           ) : null}
+5686:         </div>
+5687:       </main>
+5688: 
+5689:       <Footer />
+5690:     </div>
+5691:   );
+5692: }
+5693: 
+5694: 
+5695: type PublicPurchase = {
+5696:   order_id: string;
+5697:   pixel_count: number;
+5698:   paid_at: string;
+5699:   owner: {
+5700:     name: string;
+5701:     username: string | null;
+5702:     avatar_emoji: string | null;
+5703:     avatar_path: string | null;
+5704:   };
+5705:   bounds: {
+5706:     min_x: number;
+5707:     min_y: number;
+5708:     max_x: number;
+5709:     max_y: number;
+5710:   };
+5711:   pixels: Array<{
+5712:     x: number;
+5713:     y: number;
+5714:     color: string;
+5715:   }>;
+5716: };
+5717: 
+5718: function PublicPurchaseCanvas({
+5719:   purchase,
+5720: }: {
+5721:   purchase: PublicPurchase;
+5722: }) {
+5723:   const canvasRef =
+5724:     useRef<HTMLCanvasElement | null>(null);
+5725: 
+5726:   useEffect(() => {
+5727:     const canvas = canvasRef.current;
+5728:     if (!canvas) return;
+5729: 
+5730:     const ctx = canvas.getContext('2d');
+5731:     if (!ctx) return;
+5732: 
+5733:     const {
+5734:       min_x,
+5735:       min_y,
+5736:       max_x,
+5737:       max_y,
+5738:     } = purchase.bounds;
+5739: 
+5740:     const width = max_x - min_x + 1;
+5741:     const height = max_y - min_y + 1;
+5742: 
+5743:     const padding = Math.max(
+5744:       2,
+5745:       Math.ceil(Math.max(width, height) * 0.12),
+5746:     );
+5747: 
+5748:     const visibleWidth = width + padding * 2;
+5749:     const visibleHeight = height + padding * 2;
+5750: 
+5751:     canvas.width = Math.max(1, visibleWidth);
+5752:     canvas.height = Math.max(1, visibleHeight);
+5753: 
+5754:     ctx.imageSmoothingEnabled = false;
+5755: 
+5756:     ctx.fillStyle = '#ffffff';
+5757:     ctx.fillRect(
+5758:       0,
+5759:       0,
+5760:       canvas.width,
+
+===== TRECHO =====
+5949:                   {purchase.owner.name}
+5950:                 </strong>
+5951:               </p>
+5952: 
+5953:               <div className="public-art-meta">
+5954:                 <div>
+5955:                   <span>pixels</span>
+5956:                   <strong>
+5957:                     {purchase.pixel_count.toLocaleString(
+5958:                       'pt-BR',
+5959:                     )}
+5960:                   </strong>
+5961:                 </div>
+5962: 
+5963:                 <div>
+5964:                   <span>registrado em</span>
+5965:                   <strong>
+5966:                     {date(purchase.paid_at)}
+5967:                   </strong>
+5968:                 </div>
+5969: 
+5970:                 <div>
+5971:                   <span>coordenadas</span>
+5972:                   <strong>
+5973:                     {purchase.bounds.min_x},
+5974:                     {purchase.bounds.min_y}
+5975:                     {' → '}
+5976:                     {purchase.bounds.max_x},
+5977:                     {purchase.bounds.max_y}
+5978:                   </strong>
+5979:                 </div>
+5980:               </div>
+5981: 
+5982:               <div className="public-art-actions">
+5983:                 <Link
+5984:                   href={`/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`}
+5985:                   className="button button-coral"
+5986:                 >
+5987:                   Ver na parede
+5988:                   <Crosshair size={17} />
+5989:                 </Link>
+5990: 
+5991:                 <button
+5992:                   type="button"
+5993:                   className="button button-outline"
+5994:                   onClick={shareCurrentPage}
+5995:                 >
+5996:                   Compartilhar
+5997:                   <Share2 size={17} />
+5998:                 </button>
+5999:               </div>
+6000:             </section>
+6001: 
+6002:             <section className="public-art-frame">
+6003:               <div className="public-art-frame-top">
+6004:                 <span>
+6005:                   OBRA #{purchase.order_id
+6006:                     .slice(0, 8)
+6007:                     .toUpperCase()}
+6008:                 </span>
+6009: 
+6010:                 <span>
+6011:                   {purchase.pixel_count.toLocaleString(
+6012:                     'pt-BR',
+6013:                   )}{' '}
+6014:                   PIXELS
+6015:                 </span>
+6016:               </div>
+6017: 
+6018:               <div className="public-art-canvas-wrap">
+6019:                 <PublicPurchaseCanvas
+6020:                   purchase={purchase}
+6021:                 />
+6022:               </div>
+6023: 
+6024:               <div className="public-art-frame-bottom">
+6025:                 UM MILHÃO DE PIXELS BRASIL
+6026:               </div>
+6027:             </section>
+6028:           </div>
+6029:         )}
+6030:       </main>
+6031: 
+6032:       <Footer />
+6033:     </div>
+6034:   );
+6035: }
+6036: 
+6037: 
+6038: function AdminPage() {
+6039:   const { user, session, loading, openAuth } = useAuth();
+6040:   const [, setLocation] = useLocation();
+6041: 
+6042:   const [overview, setOverview] =
+6043:     useState<AdminOverview | null>(null);
+6044: 
+6045:   const [insights, setInsights] =
+6046:     useState<AdminInsights | null>(null);
+6047: 
+6048:   const [insightsLoading, setInsightsLoading] =
+6049:     useState(false);
+6050: 
+6051:   const [insightsError, setInsightsError] =
+6052:     useState<string | null>(null);
+6053: 
+6054:   const [analyticsStart, setAnalyticsStart] =
+6055:     useState("");
+6056: 
+6057:   const [analyticsEnd, setAnalyticsEnd] =
+6058:     useState("");
+6059: 
+6060:   const [adminLoading, setAdminLoading] =
+6061:     useState(true);
+6062: 
+6063:   const [adminError, setAdminError] =
+6064:     useState<string | null>(null);
+6065: 
+6066:   const [forbidden, setForbidden] =
+6067:     useState(false);
+6068: 
+6069:   useEffect(() => {
+6070:     if (loading) return;
+6071: 
+6072:     if (!user || !session?.access_token) {
+6073:       setAdminLoading(false);
+
+===== TRECHO =====
+6119:           );
+6120:         }
+6121: 
+6122:         setOverview(payload as AdminOverview);
+6123:       } catch (error) {
+6124:         if (!cancelled) {
+6125:           setAdminError(
+6126:             error instanceof Error
+6127:               ? error.message
+6128:               : 'Não foi possível carregar o painel.',
+6129:           );
+6130:         }
+6131:       } finally {
+6132:         if (!cancelled) {
+6133:           setAdminLoading(false);
+6134:         }
+6135:       }
+6136:     };
+6137: 
+6138:     void loadAdmin();
+6139: 
+6140:     return () => {
+6141:       cancelled = true;
+6142:     };
+6143:   }, [loading, user, session?.access_token]);
+6144: 
+6145: 
+6146:   const loadAdminInsights = useCallback(
+6147:     async (start?: string, end?: string) => {
+6148:       if (!session?.access_token) return;
+6149: 
+6150:       setInsightsLoading(true);
+6151:       setInsightsError(null);
+6152: 
+6153:       try {
+6154:         const params = new URLSearchParams();
+6155: 
+6156:         if (start && end) {
+6157:           params.set("start", start);
+6158:           params.set("end", end);
+6159:         }
+6160: 
+6161:         const query = params.toString();
+6162: 
+6163:         const response = await fetch(
+6164:           `/api/payments/mercado-pago/admin/insights${query ? `?${query}` : ""}`,
+6165:           {
+6166:             headers: {
+6167:               Accept: "application/json",
+6168:               Authorization:
+6169:                 `Bearer ${session.access_token}`,
+6170:             },
+6171:             cache: "no-store",
+6172:           },
+6173:         );
+6174: 
+6175:         const payload =
+6176:           await response.json().catch(() => null);
+6177: 
+6178:         if (!response.ok) {
+6179:           throw new Error(
+6180:             payload?.message ||
+6181:               "Não foi possível carregar as métricas.",
+6182:           );
+6183:         }
+6184: 
+6185:         setInsights(payload as AdminInsights);
+6186:       } catch (error) {
+6187:         setInsightsError(
+6188:           error instanceof Error
+6189:             ? error.message
+6190:             : "Não foi possível carregar as métricas.",
+6191:         );
+6192:       } finally {
+6193:         setInsightsLoading(false);
+6194:       }
+6195:     },
+6196:     [session?.access_token],
+6197:   );
+6198: 
+6199:   useEffect(() => {
+6200:     if (
+6201:       loading ||
+6202:       !user ||
+6203:       !session?.access_token ||
+6204:       forbidden
+6205:     ) {
+6206:       return;
+6207:     }
+6208: 
+6209:     void loadAdminInsights();
+6210:   }, [
+6211:     loading,
+6212:     user,
+6213:     session?.access_token,
+6214:     forbidden,
+6215:     loadAdminInsights,
+6216:   ]);
+6217: 
+6218:   const handleCustomAnalytics = () => {
+6219:     if (!analyticsStart || !analyticsEnd) {
+6220:       setInsightsError(
+6221:         "Escolha a data inicial e a data final.",
+6222:       );
+6223:       return;
+6224:     }
+6225: 
+6226:     if (analyticsStart > analyticsEnd) {
+6227:       setInsightsError(
+6228:         "A data inicial não pode ser posterior à data final.",
+6229:       );
+6230:       return;
+6231:     }
+6232: 
+6233:     void loadAdminInsights(
+6234:       analyticsStart,
+6235:       analyticsEnd,
+6236:     );
+6237:   };
+6238: 
+6239:   if (loading || adminLoading) {
+6240:     return (
+6241:       <main className="admin-page">
+6242:         <div className="admin-state">
+6243:           <span className="admin-eyebrow">
+
+===== TRECHO =====
+7048:           descritas nesta política, cumprimento de obrigações legais,
+7049:           exercício regular de direitos, segurança e prevenção de fraude.
+7050:         </p>
+7051:       </section>
+7052: 
+7053:       <section>
+7054:         <h2>11. Direitos do titular</h2>
+7055:         <p>
+7056:           Nos termos da Lei Geral de Proteção de Dados Pessoais (LGPD), o
+7057:           titular poderá exercer os direitos aplicáveis ao seu caso, incluindo
+7058:           confirmação de tratamento, acesso, correção e demais direitos
+7059:           previstos em lei.
+7060:         </p>
+7061:       </section>
+7062: 
+7063:       <section>
+7064:         <h2>12. Alterações desta política</h2>
+7065:         <p>
+7066:           Esta política poderá ser atualizada conforme a evolução da
+7067:           plataforma ou mudanças legais. A versão vigente e sua data de
+7068:           atualização permanecerão disponíveis nesta página.
+7069:         </p>
+7070:       </section>
+7071:     </LegalPageLayout>
+7072:   );
+7073: }
+7074: 
+7075: function Router() {
+7076:   return (
+7077:     <RoutedErrorBoundary>
+7078:       <Switch>
+7079:         <Route path="/" component={Home} />
+7080:         <Route path="/parede" component={WallPage} />
+7081:         <Route path="/termos" component={TermsPage} />
+7082:         <Route path="/privacidade" component={PrivacyPage} />
+7083:         <Route path="/meus-pixels" component={MyPixelsPage} />
+7084:         <Route path="/admin" component={AdminPage} />
+7085:         <Route path="/obra/:orderId" component={PublicPurchasePage} />
+7086:         <Route component={NotFound} />
+7087:       </Switch>
+7088:     </RoutedErrorBoundary>
+7089:   );
+7090: }
+7091: 
+7092: function RoutedErrorBoundary({ children }: { children: ReactNode }) {
+7093:   const [location] = useLocation();
+7094:   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
+7095: }
+7096: 
+7097: 
+7098: function SiteVisitTracker() {
+7099:   const [location] = useLocation();
+7100: 
+7101:   useEffect(() => {
+7102:     try {
+7103:       const storageKey = "umpb_visit_session_id";
+7104:       let sessionId = window.sessionStorage.getItem(storageKey);
+7105: 
+7106:       if (!sessionId) {
+7107:         sessionId =
+7108:           typeof crypto !== "undefined" &&
+7109:           typeof crypto.randomUUID === "function"
+7110:             ? crypto.randomUUID()
+7111:             : `${Date.now()}-${Math.random()
+7112:                 .toString(36)
+7113:                 .slice(2)}`;
+7114: 
+7115:         window.sessionStorage.setItem(
+7116:           storageKey,
+7117:           sessionId,
+7118:         );
+7119:       }
+7120: 
+7121:       const alreadyTrackedKey =
+7122:         "umpb_visit_already_tracked";
+7123: 
+7124:       const alreadyTracked =
+7125:         window.sessionStorage.getItem(
+7126:           alreadyTrackedKey,
+7127:         );
+7128: 
+7129:       if (alreadyTracked === "1") {
+7130:         return;
+7131:       }
+7132: 
+7133:       window.sessionStorage.setItem(
+7134:         alreadyTrackedKey,
+7135:         "1",
+7136:       );
+7137: 
+7138:       void fetch(
+7139:         "/api/payments/mercado-pago/analytics/visit",
+7140:         {
+7141:           method: "POST",
+7142:           headers: {
+7143:             Accept: "application/json",
+7144:             "Content-Type": "application/json",
+7145:           },
+7146:           body: JSON.stringify({
+7147:             session_id: sessionId,
+7148:             path: location || "/",
+7149:             referrer:
+7150:               document.referrer || null,
+7151:           }),
+7152:           keepalive: true,
+7153:         },
+7154:       ).catch(() => {
+7155:         window.sessionStorage.removeItem(
+7156:           alreadyTrackedKey,
+7157:         );
+7158:       });
+7159:     } catch {
+7160:       // Analytics nunca deve impedir o site de funcionar.
+7161:     }
+7162:   }, [location]);
+7163: 
+7164:   return null;
+7165: }
+7166: 
+7167: 
+7168: function App() {
+7169:   return (
+7170:     <AuthProvider>
+7171:       <QueryClientProvider client={queryClient}>
+7172:         <TooltipProvider>

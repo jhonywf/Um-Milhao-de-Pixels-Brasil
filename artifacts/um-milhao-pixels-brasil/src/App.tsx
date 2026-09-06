@@ -1269,6 +1269,7 @@ function PaymentReturnExperience() {
   const [pixelCount, setPixelCount] = useState(0);
   const [amountCents, setAmountCents] = useState(0);
   const [focusHref, setFocusHref] = useState('/parede');
+  const [publicPurchaseHref, setPublicPurchaseHref] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
   const cleanReturnUrl = () => {
@@ -1324,10 +1325,14 @@ function PaymentReturnExperience() {
               (item) => item.reservation_id === reservationId,
             );
 
-            if (purchase?.bounds) {
-              setFocusHref(
-                `/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`,
-              );
+            if (purchase) {
+              setPublicPurchaseHref(`/obra/${purchase.order_id}`);
+
+              if (purchase.bounds) {
+                setFocusHref(
+                  `/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`,
+                );
+              }
             }
           } catch {
             // A compra já foi confirmada. Se a localização não carregar,
@@ -1372,7 +1377,7 @@ function PaymentReturnExperience() {
 
   const share = async () => {
     const text = `Agora eu possuo ${pixelCount} pixels no Um Milhão de Pixels Brasil!`;
-    const shareUrl = `${window.location.origin}${focusHref}`;
+    const shareUrl = `${window.location.origin}${publicPurchaseHref ?? focusHref}`;
 
     try {
       if (navigator.share) {
@@ -1547,7 +1552,7 @@ function PaymentReturnExperience() {
                 onClick={share}
               >
                 <Share2 size={16} />
-                Compartilhar minha marca
+                Compartilhar minha compra
               </button>
             </div>
           </>

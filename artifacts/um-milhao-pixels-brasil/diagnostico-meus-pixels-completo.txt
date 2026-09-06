@@ -1,0 +1,389 @@
+5306: function MyPixelsPage() {
+5307:   const { user, session, loading, openAuth, openProfile } = useAuth();
+5308: 
+5309:   const [data, setData] = useState<MyPurchasesResponse | null>(null);
+5310:   const [loadingPurchases, setLoadingPurchases] = useState(false);
+5311:   const [error, setError] = useState<string | null>(null);
+5312: 
+5313:   useEffect(() => {
+5314:     if (!session) {
+5315:       setData(null);
+5316:       return;
+5317:     }
+5318: 
+5319:     let cancelled = false;
+5320: 
+5321:     setLoadingPurchases(true);
+5322:     setError(null);
+5323: 
+5324:     void getMyPurchases(session.access_token)
+5325:       .then((result) => {
+5326:         if (!cancelled) setData(result);
+5327:       })
+5328:       .catch((caught) => {
+5329:         if (!cancelled) {
+5330:           setError(
+5331:             caught instanceof Error
+5332:               ? caught.message
+5333:               : 'Não foi possível carregar seus pixels agora.',
+5334:           );
+5335:         }
+5336:       })
+5337:       .finally(() => {
+5338:         if (!cancelled) setLoadingPurchases(false);
+5339:       });
+5340: 
+5341:     return () => {
+5342:       cancelled = true;
+5343:     };
+5344:   }, [session]);
+5345: 
+5346:   const money = (cents: number) =>
+5347:     new Intl.NumberFormat('pt-BR', {
+5348:       style: 'currency',
+5349:       currency: 'BRL',
+5350:     }).format(cents / 100);
+5351: 
+5352:   const date = (value: string | null) => {
+5353:     if (!value) return 'Data não disponível';
+5354: 
+5355:     return new Intl.DateTimeFormat('pt-BR', {
+5356:       day: '2-digit',
+5357:       month: '2-digit',
+5358:       year: 'numeric',
+5359:       hour: '2-digit',
+5360:       minute: '2-digit',
+5361:     }).format(new Date(value));
+5362:   };
+5363: 
+5364:   return (
+5365:     <div className="app-shell">
+5366:       <Header />
+5367: 
+5368:       <main
+5369:         style={{
+5370:           minHeight: '70vh',
+5371:           padding: 'clamp(32px, 6vw, 90px) clamp(20px, 7vw, 110px)',
+5372:         }}
+5373:       >
+5374:         <div
+5375:           style={{
+5376:             maxWidth: 1100,
+5377:             margin: '0 auto',
+5378:           }}
+5379:         >
+5380:           <div className="section-label">
+5381:             MINHA CONTA — MINHAS COMPRAS
+5382:           </div>
+5383: 
+5384:           <div
+5385:             style={{
+5386:               display: 'flex',
+5387:               gap: 24,
+5388:               justifyContent: 'space-between',
+5389:               alignItems: 'flex-start',
+5390:               flexWrap: 'wrap',
+5391:               marginTop: 22,
+5392:               marginBottom: 38,
+5393:             }}
+5394:           >
+5395:             <div>
+5396:               <h1
+5397:                 style={{
+5398:                   margin: 0,
+5399:                   fontSize: 'clamp(42px, 7vw, 82px)',
+5400:                   lineHeight: 0.9,
+5401:                   letterSpacing: '-0.05em',
+5402:                 }}
+5403:               >
+5404:                 MEUS<br />
+5405:                 <span style={{ color: '#ff681d' }}>PIXELS.</span>
+5406:               </h1>
+5407: 
+5408:               <p
+5409:                 style={{
+5410:                   maxWidth: 540,
+5411:                   fontSize: 18,
+5412:                   marginTop: 24,
+5413:                 }}
+5414:               >
+5415:                 Tudo o que você já deixou na parede fica guardado aqui.
+5416:               </p>
+5417:             </div>
+5418: 
+5419:             {user && (
+5420:               <button
+5421:                 type="button"
+5422:                 className="button button-outline"
+5423:                 onClick={openProfile}
+5424:               >
+5425:                 Editar perfil
+5426:               </button>
+5427:             )}
+5428:           </div>
+5429: 
+5430:           {loading ? (
+5431:             <div className="demo-notice">
+5432:               Carregando sua conta...
+5433:             </div>
+5434:           ) : !user || !session ? (
+5435:             <div
+5436:               style={{
+5437:                 border: '1px solid #343434',
+5438:                 padding: '32px',
+5439:                 maxWidth: 620,
+5440:                 background: '#111111',
+5441:                   color: '#f5f4ef',
+5442:               }}
+5443:             >
+5444:               <h2 style={{ marginTop: 0 }}>
+5445:                 Entre para ver seus pixels.
+5446:               </h2>
+5447: 
+5448:               <p>
+5449:                 Suas compras ficam vinculadas à conta usada no pagamento.
+5450:               </p>
+5451: 
+5452:               <button
+5453:                 type="button"
+5454:                 className="button button-coral"
+5455:                 onClick={openAuth}
+5456:               >
+5457:                 Entrar na minha conta
+5458:                 <ArrowRight size={18} />
+5459:               </button>
+5460:             </div>
+5461:           ) : loadingPurchases ? (
+5462:             <div className="demo-notice">
+5463:               Carregando suas compras...
+5464:             </div>
+5465:           ) : error ? (
+5466:             <div className="demo-notice" role="alert">
+5467:               {error}
+5468:             </div>
+5469:           ) : data ? (
+5470:             <>
+5471:               <section
+5472:                 style={{
+5473:                   display: 'grid',
+5474:                   gridTemplateColumns:
+5475:                     'repeat(auto-fit, minmax(180px, 1fr))',
+5476:                   border: '1px solid #343434',
+5477:                   marginBottom: 36,
+5478:                   background: '#111111',
+5479:                   color: '#f5f4ef',
+5480:                 }}
+5481:               >
+5482:                 <div style={{ padding: 24 }}>
+5483:                   <span
+5484:                     style={{
+5485:                       display: 'block',
+5486:                       fontSize: 12,
+5487:                       textTransform: 'uppercase',
+5488:                       marginBottom: 8,
+5489:                     }}
+5490:                   >
+5491:                     pixels que são seus
+5492:                   </span>
+5493: 
+5494:                   <strong style={{ fontSize: 38 }}>
+5495:                     {data.total_pixels}
+5496:                   </strong>
+5497:                 </div>
+5498: 
+5499:                 <div
+5500:                   style={{
+5501:                     padding: 24,
+5502:                     borderLeft: '1px solid #343434',
+5503:                   }}
+5504:                 >
+5505:                   <span
+5506:                     style={{
+5507:                       display: 'block',
+5508:                       fontSize: 12,
+5509:                       textTransform: 'uppercase',
+5510:                       marginBottom: 8,
+5511:                     }}
+5512:                   >
+5513:                     compras realizadas
+5514:                   </span>
+5515: 
+5516:                   <strong style={{ fontSize: 38 }}>
+5517:                     {data.purchase_count}
+5518:                   </strong>
+5519:                 </div>
+5520: 
+5521:                 <div
+5522:                   style={{
+5523:                     padding: 24,
+5524:                     borderLeft: '1px solid #343434',
+5525:                   }}
+5526:                 >
+5527:                   <span
+5528:                     style={{
+5529:                       display: 'block',
+5530:                       fontSize: 12,
+5531:                       textTransform: 'uppercase',
+5532:                       marginBottom: 8,
+5533:                     }}
+5534:                   >
+5535:                     valor total
+5536:                   </span>
+5537: 
+5538:                   <strong style={{ fontSize: 28 }}>
+5539:                     {money(data.total_amount_cents)}
+5540:                   </strong>
+5541:                 </div>
+5542:               </section>
+5543: 
+5544:               {data.purchases.length === 0 ? (
+5545:                 <div
+5546:                   style={{
+5547:                     border: '1px dashed #343434',
+5548:                     padding: 32,
+5549:                   }}
+5550:                 >
+5551:                   <h2 style={{ marginTop: 0 }}>
+5552:                     Você ainda não possui pixels.
+5553:                   </h2>
+5554: 
+5555:                   <p>
+5556:                     Escolha um espaço na parede e deixe sua primeira marca.
+5557:                   </p>
+5558: 
+5559:                   <Link
+5560:                     href="/parede"
+5561:                     className="button button-yellow"
+5562:                   >
+5563:                     Comprar meus primeiros pixels
+5564:                     <ArrowRight size={18} />
+5565:                   </Link>
+5566:                 </div>
+5567:               ) : (
+5568:                 <div
+5569:                   style={{
+5570:                     display: 'grid',
+5571:                     gap: 18,
+5572:                   }}
+5573:                 >
+5574:                   {data.purchases.map((purchase, index) => (
+5575:                     <article
+5576:                       key={purchase.order_id}
+5577:                       style={{
+5578:                         border: '1px solid #343434',
+5579:                         background: '#111111',
+5580:                   color: '#f5f4ef',
+5581:                         padding: 26,
+5582:                         display: 'grid',
+5583:                         gap: 22,
+5584:                         gridTemplateColumns:
+5585:                           'minmax(0, 1fr) auto',
+5586:                         alignItems: 'center',
+5587:                       }}
+5588:                     >
+5589:                       <div>
+5590:                         <span
+5591:                           style={{
+5592:                             fontSize: 12,
+5593:                             textTransform: 'uppercase',
+5594:                             letterSpacing: '0.08em',
+5595:                           }}
+5596:                         >
+5597:                           Compra #{data.purchase_count - index}
+5598:                         </span>
+5599: 
+5600:                         <div
+5601:                           style={{
+5602:                             display: 'flex',
+5603:                             gap: 20,
+5604:                             flexWrap: 'wrap',
+5605:                             alignItems: 'baseline',
+5606:                             marginTop: 10,
+5607:                           }}
+5608:                         >
+5609:                           <strong style={{ fontSize: 30 }}>
+5610:                             {purchase.pixel_count} pixels
+5611:                           </strong>
+5612: 
+5613:                           <strong
+5614:                             style={{
+5615:                               fontSize: 20,
+5616:                               color: '#ff681d',
+5617:                             }}
+5618:                           >
+5619:                             {money(purchase.amount_cents)}
+5620:                           </strong>
+5621:                         </div>
+5622: 
+5623:                         <div
+5624:                           style={{
+5625:                             marginTop: 10,
+5626:                             fontSize: 14,
+5627:                             opacity: 0.75,
+5628:                           }}
+5629:                         >
+5630:                           {date(
+5631:                             purchase.paid_at ??
+5632:                               purchase.created_at,
+5633:                           )}
+5634:                         </div>
+5635: 
+5636:                         {purchase.bounds && (
+5637:                           <div
+5638:                             style={{
+5639:                               marginTop: 8,
+5640:                               fontSize: 13,
+5641:                             }}
+5642:                           >
+5643:                             Área: {purchase.bounds.min_x},
+5644:                             {purchase.bounds.min_y}
+5645:                             {' → '}
+5646:                             {purchase.bounds.max_x},
+5647:                             {purchase.bounds.max_y}
+5648:                           </div>
+5649:                         )}
+5650:                       </div>
+5651: 
+5652:                       <div
+5653:                         style={{
+5654:                           display: 'flex',
+5655:                           gap: 10,
+5656:                           flexWrap: 'wrap',
+5657:                           justifyContent: 'flex-end',
+5658:                         }}
+5659:                       >
+5660:                         <Link
+5661:                           href={`/obra/${purchase.order_id}`}
+5662:                           className="button button-coral"
+5663:                         >
+5664:                           Página pública
+5665:                           <Share2 size={17} />
+5666:                         </Link>
+5667: 
+5668:                         <Link
+5669:                           href={
+5670:                             purchase.bounds
+5671:                               ? `/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`
+5672:                               : '/parede'
+5673:                           }
+5674:                           className="button button-outline"
+5675:                         >
+5676:                           Ver na parede
+5677:                           <ArrowRight size={17} />
+5678:                         </Link>
+5679:                       </div>
+5680:                     </article>
+5681:                   ))}
+5682:                 </div>
+5683:               )}
+5684:             </>
+5685:           ) : null}
+5686:         </div>
+5687:       </main>
+5688: 
+5689:       <Footer />
+5690:     </div>
+5691:   );
+5692: }
+5693: 
+5694: 

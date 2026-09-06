@@ -1,0 +1,325 @@
+1266: function PaymentReturnExperience() {
+1267:   const { session, openAuth } = useAuth();
+1268:   const [mode, setMode] = useState<'hidden' | 'checking' | 'paid' | 'pending' | 'failure' | 'error'>('hidden');
+1269:   const [pixelCount, setPixelCount] = useState(0);
+1270:   const [amountCents, setAmountCents] = useState(0);
+1271:   const [focusHref, setFocusHref] = useState('/parede');
+1272:   const [message, setMessage] = useState('');
+1273: 
+1274:   const cleanReturnUrl = () => {
+1275:     window.history.replaceState({}, '', '/parede');
+1276:   };
+1277: 
+1278:   useEffect(() => {
+1279:     const params = new URLSearchParams(window.location.search);
+1280:     const paymentReturn = params.get('payment');
+1281:     if (!paymentReturn) return;
+1282: 
+1283:     if (paymentReturn === 'failure') {
+1284:       setMode('failure');
+1285:       return;
+1286:     }
+1287: 
+1288:     const reservationId =
+1289:       window.localStorage.getItem('pixel-wall-checkout-reservation') ||
+1290:       params.get('external_reference') ||
+1291:       '';
+1292: 
+1293:     if (!reservationId) {
+1294:       setMode('error');
+1295:       setMessage('Não encontramos a reserva desta compra. Entre na sua conta e atualize a parede.');
+1296:       return;
+1297:     }
+1298: 
+1299:     if (!session) {
+1300:       setMode('pending');
+1301:       setMessage('Entre na mesma conta usada na compra para confirmar seus pixels.');
+1302:       return;
+1303:     }
+1304: 
+1305:     let cancelled = false;
+1306:     let attempts = 0;
+1307:     setMode('checking');
+1308: 
+1309:     const check = async () => {
+1310:       try {
+1311:         const status = await getMercadoPagoPaymentStatus(reservationId, session.access_token);
+1312:         if (cancelled) return;
+1313: 
+1314:         setPixelCount(status.pixel_count);
+1315:         setAmountCents(status.amount_cents);
+1316: 
+1317:         if (status.paid) {
+1318:           window.localStorage.removeItem('pixel-wall-checkout-reservation');
+1319:           setMode('paid');
+1320: 
+1321:           try {
+1322:             const purchases = await getMyPurchases(session.access_token);
+1323:             const purchase = purchases.purchases.find(
+1324:               (item) => item.reservation_id === reservationId,
+1325:             );
+1326: 
+1327:             if (purchase?.bounds) {
+1328:               setFocusHref(
+1329:                 `/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`,
+1330:               );
+1331:             }
+1332:           } catch {
+1333:             // A compra já foi confirmada. Se a localização não carregar,
+1334:             // mantemos o acesso normal à parede.
+1335:           }
+1336: 
+1337:           return;
+1338:         }
+1339: 
+1340:         attempts += 1;
+1341:         if (attempts >= 24) {
+1342:           setMode('pending');
+1343:           setMessage('O pagamento ainda está sendo confirmado. Seus pixels serão atualizados automaticamente após a confirmação segura.');
+1344:           return;
+1345:         }
+1346: 
+1347:         window.setTimeout(check, 1500);
+1348:       } catch (caught) {
+1349:         if (cancelled) return;
+1350: 
+1351:         attempts += 1;
+1352:         if (attempts >= 6) {
+1353:           setMode('error');
+1354:           setMessage(caught instanceof Error ? caught.message : 'Não foi possível confirmar o pagamento agora.');
+1355:           return;
+1356:         }
+1357: 
+1358:         window.setTimeout(check, 1500);
+1359:       }
+1360:     };
+1361: 
+1362:     void check();
+1363:     return () => { cancelled = true; };
+1364:   }, [session]);
+1365: 
+1366:   if (mode === 'hidden') return null;
+1367: 
+1368:   const close = () => {
+1369:     cleanReturnUrl();
+1370:     setMode('hidden');
+1371:   };
+1372: 
+1373:   const share = async () => {
+1374:     const text = `Agora eu possuo ${pixelCount} pixels no Um Milhão de Pixels Brasil!`;
+1375:     const shareUrl = `${window.location.origin}${focusHref}`;
+1376: 
+1377:     try {
+1378:       if (navigator.share) {
+1379:         await navigator.share({
+1380:           title: 'Um Milhão de Pixels Brasil',
+1381:           text,
+1382:           url: shareUrl,
+1383:         });
+1384:       } else {
+1385:         await navigator.clipboard.writeText(`${text} ${shareUrl}`);
+1386:         setMessage('Link copiado para compartilhar!');
+1387:       }
+1388:     } catch {
+1389:       // O usuário pode cancelar o compartilhamento sem alterar a compra.
+1390:     }
+1391:   };
+1392: 
+1393:   return (
+1394:     <div
+1395:       role="dialog"
+1396:       aria-modal="true"
+1397:       aria-label="Status do pagamento"
+1398:       style={{
+1399:         position: 'fixed',
+1400:         inset: 0,
+1401:         zIndex: 80,
+1402:         background: 'rgba(0,0,0,.82)',
+1403:         display: 'grid',
+1404:         placeItems: 'center',
+1405:         padding: 18,
+1406:       }}
+1407:     >
+1408:       <div style={{
+1409:         width: 'min(520px, 100%)',
+1410:         background: '#111111',
+1411:         color: '#f5f4ef',
+1412:         border: '2px solid #3a3a3a',
+1413:         boxShadow: '8px 8px 0 #000000',
+1414:         padding: 24,
+1415:       }}>
+1416:         {mode === 'checking' && (
+1417:           <>
+1418:             <div style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em' }}>Mercado Pago</div>
+1419:             <h2 style={{ fontSize: 32, lineHeight: 1, margin: '12px 0' }}>Confirmando seu pagamento...</h2>
+1420:             <p style={{ margin: 0, lineHeight: 1.55 }}>Estamos esperando a confirmação segura do servidor. Não feche esta página.</p>
+1421:             <div style={{ height: 8, background: '#2b2b2b', marginTop: 22, overflow: 'hidden' }}>
+1422:               <div style={{ height: '100%', width: '58%', background: '#ff681d' }} />
+1423:             </div>
+1424:           </>
+1425:         )}
+1426: 
+1427:         {mode === 'paid' && (
+1428:           <>
+1429:             <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#ff681d', border: '2px solid #3a3a3a' }}>
+1430:               <Check size={30} />
+1431:             </div>
+1432: 
+1433:             <div
+1434:               style={{
+1435:                 marginTop: 16,
+1436:                 fontSize: 12,
+1437:                 fontWeight: 800,
+1438:                 textTransform: 'uppercase',
+1439:                 letterSpacing: '.08em',
+1440:                 color: '#ff681d',
+1441:               }}
+1442:             >
+1443:               compra confirmada
+1444:             </div>
+1445: 
+1446:             <h2
+1447:               style={{
+1448:                 fontSize: 34,
+1449:                 lineHeight: 1,
+1450:                 margin: '10px 0 12px',
+1451:               }}
+1452:             >
+1453:               VOCÊ AGORA POSSUI UM PEDAÇO DA INTERNET!
+1454:             </h2>
+1455: 
+1456:             <p style={{ lineHeight: 1.55, margin: 0 }}>
+1457:               Sua marca agora faz parte oficialmente do
+1458:               Um Milhão de Pixels Brasil.
+1459:             </p>
+1460: 
+1461:             <div
+1462:               style={{
+1463:                 display: 'grid',
+1464:                 gridTemplateColumns: '1fr 1fr',
+1465:                 border: '1px solid #3a3a3a',
+1466:                 background: '#171717',
+1467:                 marginTop: 22,
+1468:               }}
+1469:             >
+1470:               <div style={{ padding: 16 }}>
+1471:                 <span
+1472:                   style={{
+1473:                     display: 'block',
+1474:                     fontSize: 11,
+1475:                     textTransform: 'uppercase',
+1476:                     opacity: 0.65,
+1477:                     marginBottom: 5,
+1478:                   }}
+1479:                 >
+1480:                   pixels adquiridos
+1481:                 </span>
+1482:                 <strong style={{ fontSize: 25 }}>
+1483:                   {pixelCount}
+1484:                 </strong>
+1485:               </div>
+1486: 
+1487:               <div
+1488:                 style={{
+1489:                   padding: 16,
+1490:                   borderLeft: '1px solid #3a3a3a',
+1491:                 }}
+1492:               >
+1493:                 <span
+1494:                   style={{
+1495:                     display: 'block',
+1496:                     fontSize: 11,
+1497:                     textTransform: 'uppercase',
+1498:                     opacity: 0.65,
+1499:                     marginBottom: 5,
+1500:                   }}
+1501:                 >
+1502:                   valor confirmado
+1503:                 </span>
+1504:                 <strong style={{ fontSize: 25 }}>
+1505:                   {(amountCents / 100).toLocaleString('pt-BR', {
+1506:                     style: 'currency',
+1507:                     currency: 'BRL',
+1508:                   })}
+1509:                 </strong>
+1510:               </div>
+1511:             </div>
+1512: 
+1513:             {message && (
+1514:               <p style={{ marginTop: 12, fontWeight: 700 }}>
+1515:                 {message}
+1516:               </p>
+1517:             )}
+1518: 
+1519:             <div
+1520:               style={{
+1521:                 display: 'grid',
+1522:                 gap: 10,
+1523:                 marginTop: 22,
+1524:               }}
+1525:             >
+1526:               <button
+1527:                 className="selection-button"
+1528:                 type="button"
+1529:                 onClick={() => window.location.assign('/meus-pixels')}
+1530:               >
+1531:                 Ver meus pixels
+1532:                 <ArrowRight size={17} />
+1533:               </button>
+1534: 
+1535:               <button
+1536:                 className="editor-customize"
+1537:                 type="button"
+1538:                 onClick={() => window.location.assign(focusHref)}
+1539:               >
+1540:                 <Crosshair size={16} />
+1541:                 Ver na parede
+1542:               </button>
+1543: 
+1544:               <button
+1545:                 className="editor-customize"
+1546:                 type="button"
+1547:                 onClick={share}
+1548:               >
+1549:                 <Share2 size={16} />
+1550:                 Compartilhar minha marca
+1551:               </button>
+1552:             </div>
+1553:           </>
+1554:         )}
+1555: 
+1556:         {mode === 'pending' && (
+1557:           <>
+1558:             <h2 style={{ fontSize: 30, lineHeight: 1, margin: '0 0 12px' }}>Pagamento em confirmação</h2>
+1559:             <p style={{ lineHeight: 1.55 }}>{message || 'Estamos aguardando a confirmação do Mercado Pago.'}</p>
+1560:             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
+1561:               {!session && <button className="selection-button" type="button" onClick={openAuth}>Entrar na minha conta</button>}
+1562:               <button className="editor-customize" type="button" onClick={close}>Voltar para a parede</button>
+1563:               
+1564:             </div>
+1565:           </>
+1566:         )}
+1567: 
+1568:         {mode === 'failure' && (
+1569:           <>
+1570:             <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#ff681d', border: '2px solid #f5f4ef', color: '#111111' }}>
+1571:               <X size={28} />
+1572:             </div>
+1573:             <h2 style={{ fontSize: 30, lineHeight: 1, margin: '16px 0 10px' }}>Pagamento não concluído</h2>
+1574:             <p style={{ lineHeight: 1.55 }}>Nenhum pixel foi marcado como comprado. Você pode voltar à parede e tentar novamente enquanto sua reserva estiver disponível.</p>
+1575:             <button className="selection-button" type="button" onClick={close} style={{ marginTop: 18 }}>Voltar para a parede</button>
+1576:           </>
+1577:         )}
+1578: 
+1579:         {mode === 'error' && (
+1580:           <>
+1581:             <h2 style={{ fontSize: 30, lineHeight: 1, margin: '0 0 12px' }}>Não conseguimos confirmar agora</h2>
+1582:             <p style={{ lineHeight: 1.55 }}>{message}</p>
+1583:             <button className="selection-button" type="button" onClick={close} style={{ marginTop: 18 }}>Voltar para a parede</button>
+1584:           </>
+1585:         )}
+1586:       </div>
+1587:     </div>
+1588:   );
+1589: }
+1590: 
