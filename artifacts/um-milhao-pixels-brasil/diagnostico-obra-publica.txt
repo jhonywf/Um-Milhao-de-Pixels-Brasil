@@ -1,0 +1,589 @@
+======================================================================
+FRONTEND - PUBLIC PURCHASE / OBRA
+======================================================================
+5790: 
+5791: 
+5792: type PublicPurchase = {
+5793:   order_id: string;
+5794:   pixel_count: number;
+5795:   paid_at: string;
+5796:   owner: {
+5797:     name: string;
+5798:     username: string | null;
+5799:     avatar_emoji: string | null;
+5800:     avatar_path: string | null;
+5801:   };
+5802:   bounds: {
+5803:     min_x: number;
+5804:     min_y: number;
+5805:     max_x: number;
+5806:     max_y: number;
+5807:   };
+5808:   pixels: Array<{
+5809:     x: number;
+5810:     y: number;
+5811:     color: string;
+5812:   }>;
+5813: };
+5814: 
+5815: function PublicPurchaseCanvas({
+5816:   purchase,
+5817: }: {
+5818:   purchase: PublicPurchase;
+5819: }) {
+5820:   const canvasRef =
+5821:     useRef<HTMLCanvasElement | null>(null);
+5822: 
+5823:   useEffect(() => {
+5824:     const canvas = canvasRef.current;
+5825:     if (!canvas) return;
+5826: 
+5827:     const ctx = canvas.getContext('2d');
+5828:     if (!ctx) return;
+5829: 
+5830:     const {
+5831:       min_x,
+5832:       min_y,
+5833:       max_x,
+5834:       max_y,
+5835:     } = purchase.bounds;
+5836: 
+5837:     const width = max_x - min_x + 1;
+5838:     const height = max_y - min_y + 1;
+5839: 
+5840:     const padding = Math.max(
+5841:       2,
+5842:       Math.ceil(Math.max(width, height) * 0.12),
+5843:     );
+5844: 
+5845:     const visibleWidth = width + padding * 2;
+5846:     const visibleHeight = height + padding * 2;
+5847: 
+5848:     canvas.width = Math.max(1, visibleWidth);
+5849:     canvas.height = Math.max(1, visibleHeight);
+5850: 
+5851:     ctx.imageSmoothingEnabled = false;
+5852: 
+5853:     ctx.fillStyle = '#ffffff';
+5854:     ctx.fillRect(
+5855:       0,
+5856:       0,
+5857:       canvas.width,
+5858:       canvas.height,
+5859:     );
+5860: 
+5861:     for (const pixel of purchase.pixels) {
+5862:       ctx.fillStyle = pixel.color;
+5863: 
+5864:       ctx.fillRect(
+5865:         pixel.x - min_x + padding,
+5866:         pixel.y - min_y + padding,
+5867:         1,
+5868:         1,
+5869:       );
+5870:     }
+5871:   }, [purchase]);
+5872: 
+5873:   return (
+5874:     <canvas
+5875:       ref={canvasRef}
+5876:       className="public-art-canvas"
+5877:       aria-label="Pixels desta obra"
+5878:     />
+5879:   );
+5880: }
+5881: 
+5882: function PublicPurchasePage() {
+5883:   const [, params] =
+5884:     useRoute('/obra/:orderId');
+5885: 
+5886:   const orderId = params?.orderId ?? '';
+5887: 
+5888:   const [purchase, setPurchase] =
+5889:     useState<PublicPurchase | null>(null);
+5890: 
+5891:   const [loading, setLoading] =
+5892:     useState(true);
+5893: 
+5894:   const [error, setError] =
+5895:     useState<string | null>(null);
+5896: 
+5897:   useEffect(() => {
+5898:     if (!orderId) {
+5899:       setError('Obra inválida.');
+5900:       setLoading(false);
+5901:       return;
+5902:     }
+5903: 
+5904:     let cancelled = false;
+5905: 
+5906:     setLoading(true);
+5907:     setError(null);
+5908: 
+5909:     void fetch(
+5910:       `/api/payments/mercado-pago/public-purchase/${encodeURIComponent(orderId)}`,
+5911:       {
+5912:         headers: {
+5913:           Accept: 'application/json',
+5914:         },
+5915:         cache: 'no-store',
+5916:       },
+5917:     )
+5918:       .then(async (response) => {
+5919:         const payload =
+5920:           await response.json();
+5921: 
+5922:         if (!response.ok) {
+5923:           throw new Error(
+5924:             payload?.message ||
+5925:               'Não foi possível carregar essa obra.',
+5926:           );
+5927:         }
+5928: 
+5929:         return payload as PublicPurchase;
+5930:       })
+5931:       .then((result) => {
+5932:         if (!cancelled) {
+5933:           setPurchase(result);
+5934:         }
+5935:       })
+5936:       .catch((caught) => {
+5937:         if (!cancelled) {
+5938:           setError(
+5939:             caught instanceof Error
+5940:               ? caught.message
+5941:               : 'Não foi possível carregar essa obra.',
+5942:           );
+5943:         }
+5944:       })
+5945:       .finally(() => {
+5946:         if (!cancelled) {
+5947:           setLoading(false);
+5948:         }
+5949:       });
+5950: 
+5951:     return () => {
+5952:       cancelled = true;
+5953:     };
+5954:   }, [orderId]);
+5955: 
+5956:   const shareCurrentPage = async () => {
+5957:     const url = window.location.href;
+5958: 
+5959:     const title =
+5960:       purchase
+5961:         ? `${purchase.pixel_count} pixels no Um Milhão de Pixels Brasil`
+5962:         : 'Um Milhão de Pixels Brasil';
+5963: 
+5964:     try {
+5965:       if (navigator.share) {
+5966:         await navigator.share({
+5967:           title,
+5968:           text:
+5969:             'Olha a marca que ficou registrada na parede.',
+5970:           url,
+5971:         });
+5972: 
+5973:         return;
+5974:       }
+5975: 
+5976:       await navigator.clipboard.writeText(url);
+5977: 
+5978:       window.alert(
+5979:         'Link copiado para a área de transferência.',
+5980:       );
+5981:     } catch {
+5982:       // Usuário pode cancelar o compartilhamento.
+5983:     }
+5984:   };
+5985: 
+5986:   const date = (value: string) =>
+5987:     new Intl.DateTimeFormat(
+5988:       'pt-BR',
+5989:       {
+5990:         day: '2-digit',
+5991:         month: 'long',
+5992:         year: 'numeric',
+5993:       },
+5994:     ).format(new Date(value));
+5995: 
+5996:   return (
+5997:     <div className="app-shell public-art-page">
+5998:       <Header />
+5999: 
+6000:       <main className="public-art-main">
+6001:         {loading ? (
+6002:           <div className="demo-notice">
+6003:             Carregando obra...
+6004:           </div>
+6005:         ) : error || !purchase ? (
+6006:           <div className="public-art-error">
+6007:             <span className="section-label">
+6008:               OBRA
+6009:             </span>
+6010: 
+6011:             <h1>
+6012:               NÃO FOI
+6013:               <br />
+6014:               <em>ENCONTRADA.</em>
+6015:             </h1>
+6016: 
+6017:             <p>
+6018:               {error ||
+6019:                 'Essa obra não está disponível.'}
+6020:             </p>
+6021: 
+6022:             <Link
+6023:               href="/parede"
+6024:               className="button button-coral"
+6025:             >
+6026:               Explorar a parede
+6027:               <ArrowRight size={18} />
+6028:             </Link>
+6029:           </div>
+6030:         ) : (
+6031:           <div className="public-art-layout">
+6032:             <section className="public-art-copy">
+6033:               <div className="section-label">
+6034:                 OBRA NA PAREDE — PERMANENTE
+6035:               </div>
+6036: 
+6037:               <h1>
+6038:                 UM PEDAÇO
+6039:                 <br />
+6040:                 DA <em>INTERNET.</em>
+6041:               </h1>
+6042: 
+6043:               <p className="public-art-owner">
+6044:                 por{' '}
+6045:                 <strong>
+6046:                   {purchase.owner.name}
+6047:                 </strong>
+6048:               </p>
+6049: 
+6050:               <div className="public-art-meta">
+6051:                 <div>
+6052:                   <span>pixels</span>
+6053:                   <strong>
+6054:                     {purchase.pixel_count.toLocaleString(
+6055:                       'pt-BR',
+6056:                     )}
+6057:                   </strong>
+6058:                 </div>
+6059: 
+6060:                 <div>
+6061:                   <span>registrado em</span>
+6062:                   <strong>
+6063:                     {date(purchase.paid_at)}
+6064:                   </strong>
+6065:                 </div>
+6066: 
+6067:                 <div>
+6068:                   <span>coordenadas</span>
+6069:                   <strong>
+6070:                     {purchase.bounds.min_x},
+6071:                     {purchase.bounds.min_y}
+6072:                     {' → '}
+6073:                     {purchase.bounds.max_x},
+6074:                     {purchase.bounds.max_y}
+6075:                   </strong>
+6076:                 </div>
+6077:               </div>
+6078: 
+6079:               <div className="public-art-actions">
+6080:                 <Link
+6081:                   href={`/parede?focus=${purchase.bounds.min_x},${purchase.bounds.min_y},${purchase.bounds.max_x},${purchase.bounds.max_y}`}
+6082:                   className="button button-coral"
+6083:                 >
+6084:                   Ver na parede
+6085:                   <Crosshair size={17} />
+6086:                 </Link>
+6087: 
+6088:                 <button
+6089:                   type="button"
+6090:                   className="button button-outline"
+6091:                   onClick={shareCurrentPage}
+6092:                 >
+6093:                   Compartilhar
+6094:                   <Share2 size={17} />
+6095:                 </button>
+6096:               </div>
+6097:             </section>
+6098: 
+6099:             <section className="public-art-frame">
+6100:               <div className="public-art-frame-top">
+6101:                 <span>
+6102:                   OBRA #{purchase.order_id
+6103:                     .slice(0, 8)
+6104:                     .toUpperCase()}
+6105:                 </span>
+6106: 
+6107:                 <span>
+6108:                   {purchase.pixel_count.toLocaleString(
+6109:                     'pt-BR',
+6110:                   )}{' '}
+6111:                   PIXELS
+6112:                 </span>
+6113:               </div>
+6114: 
+6115:               <div className="public-art-canvas-wrap">
+6116:                 <PublicPurchaseCanvas
+6117:                   purchase={purchase}
+6118:                 />
+6119:               </div>
+6120: 
+6121:               <div className="public-art-frame-bottom">
+6122:                 UM MILHÃO DE PIXELS BRASIL
+6123:               </div>
+6124:             </section>
+6125:           </div>
+6126:         )}
+6127:       </main>
+6128: 
+6129:       <Footer />
+6130:     </div>
+6131:   );
+6132: }
+6133: 
+6134: 
+6135: function AdminPage() {
+6136:   const { user, session, loading, openAuth } = useAuth();
+6137:   const [, setLocation] = useLocation();
+6138: 
+6139:   const [overview, setOverview] =
+6140:     useState<AdminOverview | null>(null);
+
+======================================================================
+BACKEND - PUBLIC PURCHASE
+======================================================================
+1510:               order_id: latestOrder.id,
+1511:               pixel_count: latestOrder.pixel_count,
+1512:               paid_at: latestOrder.paid_at ?? latestOrder.created_at,
+1513:               ...publicIdentityForOrder(latestOrder),
+1514:               bounds: boundsByOrder.get(latestOrder.id) ?? null,
+1515:             }
+1516:           : null,
+1517: 
+1518:         largest_purchase: largestOrder
+1519:           ? {
+1520:               order_id: largestOrder.id,
+1521:               pixel_count: largestOrder.pixel_count,
+1522:               paid_at:
+1523:                 largestOrder.paid_at ?? largestOrder.created_at,
+1524:               ...publicIdentityForOrder(largestOrder),
+1525:               bounds: boundsByOrder.get(largestOrder.id) ?? null,
+1526:             }
+1527:           : null,
+1528: 
+1529:         largest_buyer: ranking[0]
+1530:           ? {
+1531:               name: ranking[0].name,
+1532:               username: ranking[0].username,
+1533:               pixels: ranking[0].pixels,
+1534:               purchases: ranking[0].purchases,
+1535:             }
+1536:           : null,
+1537:       },
+1538:     });
+1539:   } catch (error) {
+1540:     req.log?.error(
+1541:       { err: error },
+1542:       "Could not load public wall statistics",
+1543:     );
+1544: 
+1545:     res.status(500).json({
+1546:       message:
+1547:         "Não foi possível carregar as estatísticas da parede agora.",
+1548:     });
+1549:   }
+1550: });
+1551: 
+1552: 
+1553: router.get(
+1554:   "/mercado-pago/public-purchase/:orderId",
+1555:   async (req: Request, res: Response) => {
+1556:     const orderId =
+1557:       typeof req.params.orderId === "string"
+1558:         ? req.params.orderId.trim()
+1559:         : "";
+1560: 
+1561:     if (
+1562:       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+1563:         orderId,
+1564:       )
+1565:     ) {
+1566:       res.status(400).json({
+1567:         message: "Obra inválida.",
+1568:       });
+1569:       return;
+1570:     }
+1571: 
+1572:     try {
+1573:       const orderQuery = new URLSearchParams({
+1574:         select:
+1575:           "id,user_id,status,pixel_count,paid_at,created_at",
+1576:         id: `eq.${orderId}`,
+1577:         status: "eq.paid",
+1578:         limit: "1",
+1579:       });
+1580: 
+1581:       const orders = await serviceRoleGet<Array<{
+1582:         id: string;
+1583:         user_id: string;
+1584:         status: string;
+1585:         pixel_count: number;
+1586:         paid_at: string | null;
+1587:         created_at: string;
+1588:       }>>(
+1589:         `wall_orders?${orderQuery.toString()}`,
+1590:       );
+1591: 
+1592:       const order = orders[0];
+1593: 
+1594:       if (!order) {
+1595:         res.status(404).json({
+1596:           message: "Essa obra não foi encontrada.",
+1597:         });
+1598:         return;
+1599:       }
+1600: 
+1601:       const pixelQuery = new URLSearchParams({
+1602:         select: "x,y,color",
+1603:         order_id: `eq.${order.id}`,
+1604:         status: "eq.purchased",
+1605:         order: "y.asc,x.asc",
+1606:       });
+1607: 
+1608:       const pixels = await serviceRoleGet<Array<{
+1609:         x: number;
+1610:         y: number;
+1611:         color: string | null;
+1612:       }>>(
+1613:         `wall_pixel_claims?${pixelQuery.toString()}`,
+1614:       );
+1615: 
+1616:       if (pixels.length === 0) {
+1617:         res.status(404).json({
+1618:           message: "Os pixels dessa obra não estão disponíveis.",
+1619:         });
+1620:         return;
+1621:       }
+1622: 
+1623:       const xs = pixels.map((pixel) => pixel.x);
+1624:       const ys = pixels.map((pixel) => pixel.y);
+1625: 
+1626:       const bounds = {
+1627:         min_x: Math.min(...xs),
+1628:         min_y: Math.min(...ys),
+1629:         max_x: Math.max(...xs),
+1630:         max_y: Math.max(...ys),
+1631:       };
+1632: 
+1633:       let owner = {
+1634:         name: "Comprador anônimo",
+1635:         username: null as string | null,
+1636:         avatar_emoji: null as string | null,
+1637:         avatar_path: null as string | null,
+1638:       };
+1639: 
+1640:       try {
+1641:         const profileQuery = new URLSearchParams({
+1642:           select:
+1643:             "display_name,username,avatar_emoji,avatar_path,consent_public_profile",
+1644:           id: `eq.${order.user_id}`,
+1645:           limit: "1",
+1646:         });
+1647: 
+1648:         const profiles = await serviceRoleGet<Array<{
+1649:           display_name: string | null;
+1650:           username: string | null;
+1651:           avatar_emoji: string | null;
+1652:           avatar_path: string | null;
+1653:           consent_public_profile: boolean | null;
+1654:         }>>(
+1655:           `profiles?${profileQuery.toString()}`,
+1656:         );
+1657: 
+1658:         const profile = profiles[0];
+1659: 
+1660:         if (profile?.consent_public_profile === true) {
+1661:           owner = {
+1662:             name:
+1663:               profile.display_name ||
+1664:               (profile.username
+1665:                 ? `@${profile.username}`
+1666:                 : "Comprador"),
+1667:             username: profile.username ?? null,
+1668:             avatar_emoji: profile.avatar_emoji ?? null,
+1669:             avatar_path: profile.avatar_path ?? null,
+1670:           };
+1671:         }
+1672:       } catch {
+1673:         // Privacidade por padrão: continua anônimo.
+1674:       }
+1675: 
+1676:       res.status(200).json({
+1677:         order_id: order.id,
+1678:         pixel_count: Number(order.pixel_count || pixels.length),
+1679:         paid_at: order.paid_at ?? order.created_at,
+1680:         owner,
+1681:         bounds,
+1682:         pixels: pixels.map((pixel) => ({
+1683:           x: pixel.x,
+1684:           y: pixel.y,
+1685:           color: pixel.color || "#111111",
+1686:         })),
+1687:       });
+1688:     } catch (error) {
+1689:       req.log?.error(
+1690:         { err: error },
+1691:         "Could not load public purchase",
+1692:       );
+1693: 
+1694:       res.status(500).json({
+1695:         message:
+1696:           "Não foi possível carregar essa obra agora.",
+1697:       });
+1698:     }
+1699:   },
+1700: );
+1701: 
+1702: router.get("/mercado-pago/my-purchases", async (req: Request, res: Response) => {
+1703:   const accessToken = getBearerToken(req);
+1704: 
+1705:   if (!accessToken) {
+1706:     res.status(401).json({ message: "Entre na sua conta para ver seus pixels." });
+1707:     return;
+1708:   }
+1709: 
+1710:   try {
+1711:     const user = await loadAuthenticatedUser(accessToken);
+1712: 
+1713:     if (!user) {
+1714:       res.status(401).json({ message: "Sua sessão expirou. Entre novamente." });
+1715:       return;
+1716:     }
+1717: 
+1718:     const orderQuery = new URLSearchParams({
+1719:       select: "id,status,reservation_id,pixel_count,amount_cents,currency,provider,provider_reference,paid_at,created_at",
+1720:       user_id: `eq.${user.id}`,
+1721:       status: "eq.paid",
+1722:       order: "paid_at.desc.nullslast,created_at.desc",
+1723:     });
+1724: 
+1725:     const orders = await serviceRoleGet<MyPurchaseOrderRow[]>(
+1726:       `wall_orders?${orderQuery.toString()}`,
+1727:     );
+1728: 
+1729:     if (orders.length === 0) {
+1730:       res.status(200).json({
+1731:         total_pixels: 0,
+1732:         total_amount_cents: 0,
+1733:         purchase_count: 0,
+1734:         purchases: [],
+1735:       });
+1736:       return;
+1737:     }
+1738: 
+1739:     const orderIds = orders
+1740:       .map((order) => order.id)

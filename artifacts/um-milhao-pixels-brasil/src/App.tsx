@@ -230,7 +230,7 @@ function Header() {
                   display: 'block',
                   padding: '12px 14px',
                   textDecoration: 'none',
-                  color: '#343434',
+                  color: '#cfcfcf',
                   fontWeight: 700,
                 }}
               ><span style={{ color: '#f5f4ef' }}>Meus pixels</span></Link>
@@ -1278,6 +1278,37 @@ function PaymentReturnExperience() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const previewPayment = params.get('preview_payment');
+
+    if (previewPayment) {
+      setPixelCount(25);
+      setAmountCents(2500);
+      setFocusHref('/parede?focus=100,100,104,104');
+      setPublicPurchaseHref(null);
+
+      if (previewPayment === 'paid') {
+        setMode('paid');
+        return;
+      }
+
+      if (previewPayment === 'pending') {
+        setMode('pending');
+        setMessage('O pagamento ainda está sendo confirmado. Seus pixels serão atualizados automaticamente após a confirmação segura.');
+        return;
+      }
+
+      if (previewPayment === 'failure') {
+        setMode('failure');
+        return;
+      }
+
+      if (previewPayment === 'error') {
+        setMode('error');
+        setMessage('Não foi possível confirmar o pagamento agora.');
+        return;
+      }
+    }
+
     const paymentReturn = params.get('payment');
     if (!paymentReturn) return;
 
@@ -1404,19 +1435,23 @@ function PaymentReturnExperience() {
         position: 'fixed',
         inset: 0,
         zIndex: 80,
-        background: 'rgba(0,0,0,.82)',
+        background: 'rgba(17,17,17,.76)',
+        backdropFilter: 'blur(5px)',
+        WebkitBackdropFilter: 'blur(5px)',
         display: 'grid',
         placeItems: 'center',
-        padding: 18,
+        padding: 'clamp(14px, 4vw, 28px)',
       }}
     >
       <div style={{
-        width: 'min(520px, 100%)',
+        width: 'min(600px, 100%)',
+        maxHeight: 'calc(100vh - 32px)',
+        overflowY: 'auto',
         background: '#111111',
         color: '#f5f4ef',
-        border: '2px solid #3a3a3a',
-        boxShadow: '8px 8px 0 #000000',
-        padding: 24,
+        border: '2px solid #343434',
+        boxShadow: '10px 10px 0 #ff681d',
+        padding: 'clamp(20px, 4vw, 30px)',
       }}>
         {mode === 'checking' && (
           <>
@@ -1431,17 +1466,28 @@ function PaymentReturnExperience() {
 
         {mode === 'paid' && (
           <>
-            <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#ff681d', border: '2px solid #3a3a3a' }}>
-              <Check size={30} />
+            <div
+              style={{
+                width: 58,
+                height: 58,
+                display: 'grid',
+                placeItems: 'center',
+                background: '#ff681d',
+                color: '#ffffff',
+                border: '2px solid #f5f4ef',
+                boxShadow: '4px 4px 0 #000000',
+              }}
+            >
+              <Check size={32} strokeWidth={3} />
             </div>
 
             <div
               style={{
                 marginTop: 16,
                 fontSize: 12,
-                fontWeight: 800,
+                fontWeight: 900,
                 textTransform: 'uppercase',
-                letterSpacing: '.08em',
+                letterSpacing: '.12em',
                 color: '#ff681d',
               }}
             >
@@ -1450,15 +1496,25 @@ function PaymentReturnExperience() {
 
             <h2
               style={{
-                fontSize: 34,
-                lineHeight: 1,
+                fontSize: 'clamp(38px, 8vw, 58px)',
+                lineHeight: 0.92,
+                letterSpacing: '-0.045em',
                 margin: '10px 0 12px',
+                maxWidth: 520,
               }}
             >
               VOCÊ AGORA POSSUI UM PEDAÇO DA INTERNET!
             </h2>
 
-            <p style={{ lineHeight: 1.55, margin: 0 }}>
+            <p
+              style={{
+                lineHeight: 1.6,
+                margin: 0,
+                fontSize: 'clamp(16px, 2.8vw, 19px)',
+                maxWidth: 500,
+                color: '#f0f0f0',
+              }}
+            >
               Sua marca agora faz parte oficialmente do
               Um Milhão de Pixels Brasil.
             </p>
@@ -1468,11 +1524,11 @@ function PaymentReturnExperience() {
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 border: '1px solid #3a3a3a',
-                background: '#171717',
-                marginTop: 22,
+                background: '#181818',
+                marginTop: 20,
               }}
             >
-              <div style={{ padding: 16 }}>
+              <div style={{ padding: '12px 16px' }}>
                 <span
                   style={{
                     display: 'block',
@@ -1491,7 +1547,7 @@ function PaymentReturnExperience() {
 
               <div
                 style={{
-                  padding: 16,
+                  padding: '12px 16px',
                   borderLeft: '1px solid #3a3a3a',
                 }}
               >
@@ -1524,14 +1580,28 @@ function PaymentReturnExperience() {
             <div
               style={{
                 display: 'grid',
-                gap: 10,
-                marginTop: 22,
+                gap: 9,
+                marginTop: 18,
               }}
             >
               <button
                 className="selection-button"
                 type="button"
                 onClick={() => window.location.assign('/meus-pixels')}
+                style={{
+                  minHeight: 46,
+                  border: '2px solid #ff681d',
+                  background: '#ff681d',
+                  color: '#111111',
+                  boxShadow: 'none',
+                  fontWeight: 900,
+                  letterSpacing: '.03em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  textAlign: 'center',
+                }}
               >
                 Ver meus pixels
                 <ArrowRight size={17} />
@@ -1541,8 +1611,18 @@ function PaymentReturnExperience() {
                 className="editor-customize"
                 type="button"
                 onClick={() => window.location.assign(focusHref)}
+                style={{
+                  minHeight: 44,
+                  background: '#1b1b1b',
+                  color: '#f5f4ef',
+                  border: '1px solid #4a4a4a',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                }}
               >
-                <Crosshair size={16} />
                 Ver na parede
               </button>
 
@@ -1550,6 +1630,18 @@ function PaymentReturnExperience() {
                 className="editor-customize"
                 type="button"
                 onClick={share}
+                style={{
+                  minHeight: 44,
+                  background: '#111111',
+                  color: '#f5f4ef',
+                  border: '1px solid #4a4a4a',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  textAlign: 'center',
+                }}
               >
                 <Share2 size={16} />
                 Compartilhar minha compra
@@ -5805,6 +5897,63 @@ function PublicPurchasePage() {
   useEffect(() => {
     if (!orderId) {
       setError('Obra inválida.');
+      setLoading(false);
+      return;
+    }
+
+    if (orderId === 'preview') {
+      const previewPixels = [
+        { x: 100, y: 100, color: '#ff681d' },
+        { x: 101, y: 100, color: '#ff681d' },
+        { x: 102, y: 100, color: '#111111' },
+        { x: 103, y: 100, color: '#ff681d' },
+        { x: 104, y: 100, color: '#ff681d' },
+
+        { x: 100, y: 101, color: '#111111' },
+        { x: 101, y: 101, color: '#ff681d' },
+        { x: 102, y: 101, color: '#111111' },
+        { x: 103, y: 101, color: '#ff681d' },
+        { x: 104, y: 101, color: '#111111' },
+
+        { x: 100, y: 102, color: '#111111' },
+        { x: 101, y: 102, color: '#111111' },
+        { x: 102, y: 102, color: '#ff681d' },
+        { x: 103, y: 102, color: '#111111' },
+        { x: 104, y: 102, color: '#111111' },
+
+        { x: 100, y: 103, color: '#111111' },
+        { x: 101, y: 103, color: '#ff681d' },
+        { x: 102, y: 103, color: '#111111' },
+        { x: 103, y: 103, color: '#ff681d' },
+        { x: 104, y: 103, color: '#111111' },
+
+        { x: 100, y: 104, color: '#ff681d' },
+        { x: 101, y: 104, color: '#ff681d' },
+        { x: 102, y: 104, color: '#111111' },
+        { x: 103, y: 104, color: '#ff681d' },
+        { x: 104, y: 104, color: '#ff681d' },
+      ];
+
+      setPurchase({
+        order_id: 'preview-obra-publica',
+        pixel_count: previewPixels.length,
+        paid_at: '2026-09-06T15:00:00-03:00',
+        owner: {
+          name: 'Comprador de exemplo',
+          username: null,
+          avatar_emoji: null,
+          avatar_path: null,
+        },
+        bounds: {
+          min_x: 100,
+          min_y: 100,
+          max_x: 104,
+          max_y: 104,
+        },
+        pixels: previewPixels,
+      });
+
+      setError(null);
       setLoading(false);
       return;
     }
