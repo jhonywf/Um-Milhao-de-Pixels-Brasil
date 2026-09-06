@@ -5105,7 +5105,7 @@ function AdminPage() {
           <button
             className="admin-primary-button"
             type="button"
-            onClick={openAuth}
+            onClick={() => openAuth({ loginOnly: true })}
           >
             ENTRAR
             <ArrowRight size={18} />

@@ -33,6 +33,7 @@ function DialogShell({
 export function AuthDialogs() {
   const {
     authDialogOpen,
+    authLoginOnly,
     closeAuth,
     profileDialogOpen,
     closeProfile,
@@ -43,16 +44,29 @@ export function AuthDialogs() {
   } = useAuth();
   return (
     <>
-      {authDialogOpen && <AuthDialog onClose={closeAuth} />}
+      {authDialogOpen && (
+        <AuthDialog
+          onClose={closeAuth}
+          loginOnly={authLoginOnly}
+        />
+      )}
       {profileDialogOpen && user && <ProfileDialog onClose={closeProfile} />}
       {passwordRecoveryOpen && session && <PasswordRecoveryDialog onClose={closePasswordRecovery} />}
     </>
   );
 }
 
-function AuthDialog({ onClose }: { onClose: () => void }) {
+function AuthDialog({
+  onClose,
+  loginOnly = false,
+}: {
+  onClose: () => void;
+  loginOnly?: boolean;
+}) {
   const { login, signup, loginWithGoogle, requestPasswordReset, error, clearError } = useAuth();
-  const [mode, setMode] = useState<'choice' | 'login' | 'signup'>('choice');
+  const [mode, setMode] = useState<'choice' | 'login' | 'signup'>(
+    loginOnly ? 'login' : 'choice',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -63,6 +77,7 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
   const [formError, setFormError] = useState<string | null>(null);
 
   const switchMode = (nextMode: 'choice' | 'login' | 'signup') => {
+    if (loginOnly && nextMode === 'signup') return;
     setMode(nextMode);
     setFormError(null);
     clearError();
@@ -179,7 +194,7 @@ function AuthDialog({ onClose }: { onClose: () => void }) {
         </>
       )}
 
-      {mode !== 'choice' && (
+      {mode !== 'choice' && !loginOnly && (
         <p className="account-switch">
           <button type="button" onClick={() => switchMode('choice')}>← Voltar</button>
           <span aria-hidden="true"> · </span>

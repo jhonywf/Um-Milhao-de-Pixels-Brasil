@@ -31,9 +31,10 @@ type AuthContextValue = {
   loading: boolean;
   error: string | null;
   authDialogOpen: boolean;
+  authLoginOnly: boolean;
   profileDialogOpen: boolean;
   passwordRecoveryOpen: boolean;
-  openAuth: () => void;
+  openAuth: (options?: { loginOnly?: boolean }) => void;
   closeAuth: () => void;
   openProfile: () => void;
   closeProfile: () => void;
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [authLoginOnly, setAuthLoginOnly] = useState(false);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [passwordRecoveryOpen, setPasswordRecoveryOpen] = useState(false);
 
@@ -265,15 +267,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     authDialogOpen,
+    authLoginOnly,
     profileDialogOpen,
     passwordRecoveryOpen,
-    openAuth: () => {
+    openAuth: (options) => {
       setError(null);
+      setAuthLoginOnly(options?.loginOnly === true);
       setAuthDialogOpen(true);
     },
     closeAuth: () => {
       setError(null);
       setAuthDialogOpen(false);
+      setAuthLoginOnly(false);
     },
     openProfile: () => {
       setError(null);
@@ -295,7 +300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     updatePassword: changePassword,
     logout,
     updateProfile,
-  }), [authDialogOpen, changePassword, error, loading, login, loginWithGoogle, logout, passwordRecoveryOpen, profile, profileDialogOpen, sendPasswordReset, session, signup, updateProfile]);
+  }), [authDialogOpen, authLoginOnly, changePassword, error, loading, login, loginWithGoogle, logout, passwordRecoveryOpen, profile, profileDialogOpen, sendPasswordReset, session, signup, updateProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
