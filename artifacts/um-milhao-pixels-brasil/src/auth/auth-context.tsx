@@ -34,7 +34,7 @@ type AuthContextValue = {
   authLoginOnly: boolean;
   profileDialogOpen: boolean;
   passwordRecoveryOpen: boolean;
-  openAuth: (options?: { loginOnly?: boolean }) => void;
+  openAuth: (options?: unknown) => void;
   closeAuth: () => void;
   openProfile: () => void;
   closeProfile: () => void;
@@ -272,7 +272,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     passwordRecoveryOpen,
     openAuth: (options) => {
       setError(null);
-      setAuthLoginOnly(options?.loginOnly === true);
+
+      const loginOnly =
+        typeof options === 'object' &&
+        options !== null &&
+        'loginOnly' in options &&
+        (options as { loginOnly?: boolean }).loginOnly === true;
+
+      setAuthLoginOnly(loginOnly);
       setAuthDialogOpen(true);
     },
     closeAuth: () => {

@@ -3764,7 +3764,15 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                   </label>
                   </div>
                   <div className="customizer-actions">
-                    <button className="customizer-primary" onClick={() => fillAll(activeColor)}>Aplicar aos {selectedCount} pixels</button>
+                    <button
+  className="customizer-primary"
+  onClick={() => {
+    fillAll(activeColor);
+    setCustomizeOpen(false);
+  }}
+>
+  Aplicar aos {selectedCount} pixels
+</button>
                     <button className="customizer-secondary" onClick={() => { setRecolorMode(true); setTool('select'); setCustomizeOpen(false); }}>Pintar pixel por pixel</button>
                   </div>
                 </div>
