@@ -1,0 +1,415 @@
+===== IMAGE COMPLETO =====
+        "A seleção deixou de ser uma área retangular válida.",
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const source =
+        typeof reader.result === "string"
+          ? reader.result
+          : null;
+
+      if (!source) {
+        setImageEditorError(
+          "Não foi possível ler a imagem.",
+        );
+        return;
+      }
+
+      setImageFileName(file.name);
+      setImagePreviewUrl(source);
+
+      const image = new Image();
+
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+
+        canvas.width = rectangle.width;
+        canvas.height = rectangle.height;
+
+        const context = canvas.getContext("2d", {
+          willReadFrequently: true,
+        });
+
+        if (!context) {
+          setImageEditorError(
+            "Seu navegador não conseguiu preparar a imagem.",
+          );
+          return;
+        }
+
+        /*
+         * Modo COVER:
+         * preserva a proporção e corta somente o excedente.
+         */
+        const sourceRatio =
+          image.naturalWidth / image.naturalHeight;
+
+        const targetRatio =
+          rectangle.width / rectangle.height;
+
+        let sx = 0;
+        let sy = 0;
+        let sw = image.naturalWidth;
+        let sh = image.naturalHeight;
+
+        if (sourceRatio > targetRatio) {
+          sw = image.naturalHeight * targetRatio;
+          sx = (image.naturalWidth - sw) / 2;
+        } else if (sourceRatio < targetRatio) {
+          sh = image.naturalWidth / targetRatio;
+          sy = (image.naturalHeight - sh) / 2;
+        }
+
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+
+        context.drawImage(
+          image,
+          sx,
+          sy,
+          sw,
+          sh,
+          0,
+          0,
+          rectangle.width,
+          rectangle.height,
+        );
+
+        const pixels = context.getImageData(
+          0,
+          0,
+          rectangle.width,
+          rectangle.height,
+        ).data;
+
+        const colors: string[] = [];
+
+        for (let index = 0; index < pixels.length; index += 4) {
+          const alpha = pixels[index + 3] / 255;
+
+          /*
+           * V1: transparência é composta sobre fundo branco.
+           */
+          const red = Math.round(
+            pixels[index] * alpha + 255 * (1 - alpha),
+          );
+
+          const green = Math.round(
+            pixels[index + 1] * alpha + 255 * (1 - alpha),
+          );
+
+          const blue = Math.round(
+            pixels[index + 2] * alpha + 255 * (1 - alpha),
+          );
+
+          colors.push(
+            `#${red.toString(16).padStart(2, "0")}${green
+              .toString(16)
+              .padStart(2, "0")}${blue
+              .toString(16)
+              .padStart(2, "0")}`.toUpperCase(),
+          );
+        }
+
+        setImagePixelColors(colors);
+        setImagePixelPreview(canvas.toDataURL("image/png"));
+      };
+
+      image.onerror = () => {
+        setImageEditorError(
+          "Não foi possível abrir essa imagem.",
+        );
+      };
+
+      image.src = source;
+    };
+
+    reader.onerror = () => {
+      setImageEditorError(
+        "Não foi possível ler o arquivo selecionado.",
+      );
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const applyImageToSelection = () => {
+    const rectangle = getSelectedRectangle();
+
+===== BOTOES COMPLETOS =====
+              <canvas
+                ref={canvasRef}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerCancel}
+                onWheel={(event) => { event.preventDefault(); zoomAt(cameraRef.current.scale + (event.deltaY > 0 ? -0.1 : 0.1), event.clientX, event.clientY); }}
+                data-testid="canvas-pixel-wall"
+                aria-label="Parede interativa de um milhão de pixels"
+              />
+            </div>
+
+            <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
+              <div className="pixel-editor-tools">
+                <button className={tool === 'select' && !recolorMode ? 'active' : ''} onClick={() => { setTool('select'); setRecolorMode(false); setSelectionArmed(true); setAvailablePixelPrompt(null); }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
+
+                <button className={tool === 'pan' ? 'active' : ''} onClick={() => { setTool('pan'); setRecolorMode(false); }}><Hand size={17} /> Mover</button>
+              </div>
+
+              <div className="pixel-editor-actions">
+                <button className="editor-clear" onClick={clearSelection} disabled={!selectedCount || !!lastReservation}>Limpar</button>
+                <button className="editor-customize" onClick={() => { setSelectionNudgeOpen(false); setCustomizeOpen(true); }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
+              <button
+                className="editor-image"
+                type="button"
+                onClick={() => {
+                  setSelectionNudgeOpen(false);
+                  setCustomizeOpen(false);
+                  openImageEditor();
+                }}
+                disabled={!selectedCount || !!lastReservation}
+              >
+                IMAGEM
+              </button>
+              </div>
+            </div>
+
+    
+        {imageEditorOpen && (
+          <div
+            className="pixel-customizer image-customizer"
+            role="dialog"
+            aria-label="Adicionar imagem"
+          >
+            <div className="pixel-customizer-head">
+              <strong>ADICIONAR UMA IMAGEM</strong>
+
+              <button
+                type="button"
+                onClick={() => setImageEditorOpen(false)}
+                aria-label="Fechar"
+===== CABECALHO PERSONALIZAR =====
+2990-    setAvailablePixelPrompt(null);
+2991-    setSelectionArmed(false);
+2992-    setSelectionCustomized(false);
+2993-    setSelectionNudgeOpen(false);
+2994-    rectangleSelectRef.current = null;
+2995:    setCustomizeOpen(false);
+2996-    setRecolorMode(false);
+2997-    setLastReservation(null);
+2998-  };
+2999-
+3000-  const fillAll = (color: string) => {
+3001-    if (lastReservation) return;
+3002-    setActiveColor(color);
+3003-    setSelectionCustomized(true);
+3004-    setSelectedPixels((current) => {
+3005-      const next = new Map<string, SelectedPixel>();
+3006-      current.forEach((pixel, key) => next.set(key, { ...pixel, color }));
+3007-      return next;
+--
+3313-
+3314-
+3315-  const handleReserved = (reservation: WallReservationSuccess) => {
+3316-    clearPendingPixelSelection();
+3317-    setLastReservation(reservation);
+3318:    setCustomizeOpen(false);
+3319-    setRecolorMode(false);
+3320-    setAvailablePixelPrompt(null);
+3321-  };
+3322-
+3323-
+3324-  const [tutorialOpen, setTutorialOpen] = useState(false);
+3325-  const [tutorialStep, setTutorialStep] = useState(0);
+3326-  const [tutorialPosition, setTutorialPosition] = useState<{
+3327-    top: number;
+3328-    left: number;
+3329-  } | null>(null);
+3330-
+--
+4032-              <button
+4033-                className="editor-image"
+4034-                type="button"
+4035-                onClick={() => {
+4036-                  setSelectionNudgeOpen(false);
+4037:                  setCustomizeOpen(false);
+4038-                  openImageEditor();
+4039-                }}
+4040-                disabled={!selectedCount || !!lastReservation}
+4041-              >
+4042-                IMAGEM
+4043-              </button>
+4044-              </div>
+4045-            </div>
+4046-
+4047-    
+4048-        {imageEditorOpen && (
+4049-          <div
+--
+4188-          </div>
+4189-        )}
+4190-
+4191-        {customizeOpen && (
+4192-              <div className="pixel-customizer" role="dialog" aria-label="Personalizar pixels">
+4193:                <div className="pixel-customizer-head"><strong>Personalizar {selectedCount} pixels</strong><button onClick={() => setCustomizeOpen(false)} aria-label="Fechar"><X size={20} /></button></div>
+4194-                <div className="pixel-customizer-body">
+4195-                  <p>Escolha uma cor. Você pode aplicar em todos ou pintar somente os pixels que quiser.</p>
+4196-                  <div className="pixel-palette">
+4197-                    {PIXEL_PALETTE.map((color) => (
+4198-                    <button
+4199-                      key={color}
+4200-                      type="button"
+4201-                      className={activeColor === color && !customColorActive ? 'active' : ''}
+4202-                      onClick={() => {
+4203-                        setActiveColor(color);
+4204-                        setCustomColorActive(false);
+4205-                      }}
+--
+4235-                  <div className="customizer-actions">
+4236-                    <button
+4237-  className="customizer-primary"
+4238-  onClick={() => {
+4239-    fillAll(activeColor);
+4240:    setCustomizeOpen(false);
+4241-  }}
+4242->
+4243-  Aplicar aos {selectedCount} pixels
+4244-</button>
+4245:                    <button className="customizer-secondary" onClick={() => { setRecolorMode(true); setTool('select'); setCustomizeOpen(false); }}>Pintar pixel por pixel</button>
+4246-                  </div>
+4247-                </div>
+4248-              </div>
+4249-            )}
+4250-            {recolorMode && (
+4251-              <div className="recolor-banner"><span><Paintbrush size={14} /> Pintando pixels individualmente</span><button onClick={() => setRecolorMode(false)}>Concluir</button></div>
+4252-            )}
+4253-          </section>
+4254-          <SelectionPanel
+4255-            selectedPixels={selectedList}
+4256-            selectedBlock={selectedBlock}
+4257-            coordinateText={coordinateText}
+===== CORES AZUL ROXO CSS =====
+4591:  background: #090909;
+4592:  color: #f5f4ef;
+4607:  border-bottom: 1px solid #343434;
+4614:  color: #f5f4ef;
+4626:  color: #929292;
+4630:  color: #ff681d;
+4639:  border-left: 1px solid #343434;
+4640:  border-top: 1px solid #343434;
+4650:  background: #111111;
+4651:  border-right: 1px solid #343434;
+4652:  border-bottom: 1px solid #343434;
+4656:  background: #ff681d;
+4657:  color: #090909;
+4672:  color: #777;
+4676:  color: #3c1a09;
+4686:  background: #111111;
+4687:  border: 1px solid #343434;
+4699:  border-bottom: 1px solid #343434;
+4711:  background: #ff681d;
+4712:  color: #090909;
+4730:  border-bottom: 1px solid #292929;
+4734:  color: #777;
+4740:  color: #deddd8;
+4751:  border: 1px solid #444;
+4759:  color: #ff681d;
+4760:  border-color: #ff681d;
+4765:  border-top: 1px solid #343434;
+4772:  border-bottom: 1px solid #292929;
+4776:  color: #999;
+4780:  color: #f5f4ef;
+4786:  background: #ff681d;
+4787:  color: #090909;
+4813:  color: #f5f4ef;
+4820:  background: #111;
+4821:  border: 1px solid #343434;
+4839:  background: #ff681d;
+4840:  color: #090909;
+4841:  border: 1px solid #ff681d;
+4846:  background: #151515;
+4847:  color: #f5f4ef;
+4848:  border: 1px solid #343434;
+4904:  outline: 3px solid #ff681d !important;
+4927:  color: #ffffff;
+4955:  outline: 3px solid #ff681d !important;
+4964:    #ff3b30,
+4965:    #ff9500,
+4966:    #ffcc00,
+4967:    #34c759,
+4968:    #00c7be,
+4969:    #32ade6,
+4970:    #0a84ff,
+4971:    #5e5ce6,
+4972:    #af52de,
+4973:    #ff2d55,
+4974:    #ff3b30
+4985:  color: #ffffff;
+5007:  background-color: #090909 !important;
+5011:  background-color: #090909 !important;
+5023:  background: #111111;
+5024:  border: 1px solid #343434;
+5026:  color: #f5f4ef;
+5034:  color: #ff681d;
+5044:  color: #f5f4ef;
+5052:  color: #a8a8a8;
+5066:  border: 1px solid #343434;
+5067:  background: #191919;
+5068:  color: #f5f4ef;
+5079:  border: 1px solid #ff681d;
+5080:  background: #ff681d;
+5081:  color: #090909;
+5106:  background: #111111;
+5107:  color: #f5f4ef;
+5108:  border: 1px solid #343434;
+5117:  color: #ff681d;
+5126:  color: #f5f4ef;
+5132:  color: #a8a8a8;
+5146:  border: 1px solid #343434;
+5147:  background: #191919;
+5148:  color: #f5f4ef;
+5163:  border: 1px solid #444;
+5164:  background: #171717;
+5165:  color: #f5f4ef;
+5171:  background: #ff681d;
+5172:  border-color: #ff681d;
+5173:  color: #090909;
+5192:  background: #090909;
+5193:  color: #f5f4ef;
+5197:  background: #090909 !important;
+5198:  color: #f5f4ef !important;
+5199:  border-bottom: 1px solid #2f2f2f !important;
+5210:  border-bottom: 1px solid #343434;
+5214:  color: #ff681d;
+5221:  color: #f5f4ef;
+5228:  color: #888;
+5238:  border-bottom: 1px solid #292929;
+5243:  color: #ff681d;
+5252:  color: #c7c7c7;
+5265:  color: #ff681d;
+5296:  background-color: #000000 !important;
+5302:  background-color: #000000 !important;
+5326:  background: #000000;
+5332:  background-color: #000000 !important;
+5946:  border: 1px solid #343434;
+5947:  background: #111111;
+5960:  border: 1px solid #343434;
+5987:  border-color: #ff681d;
+6008:  border: 1px solid #343434;
+6009:  background: #0b0b0b;
+6010:  color: #f5f4ef;
+6015:  outline: 1px solid #ff681d;
+6016:  border-color: #ff681d;
+6024:  color: #ff9a68;
+6035:  border: 1px solid #343434;
+6115:  border: 1px solid #343434;
+6133:  border: 1px dashed #ff681d;
+6151:  color: #ff681d;
+6163:  color: #ff9c6b;
+6189:  border: 1px solid #343434;
+6190:  background: #ffffff;
+6208:  border-left: 2px solid #ff681d;

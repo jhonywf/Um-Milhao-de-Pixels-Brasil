@@ -1,0 +1,342 @@
+===== APPLY RECTANGLE =====
+2517-        );
+2518-      }
+2519-      return next;
+2520-    });
+2521-  };
+2522-
+2523-  const paintLine = (fromX: number, fromY: number, toX: number, toY: number, action: 'add' | 'erase' | 'recolor') => {
+2524-    const dx = toX - fromX;
+2525-    const dy = toY - fromY;
+2526-    const steps = Math.max(Math.abs(dx), Math.abs(dy), 1);
+2527-    for (let i = 0; i <= steps; i += 1) {
+2528-      updatePixel(Math.round(fromX + dx * i / steps), Math.round(fromY + dy * i / steps), action);
+2529-    }
+2530-  };
+2531-
+2532:  const applyRectangleSelection = (
+2533-    startX: number,
+2534-    startY: number,
+2535-    endX: number,
+2536-    endY: number,
+2537-    base: Map<string, SelectedPixel>,
+2538-  ) => {
+2539-    if (lastReservation) return;
+2540-
+2541-    const minX = Math.max(0, Math.min(startX, endX));
+2542-    const maxX = Math.min(999, Math.max(startX, endX));
+2543-    const minY = Math.max(0, Math.min(startY, endY));
+2544-    const maxY = Math.min(999, Math.max(startY, endY));
+2545-
+2546-    const next = new Map(base);
+2547-    const maxSelection = 100000;
+2548-
+2549-    outer:
+2550-    for (let y = minY; y <= maxY; y += 1) {
+2551-      for (let x = minX; x <= maxX; x += 1) {
+2552-        if (next.size >= maxSelection) break outer;
+2553-
+2554-        if (
+2555-          occupiedAt(x + 0.5, y + 0.5) ||
+2556-          claimedAt(x, y)
+2557-        ) {
+2558-          continue;
+2559-        }
+2560-
+2561-        const key = `${x}:${y}`;
+2562-
+2563-        if (!next.has(key)) {
+2564-          next.set(key, {
+2565-            x,
+2566-            y,
+2567-            color: activeColor,
+2568-          });
+2569-        }
+2570-      }
+2571-    }
+2572-
+2573-    setSelectedBlock(null);
+2574-    setSelectedPixels(next);
+2575-  };
+2576-
+2577-  const focusPixelForEditing = (
+2578-    pixelX: number,
+2579-    pixelY: number,
+2580-  ) => {
+2581-    const stage = stageRef.current;
+2582-    if (!stage) return;
+2583-
+2584-    const rect = stage.getBoundingClientRect();
+2585-    if (!rect.width || !rect.height) return;
+2586-
+2587-    const currentScale = cameraRef.current.scale;
+2588-
+2589-    /*
+2590-     * Queremos aproximadamente 35–45 pixels visíveis
+2591-     * na menor dimensão ao redor do pixel escolhido.
+2592-     */
+--
+2745-        action === 'add' &&
+2746-        !occupied &&
+2747-        selectionArmed
+2748-      ) {
+2749-        const base = new Map(selectedPixels);
+2750-
+2751-        setSelectionNudgeOpen(false);
+2752-
+2753-        rectangleSelectRef.current = {
+2754-          pointerId: event.pointerId,
+2755-          startX: x,
+2756-          startY: y,
+2757-          base,
+2758-        };
+2759-
+2760:        applyRectangleSelection(
+2761-          x,
+2762-          y,
+2763-          x,
+2764-          y,
+2765-          base,
+2766-        );
+2767-
+2768-        setAvailablePixelPrompt(null);
+2769-        return;
+2770-      }
+2771-
+2772-      pendingTouchRef.current = {
+2773-        pointerId: event.pointerId,
+2774-        startedAt: performance.now(),
+2775-        startX: event.clientX,
+2776-        startY: event.clientY,
+2777-        x,
+2778-        y,
+2779-        action,
+2780-        occupied,
+2781-        moved: false,
+2782-      };
+2783-      return;
+2784-    }
+2785-
+2786-    if (occupied) {
+2787-      setSelectedBlock(occupied);
+2788-      setAvailablePixelPrompt(null);
+2789-      return;
+2790-    }
+2791-
+2792-    if (
+2793-      action === 'add' &&
+2794-      isAlreadySelected
+2795-    ) {
+2796-      updatePixel(x, y, 'erase');
+2797-      setSelectionNudgeOpen(false);
+2798-      return;
+2799-    }
+2800-
+2801-    if (
+2802-      action === 'add' &&
+2803-      !selectionArmed
+2804-    ) {
+2805-      focusPixelForEditing(x, y);
+2806-      setAvailablePixelPrompt({ x, y });
+2807-      return;
+2808-    }
+2809-
+2810-    updatePixel(x, y, action);
+2811-    paintRef.current = { pointerId: event.pointerId, lastX: x, lastY: y, action };
+2812-  };
+2813-
+2814-  const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
+2815-    if (!pointersRef.current.has(event.pointerId)) return;
+2816-    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+2817-
+2818-    if (pointersRef.current.size >= 2) {
+2819-      gestureRef.current.multiTouch = true;
+2820-
+--
+2854-      const world = screenToWorld(
+2855-        event.clientX,
+2856-        event.clientY,
+2857-      );
+2858-
+2859-      const endX = Math.max(
+2860-        0,
+2861-        Math.min(999, Math.floor(world.x)),
+2862-      );
+2863-
+2864-      const endY = Math.max(
+2865-        0,
+2866-        Math.min(999, Math.floor(world.y)),
+2867-      );
+2868-
+2869:      applyRectangleSelection(
+2870-        rectangleSelection.startX,
+2871-        rectangleSelection.startY,
+2872-        endX,
+2873-        endY,
+2874-        rectangleSelection.base,
+2875-      );
+2876-
+2877-      setIsDragging(true);
+2878-      return;
+2879-    }
+===== CLEAR / BUTTON =====
+2985-      );
+2986-      rectangleSelectRef.current = null;
+2987-    }
+2988-
+2989-    if (pendingTouchRef.current?.pointerId === event.pointerId) pendingTouchRef.current = null;
+2990-    paintRef.current = null;
+2991-    pinchRef.current = null;
+2992-
+2993-    if (pointersRef.current.size < 2) {
+2994-      gestureRef.current.multiTouch = false;
+2995-    }
+2996-
+2997-    setIsDragging(false);
+2998-  };
+2999-
+3000:  const clearSelection = () => {
+3001-    setSelectedPixels(new Map());
+3002-    setSelectedBlock(null);
+3003-    setAvailablePixelPrompt(null);
+3004-    setSelectionArmed(false);
+3005-    setSelectionCustomized(false);
+3006-    setSelectionNudgeOpen(false);
+3007-    rectangleSelectRef.current = null;
+3008-    setCustomizeOpen(false);
+3009-    setRecolorMode(false);
+3010-    setLastReservation(null);
+3011-  };
+3012-
+3013-  const fillAll = (color: string) => {
+3014-    if (lastReservation) return;
+3015-    setActiveColor(color);
+3016-    setSelectionCustomized(true);
+3017-    setSelectedPixels((current) => {
+3018-      const next = new Map<string, SelectedPixel>();
+3019-      current.forEach((pixel, key) => next.set(key, { ...pixel, color }));
+3020-      return next;
+3021-    });
+3022-  };
+3023-
+3024-  const getSelectedRectangle = () => {
+3025-    const pixels = Array.from(selectedPixels.values());
+3026-
+3027-    if (!pixels.length) {
+3028-      return null;
+3029-    }
+3030-
+3031-    const xs = pixels.map((pixel) => pixel.x);
+3032-    const ys = pixels.map((pixel) => pixel.y);
+3033-
+3034-    const minX = Math.min(...xs);
+3035-    const maxX = Math.max(...xs);
+--
+4031-                onLostPointerCapture={onPointerCancel}
+4032-                onWheel={(event) => { event.preventDefault(); zoomAt(cameraRef.current.scale + (event.deltaY > 0 ? -0.1 : 0.1), event.clientX, event.clientY); }}
+4033-                data-testid="canvas-pixel-wall"
+4034-                aria-label="Parede interativa de um milhão de pixels"
+4035-              />
+4036-            </div>
+4037-
+4038-            <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
+4039-              <div className="pixel-editor-tools">
+4040-                <button className={tool === 'select' && !recolorMode ? 'active' : ''} onClick={() => { setTool('select'); setRecolorMode(false); setSelectionArmed(true); setAvailablePixelPrompt(null); }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
+4041-
+4042-                <button className={tool === 'pan' ? 'active' : ''} onClick={() => { setTool('pan'); setRecolorMode(false); }}><Hand size={17} /> Mover</button>
+4043-              </div>
+4044-
+4045-              <div className="pixel-editor-actions">
+4046:                <button className="editor-clear" onClick={clearSelection} disabled={!selectedCount || !!lastReservation}>Limpar</button>
+4047-                <button className="editor-customize" onClick={() => { setSelectionNudgeOpen(false); setCustomizeOpen(true); }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
+4048-              <button
+4049-                className="editor-image"
+4050-                type="button"
+4051-                onClick={() => {
+4052-                  setSelectionNudgeOpen(false);
+4053-                  setCustomizeOpen(false);
+4054-                  openImageEditor();
+4055-                }}
+4056-                disabled={!selectedCount || !!lastReservation}
+4057-              >
+4058-                IMAGEM
+4059-              </button>
+4060-              </div>
+4061-            </div>
+4062-
+4063-    
+4064-        {imageEditorOpen && (
+4065-          <div
+4066-            className="pixel-customizer image-customizer"
+4067-            role="dialog"
+4068-            aria-label="Adicionar imagem"
+4069-          >
+4070-            <div className="pixel-customizer-head">
+4071-              <strong>ADICIONAR UMA IMAGEM</strong>
+4072-
+4073-              <button
+4074-                type="button"
+4075-                onClick={() => setImageEditorOpen(false)}
+4076-                aria-label="Fechar"
+4077-              >
+4078-                <X size={20} />
+4079-              </button>
+4080-            </div>
+4081-
+===== STATES TOOL =====
+    return null;
+  }
+
+  return { minX, minY, maxX, maxY };
+}
+
+type PixelTool = 'select' | 'erase' | 'pan';
+
+const PIXEL_PALETTE = [
+  '#ef4444', '#f97316', '#f59e0b', '#facc15', '#a3e635', '#22c55e', '#15803d',
+  '#14b8a6', '#06b6d4', '#38bdf8', '#3b82f6', '#1d4ed8', '#9333ea', '#db2777',
+  '#7c5c4f', '#ffffff', '#8b8b8b', '#3f3f46', '#111111',
+];
+
+function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
+  const [tool, setTool] = useState<PixelTool>('select');
+  const [selectedPixels, setSelectedPixels] = useState<Map<string, SelectedPixel>>(() => loadPendingPixelSelection());
+  const [selectedBlock, setSelectedBlock] = useState<PixelBlock | null>(null);
+  const [availablePixelPrompt, setAvailablePixelPrompt] = useState<{ x: number; y: number } | null>(null);
+  const [selectionArmed, setSelectionArmed] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+
+  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+  const [imageEditorError, setImageEditorError] = useState<string | null>(null);
+  const [imageFileName, setImageFileName] = useState("");
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imagePixelPreview, setImagePixelPreview] = useState<string | null>(null);
+  const [imagePixelColors, setImagePixelColors] = useState<string[]>([]);
+
+  const [selectionCustomized, setSelectionCustomized] = useState(false);
+  const [selectionNudgeOpen, setSelectionNudgeOpen] = useState(false);
+  const [activeColor, setActiveColor] = useState('#ef4444');
+  const [customColor, setCustomColor] = useState('#ff681d');
+  const [customColorActive, setCustomColorActive] = useState(false);
+  const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
+  const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
+  const publicPixelBucketsRef = useRef(
+    new Map<string, PublicWallPixel[]>(),
+  );
+  const publicPixelBucketSize = 50;
+  const [wallSyncError, setWallSyncError] = useState<string | null>(null);
+
+  const wallSyncInFlightRef = useRef(false);
+  const wallLastSyncAtRef = useRef(0);
+
+  const cameraRef = useRef(camera);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
+  const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
+  const rectangleSelectRef = useRef<{
+    pointerId: number;
+    startX: number;

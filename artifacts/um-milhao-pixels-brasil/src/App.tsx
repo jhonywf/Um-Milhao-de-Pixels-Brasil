@@ -1560,6 +1560,7 @@ function PaymentReturnExperience() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
               {!session && <button className="selection-button" type="button" onClick={openAuth}>Entrar na minha conta</button>}
               <button className="editor-customize" type="button" onClick={close}>Voltar para a parede</button>
+              
             </div>
           </>
         )}
@@ -1741,8 +1742,18 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [selectionArmed, setSelectionArmed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+
+  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+  const [imageEditorError, setImageEditorError] = useState<string | null>(null);
+  const [imageFileName, setImageFileName] = useState("");
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imagePixelPreview, setImagePixelPreview] = useState<string | null>(null);
+  const [imagePixelColors, setImagePixelColors] = useState<string[]>([]);
+
   const [selectionCustomized, setSelectionCustomized] = useState(false);
   const [selectionNudgeOpen, setSelectionNudgeOpen] = useState(false);
+  const [clearMenuOpen, setClearMenuOpen] = useState(false);
+  const [eraseAreaMode, setEraseAreaMode] = useState(false);
   const [activeColor, setActiveColor] = useState('#ef4444');
   const [customColor, setCustomColor] = useState('#ff681d');
   const [customColorActive, setCustomColorActive] = useState(false);
@@ -2565,6 +2576,36 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setSelectedPixels(next);
   };
 
+  const applyRectangleErase = (
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    base: Map<string, SelectedPixel>,
+  ) => {
+    if (lastReservation) return;
+
+    const minX = Math.max(0, Math.min(startX, endX));
+    const maxX = Math.min(999, Math.max(startX, endX));
+    const minY = Math.max(0, Math.min(startY, endY));
+    const maxY = Math.min(999, Math.max(startY, endY));
+
+    const next = new Map(base);
+
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        next.delete(`${x}:${y}`);
+      }
+    }
+
+    setSelectedBlock(null);
+    setSelectedPixels(next);
+
+    if (next.size === 0) {
+      setSelectionCustomized(false);
+    }
+  };
+
   const focusPixelForEditing = (
     pixelX: number,
     pixelY: number,
@@ -2710,6 +2751,28 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const selectedKey = `${x}:${y}`;
     const isAlreadySelected =
       selectedPixels.has(selectedKey);
+
+    if (eraseAreaMode && !occupied) {
+      const base = new Map(selectedPixels);
+
+      rectangleSelectRef.current = {
+        pointerId: event.pointerId,
+        startX: x,
+        startY: y,
+        base,
+      };
+
+      applyRectangleErase(
+        x,
+        y,
+        x,
+        y,
+        base,
+      );
+
+      setAvailablePixelPrompt(null);
+      return;
+    }
 
     if (event.pointerType === 'touch') {
       if (
@@ -2857,13 +2920,23 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
         Math.min(999, Math.floor(world.y)),
       );
 
-      applyRectangleSelection(
-        rectangleSelection.startX,
-        rectangleSelection.startY,
-        endX,
-        endY,
-        rectangleSelection.base,
-      );
+      if (eraseAreaMode) {
+        applyRectangleErase(
+          rectangleSelection.startX,
+          rectangleSelection.startY,
+          endX,
+          endY,
+          rectangleSelection.base,
+        );
+      } else {
+        applyRectangleSelection(
+          rectangleSelection.startX,
+          rectangleSelection.startY,
+          endX,
+          endY,
+          rectangleSelection.base,
+        );
+      }
 
       setIsDragging(true);
       return;
@@ -2914,7 +2987,15 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       rectangleSelectRef.current?.pointerId === event.pointerId
     ) {
       rectangleSelectRef.current = null;
-      setSelectionArmed(true);
+
+      if (eraseAreaMode) {
+        setEraseAreaMode(false);
+        setSelectionArmed(false);
+        setClearMenuOpen(false);
+      } else {
+        setSelectionArmed(true);
+      }
+
       setAvailablePixelPrompt(null);
     }
 
@@ -2949,10 +3030,19 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       }
     }
 
-    if (pointersRef.current.size >= 2) startPinch();
-    else pinchRef.current = null;
-    if (paintRef.current?.pointerId === event.pointerId) paintRef.current = null;
-    if (pointersRef.current.size === 0) gestureRef.current.multiTouch = false;
+    // Ao terminar um gesto de pinça, não reinicie o pinch com
+    // ponteiros remanescentes. Isso evita saltos de câmera/zoom
+    // no Safari/iPad e a parede aparentemente preta.
+    pinchRef.current = null;
+
+    if (paintRef.current?.pointerId === event.pointerId) {
+      paintRef.current = null;
+    }
+
+    if (pointersRef.current.size < 2) {
+      gestureRef.current.multiTouch = false;
+    }
+
     setIsDragging(false);
   };
 
@@ -2971,7 +3061,11 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     if (pendingTouchRef.current?.pointerId === event.pointerId) pendingTouchRef.current = null;
     paintRef.current = null;
     pinchRef.current = null;
-    if (pointersRef.current.size === 0) gestureRef.current.multiTouch = false;
+
+    if (pointersRef.current.size < 2) {
+      gestureRef.current.multiTouch = false;
+    }
+
     setIsDragging(false);
   };
 
@@ -2982,6 +3076,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setSelectionArmed(false);
     setSelectionCustomized(false);
     setSelectionNudgeOpen(false);
+    setClearMenuOpen(false);
+    setEraseAreaMode(false);
     rectangleSelectRef.current = null;
     setCustomizeOpen(false);
     setRecolorMode(false);
@@ -2998,6 +3094,312 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       return next;
     });
   };
+
+  const getSelectedRectangle = () => {
+    const pixels = Array.from(selectedPixels.values());
+
+    if (!pixels.length) {
+      return null;
+    }
+
+    const xs = pixels.map((pixel) => pixel.x);
+    const ys = pixels.map((pixel) => pixel.y);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+
+    if (pixels.length !== width * height) {
+      return null;
+    }
+
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        if (!selectedPixels.has(`${x}:${y}`)) {
+          return null;
+        }
+      }
+    }
+
+    return {
+      minX,
+      minY,
+      maxX,
+      maxY,
+      width,
+      height,
+    };
+  };
+
+  const openImageEditor = () => {
+    setImageEditorError(null);
+
+    const rectangle = getSelectedRectangle();
+
+    if (!rectangle) {
+      setImageEditorError(
+        "Para usar uma imagem, selecione uma área retangular completa.",
+      );
+      setImageEditorOpen(true);
+      return;
+    }
+
+    if (rectangle.width < 10 || rectangle.height < 10) {
+      setImageEditorError(
+        `A área mínima para imagens é 10×10 pixels. Sua seleção atual é ${rectangle.width}×${rectangle.height}.`,
+      );
+      setImageEditorOpen(true);
+      return;
+    }
+
+    if (rectangle.width > 200 || rectangle.height > 200) {
+      setImageEditorError(
+        `A área máxima para imagens é 200×200 pixels. Sua seleção atual é ${rectangle.width}×${rectangle.height}.`,
+      );
+      setImageEditorOpen(true);
+      return;
+    }
+
+    setImageFileName("");
+    setImagePreviewUrl(null);
+    setImagePixelPreview(null);
+    setImagePixelColors([]);
+    setImageEditorOpen(true);
+  };
+
+  const processImageFile = (file: File | null) => {
+    setImageEditorError(null);
+    setImagePixelColors([]);
+    setImagePixelPreview(null);
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = new Set([
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+    ]);
+
+    if (!allowedTypes.has(file.type)) {
+      setImageEditorError(
+        "Formato não suportado. Use PNG, JPG, JPEG ou WEBP.",
+      );
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setImageEditorError(
+        "A imagem deve ter no máximo 5 MB.",
+      );
+      return;
+    }
+
+    const rectangle = getSelectedRectangle();
+
+    if (!rectangle) {
+      setImageEditorError(
+        "A seleção deixou de ser uma área retangular válida.",
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const source =
+        typeof reader.result === "string"
+          ? reader.result
+          : null;
+
+      if (!source) {
+        setImageEditorError(
+          "Não foi possível ler a imagem.",
+        );
+        return;
+      }
+
+      setImageFileName(file.name);
+      setImagePreviewUrl(source);
+
+      const image = new Image();
+
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+
+        canvas.width = rectangle.width;
+        canvas.height = rectangle.height;
+
+        const context = canvas.getContext("2d", {
+          willReadFrequently: true,
+        });
+
+        if (!context) {
+          setImageEditorError(
+            "Seu navegador não conseguiu preparar a imagem.",
+          );
+          return;
+        }
+
+        /*
+         * Modo COVER:
+         * preserva a proporção e corta somente o excedente.
+         */
+        const sourceRatio =
+          image.naturalWidth / image.naturalHeight;
+
+        const targetRatio =
+          rectangle.width / rectangle.height;
+
+        let sx = 0;
+        let sy = 0;
+        let sw = image.naturalWidth;
+        let sh = image.naturalHeight;
+
+        if (sourceRatio > targetRatio) {
+          sw = image.naturalHeight * targetRatio;
+          sx = (image.naturalWidth - sw) / 2;
+        } else if (sourceRatio < targetRatio) {
+          sh = image.naturalWidth / targetRatio;
+          sy = (image.naturalHeight - sh) / 2;
+        }
+
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+
+        context.drawImage(
+          image,
+          sx,
+          sy,
+          sw,
+          sh,
+          0,
+          0,
+          rectangle.width,
+          rectangle.height,
+        );
+
+        const pixels = context.getImageData(
+          0,
+          0,
+          rectangle.width,
+          rectangle.height,
+        ).data;
+
+        const colors: string[] = [];
+
+        for (let index = 0; index < pixels.length; index += 4) {
+          const alpha = pixels[index + 3] / 255;
+
+          /*
+           * V1: transparência é composta sobre fundo branco.
+           */
+          const red = Math.round(
+            pixels[index] * alpha + 255 * (1 - alpha),
+          );
+
+          const green = Math.round(
+            pixels[index + 1] * alpha + 255 * (1 - alpha),
+          );
+
+          const blue = Math.round(
+            pixels[index + 2] * alpha + 255 * (1 - alpha),
+          );
+
+          colors.push(
+            `#${red.toString(16).padStart(2, "0")}${green
+              .toString(16)
+              .padStart(2, "0")}${blue
+              .toString(16)
+              .padStart(2, "0")}`.toUpperCase(),
+          );
+        }
+
+        setImagePixelColors(colors);
+        setImagePixelPreview(canvas.toDataURL("image/png"));
+      };
+
+      image.onerror = () => {
+        setImageEditorError(
+          "Não foi possível abrir essa imagem.",
+        );
+      };
+
+      image.src = source;
+    };
+
+    reader.onerror = () => {
+      setImageEditorError(
+        "Não foi possível ler o arquivo selecionado.",
+      );
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const applyImageToSelection = () => {
+    const rectangle = getSelectedRectangle();
+
+    if (!rectangle) {
+      setImageEditorError(
+        "A seleção não é mais uma área retangular válida.",
+      );
+      return;
+    }
+
+    if (
+      imagePixelColors.length !==
+      rectangle.width * rectangle.height
+    ) {
+      setImageEditorError(
+        "Envie uma imagem antes de aplicar.",
+      );
+      return;
+    }
+
+    setSelectionCustomized(true);
+
+    setSelectedPixels((current) => {
+      const next =
+        new Map<string, SelectedPixel>(current);
+
+      let colorIndex = 0;
+
+      for (
+        let y = rectangle.minY;
+        y <= rectangle.maxY;
+        y += 1
+      ) {
+        for (
+          let x = rectangle.minX;
+          x <= rectangle.maxX;
+          x += 1
+        ) {
+          const key = `${x}:${y}`;
+          const pixel = next.get(key);
+
+          if (pixel) {
+            next.set(key, {
+              ...pixel,
+              color: imagePixelColors[colorIndex],
+            });
+          }
+
+          colorIndex += 1;
+        }
+      }
+
+      return next;
+    });
+
+    setImageEditorOpen(false);
+  };
+
 
   const handleReserved = (reservation: WallReservationSuccess) => {
     clearPendingPixelSelection();
@@ -3700,6 +4102,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerCancel}
+                onLostPointerCapture={onPointerCancel}
                 onWheel={(event) => { event.preventDefault(); zoomAt(cameraRef.current.scale + (event.deltaY > 0 ? -0.1 : 0.1), event.clientX, event.clientY); }}
                 data-testid="canvas-pixel-wall"
                 aria-label="Parede interativa de um milhão de pixels"
@@ -3708,21 +4111,263 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
             <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
               <div className="pixel-editor-tools">
-                <button className={tool === 'select' && !recolorMode ? 'active' : ''} onClick={() => { setTool('select'); setRecolorMode(false); setSelectionArmed(true); setAvailablePixelPrompt(null); }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
+                <button className={tool === 'select' && !recolorMode && !clearMenuOpen && !eraseAreaMode ? 'active' : ''} onClick={() => {
+                  setClearMenuOpen(false);
+                  setEraseAreaMode(false);
+                  setTool('select');
+                  setRecolorMode(false);
+                  setSelectionArmed(true);
+                  setAvailablePixelPrompt(null);
+                }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
 
-                <button className={tool === 'pan' ? 'active' : ''} onClick={() => { setTool('pan'); setRecolorMode(false); }}><Hand size={17} /> Mover</button>
+                <button className={tool === 'pan' && !clearMenuOpen && !eraseAreaMode ? 'active' : ''} onClick={() => {
+                  setClearMenuOpen(false);
+                  setEraseAreaMode(false);
+                  setSelectionArmed(false);
+                  setTool('pan');
+                  setRecolorMode(false);
+                }}><Hand size={17} /> Mover</button>
               </div>
 
               <div className="pixel-editor-actions">
-                <button className="editor-clear" onClick={clearSelection} disabled={!selectedCount || !!lastReservation}>Limpar</button>
-                <button className="editor-customize" onClick={() => { setSelectionNudgeOpen(false); setCustomizeOpen(true); }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
+                <div className="editor-clear-wrap">
+                  <button
+                    className={`editor-clear ${clearMenuOpen ? 'active' : ''}`}
+                    type="button"
+                    onClick={() => {
+                      setClearMenuOpen((current) => !current);
+                      setSelectionArmed(false);
+                      setEraseAreaMode(false);
+                      setCustomizeOpen(false);
+                      setImageEditorOpen(false);
+                      setAvailablePixelPrompt(null);
+                    }}
+                    disabled={!selectedCount || !!lastReservation}
+                  >
+                    Limpar
+                  </button>
+                </div>
+
+                {clearMenuOpen && (
+                  <div
+                    className="clear-floating-dialog"
+                    role="dialog"
+                    aria-label="Opções de limpeza"
+                  >
+                    <p>
+                      Escolha como deseja remover os pixels selecionados.
+                    </p>
+
+                    <div className="clear-floating-actions">
+                      <button
+                        type="button"
+                        onClick={clearSelection}
+                      >
+                        LIMPAR TUDO
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEraseAreaMode(true);
+                          setSelectionArmed(false);
+                          setTool('select');
+                          setRecolorMode(false);
+                          setClearMenuOpen(false);
+                          setAvailablePixelPrompt(null);
+                        }}
+                      >
+                        SELECIONAR ÁREA PARA LIMPAR
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <button className="editor-customize" onClick={() => {
+                  setClearMenuOpen(false);
+                  setEraseAreaMode(false);
+                  setSelectionArmed(false);
+                  setSelectionNudgeOpen(false);
+                  setCustomizeOpen(true);
+                }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
+
               </div>
             </div>
 
-            {customizeOpen && (
+    
+        {imageEditorOpen && (
+          <div
+            className="pixel-customizer image-customizer"
+            role="dialog"
+            aria-label="Adicionar imagem"
+          >
+            <div className="pixel-customizer-head">
+              <strong>ADICIONAR UMA IMAGEM</strong>
+
+              <button
+                type="button"
+                onClick={() => setImageEditorOpen(false)}
+                aria-label="Fechar"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="pixel-customizer-body image-customizer-body">
+              {(() => {
+                const rectangle = getSelectedRectangle();
+
+                return (
+                  <>
+                    <p>
+                      Envie uma imagem para transformar sua
+                      seleção em pixels reais da parede.
+                    </p>
+
+                    {rectangle && (
+                      <div className="image-selection-info">
+                        <span>
+                          ÁREA
+                          <strong>
+                            {rectangle.width}×{rectangle.height}
+                          </strong>
+                        </span>
+
+                        <span>
+                          PIXELS
+                          <strong>
+                            {rectangle.width * rectangle.height}
+                          </strong>
+                        </span>
+
+                        <span>
+                          VALOR
+                          <strong>
+                            R${" "}
+                            {(
+                              rectangle.width *
+                              rectangle.height
+                            )
+                              .toFixed(2)
+                              .replace(".", ",")}
+                          </strong>
+                        </span>
+                      </div>
+                    )}
+
+                    <label className="image-upload-box">
+                      <input
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+                        onChange={(event) =>
+                          processImageFile(
+                            event.target.files?.[0] ?? null,
+                          )
+                        }
+                      />
+
+                      <strong>
+                        {imageFileName
+                          ? "TROCAR IMAGEM"
+                          : "ESCOLHER IMAGEM"}
+                      </strong>
+
+                      <span>
+                        PNG, JPG, JPEG ou WEBP · até 5 MB
+                      </span>
+                    </label>
+
+                    {imageEditorError && (
+                      <div
+                        className="image-editor-error"
+                        role="alert"
+                      >
+                        {imageEditorError}
+                      </div>
+                    )}
+
+                    {imagePreviewUrl &&
+                      imagePixelPreview && (
+                        <div className="image-preview-grid">
+                          <div>
+                            <span>ORIGINAL</span>
+                            <div className="image-preview-frame">
+                              <img
+                                src={imagePreviewUrl}
+                                alt="Imagem original"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <span>
+                              COMO FICARÁ NA PAREDE
+                            </span>
+                            <div className="image-preview-frame image-preview-pixelated">
+                              <img
+                                src={imagePixelPreview}
+                                alt="Prévia pixelada"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    <div className="image-editor-note">
+                      <strong>V1 · AJUSTE AUTOMÁTICO</strong>
+                      <span>
+                        A imagem mantém a proporção e é
+                        centralizada para preencher toda a
+                        área selecionada.
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="customizer-primary"
+                      disabled={!imagePixelColors.length}
+                      onClick={applyImageToSelection}
+                    >
+                      APLICAR IMAGEM AOS{" "}
+                      {selectedCount.toLocaleString("pt-BR")} PIXELS
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {customizeOpen && (
               <div className="pixel-customizer" role="dialog" aria-label="Personalizar pixels">
                 <div className="pixel-customizer-head"><strong>Personalizar {selectedCount} pixels</strong><button onClick={() => setCustomizeOpen(false)} aria-label="Fechar"><X size={20} /></button></div>
                 <div className="pixel-customizer-body">
+                  <div className="customizer-image-section">
+                    <span className="customizer-method-label">
+                      IMAGEM
+                    </span>
+
+                    <button
+                      className="customizer-image-option"
+                      type="button"
+                      onClick={() => {
+                        setCustomizeOpen(false);
+                        openImageEditor();
+                      }}
+                      disabled={!selectedCount || !!lastReservation}
+                    >
+                      <strong className="customizer-image-option-title">
+                        USAR UMA IMAGEM
+                      </strong>
+
+                      <span className="customizer-image-option-description">
+                        Envie uma foto, logo ou arte para preencher os pixels selecionados
+                      </span>
+                    </button>
+
+                    <div className="customizer-method-divider">
+                      <span>OU PERSONALIZE COM UMA COR</span>
+                    </div>
+                  </div>
                   <p>Escolha uma cor. Você pode aplicar em todos ou pintar somente os pixels que quiser.</p>
                   <div className="pixel-palette">
                     {PIXEL_PALETTE.map((color) => (

@@ -1,0 +1,534 @@
+===== FILL ALL / APPLY IMAGE =====
+  };
+
+  const clearSelection = () => {
+    setSelectedPixels(new Map());
+    setSelectedBlock(null);
+    setAvailablePixelPrompt(null);
+    setSelectionArmed(false);
+    setSelectionCustomized(false);
+    setSelectionNudgeOpen(false);
+    rectangleSelectRef.current = null;
+    setCustomizeOpen(false);
+    setRecolorMode(false);
+    setLastReservation(null);
+  };
+
+  const fillAll = (color: string) => {
+    if (lastReservation) return;
+    setActiveColor(color);
+    setSelectionCustomized(true);
+    setSelectedPixels((current) => {
+      const next = new Map<string, SelectedPixel>();
+      current.forEach((pixel, key) => next.set(key, { ...pixel, color }));
+      return next;
+    });
+  };
+
+  const getSelectedRectangle = () => {
+    const pixels = Array.from(selectedPixels.values());
+
+    if (!pixels.length) {
+      return null;
+    }
+
+    const xs = pixels.map((pixel) => pixel.x);
+    const ys = pixels.map((pixel) => pixel.y);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+
+    if (pixels.length !== width * height) {
+      return null;
+    }
+
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        if (!selectedPixels.has(`${x}:${y}`)) {
+          return null;
+        }
+      }
+    }
+
+    return {
+      minX,
+      minY,
+      maxX,
+      maxY,
+      width,
+      height,
+    };
+  };
+
+  const openImageEditor = () => {
+    setImageEditorError(null);
+
+    const rectangle = getSelectedRectangle();
+
+    if (!rectangle) {
+      setImageEditorError(
+        "Para usar uma imagem, selecione uma área retangular completa.",
+      );
+      setImageEditorOpen(true);
+      return;
+    }
+
+    if (rectangle.width < 10 || rectangle.height < 10) {
+      setImageEditorError(
+        `A área mínima para imagens é 10×10 pixels. Sua seleção atual é ${rectangle.width}×${rectangle.height}.`,
+      );
+      setImageEditorOpen(true);
+      return;
+    }
+
+    if (rectangle.width > 200 || rectangle.height > 200) {
+      setImageEditorError(
+        `A área máxima para imagens é 200×200 pixels. Sua seleção atual é ${rectangle.width}×${rectangle.height}.`,
+      );
+      setImageEditorOpen(true);
+      return;
+    }
+
+    setImageFileName("");
+    setImagePreviewUrl(null);
+    setImagePixelPreview(null);
+    setImagePixelColors([]);
+    setImageEditorOpen(true);
+  };
+
+  const processImageFile = (file: File | null) => {
+    setImageEditorError(null);
+    setImagePixelColors([]);
+    setImagePixelPreview(null);
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = new Set([
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+    ]);
+
+    if (!allowedTypes.has(file.type)) {
+      setImageEditorError(
+        "Formato não suportado. Use PNG, JPG, JPEG ou WEBP.",
+      );
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setImageEditorError(
+        "A imagem deve ter no máximo 5 MB.",
+      );
+      return;
+    }
+
+    const rectangle = getSelectedRectangle();
+
+    if (!rectangle) {
+      setImageEditorError(
+        "A seleção deixou de ser uma área retangular válida.",
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const source =
+        typeof reader.result === "string"
+          ? reader.result
+          : null;
+
+      if (!source) {
+        setImageEditorError(
+          "Não foi possível ler a imagem.",
+        );
+        return;
+      }
+
+      setImageFileName(file.name);
+      setImagePreviewUrl(source);
+
+      const image = new Image();
+
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+
+        canvas.width = rectangle.width;
+        canvas.height = rectangle.height;
+
+        const context = canvas.getContext("2d", {
+          willReadFrequently: true,
+        });
+
+        if (!context) {
+          setImageEditorError(
+            "Seu navegador não conseguiu preparar a imagem.",
+          );
+          return;
+        }
+
+        /*
+         * Modo COVER:
+         * preserva a proporção e corta somente o excedente.
+         */
+        const sourceRatio =
+          image.naturalWidth / image.naturalHeight;
+
+        const targetRatio =
+          rectangle.width / rectangle.height;
+
+        let sx = 0;
+        let sy = 0;
+        let sw = image.naturalWidth;
+        let sh = image.naturalHeight;
+===== RENDER DOS PIXELS SELECIONADOS =====
+309-      try {
+310-        const result = await loadPublicWallPixels();
+311-
+312-        if (!cancelled) {
+313-          setPixels(
+314-            result.filter(
+315-              (pixel) =>
+316-                pixel.status === 'purchased' &&
+317:                typeof pixel.color === 'string',
+318-            ),
+319-          );
+320-          setLoadFailed(false);
+321-        }
+322-      } catch {
+323-        if (!cancelled) {
+324-          setLoadFailed(true);
+325-        }
+326-      }
+327-    };
+328-
+329-    void load();
+330-
+331-    const interval = window.setInterval(
+332-      () => void load(),
+333-      60000,
+--
+385-    ctx.fillStyle = '#ffffff';
+386-    ctx.fillRect(0, 0, 1000, 1000);
+387-
+388-    /*
+389-     * PIXELS REAIS
+390-     * Mesma fonte de dados da parede oficial.
+391-     */
+392-    for (const pixel of pixels) {
+393:      if (!pixel.color) continue;
+394-
+395:      ctx.fillStyle = pixel.color;
+396-      ctx.fillRect(pixel.x, pixel.y, 1, 1);
+397-    }
+398-
+399-    /*
+400-     * GRADE DA VISÃO GERAL
+401-     *
+402-     * 10 x 10 pixels = divisão fina
+403-     * 100 x 100 pixels = divisão principal
+404-     *
+405-     * A grade é desenhada DEPOIS dos pixels para continuar
+406-     * visível mesmo quando existirem desenhos grandes.
+407-     */
+408-
+409-    ctx.save();
+410-
+411-    /* blocos de 10 pixels */
+--
+2181-              Math.max(
+2182-                1,
+2183-                camera.scale,
+2184-              );
+2185-
+2186-            ctx.fillStyle =
+2187-              pixel.status === 'purchased'
+2188-                ? (
+2189:                    pixel.color ??
+2190-                    '#111111'
+2191-                  )
+2192-                : '#b9b4aa';
+2193-
+2194-            ctx.fillRect(
+2195-              x,
+2196-              y,
+2197-              size,
+2198-              size,
+2199-            );
+2200-
+2201-            if (
+2202-              pixel.status ===
+2203-                'reserved' &&
+2204-              camera.scale >= 6
+2205-            ) {
+--
+2243-    }
+2244-
+2245-    selectedPixels.forEach((pixel) => {
+2246-      const x = originX + pixel.x * camera.scale;
+2247-      const y = originY + pixel.y * camera.scale;
+2248-      const size = Math.max(1, camera.scale);
+2249-
+2250-      ctx.fillStyle = selectionCustomized
+2251:        ? pixel.color
+2252-        : 'rgba(90, 160, 255, 0.22)';
+2253-
+2254-      ctx.fillRect(x, y, size, size);
+2255-
+2256-      /*
+2257-       * Antes da personalização, mantemos apenas uma indicação
+2258-       * discreta de que cada célula faz parte da seleção.
+2259-       */
+2260-      if (!selectionCustomized && camera.scale >= 3) {
+2261-        ctx.strokeStyle = 'rgba(22, 135, 255, 0.42)';
+2262-
+2263-        ctx.lineWidth = Math.max(
+2264-          0.55,
+2265-          Math.min(1.05, camera.scale * 0.05),
+2266-        );
+2267-
+--
+2713-    const occupied = occupiedAt(world.x, world.y) ?? null;
+2714-    if (!occupied && (world.x < 0 || world.x >= 1000 || world.y < 0 || world.y >= 1000)) return;
+2715-
+2716-    const action: 'add' | 'erase' | 'recolor' = recolorMode ? 'recolor' : tool === 'erase' ? 'erase' : 'add';
+2717-    if (action === 'add' && claimedAt(x, y)) return;
+2718-
+2719-    const selectedKey = `${x}:${y}`;
+2720-    const isAlreadySelected =
+2721:      selectedPixels.has(selectedKey);
+2722-
+2723-    if (event.pointerType === 'touch') {
+2724-      if (
+2725-        action === 'add' &&
+2726-        !occupied &&
+2727-        isAlreadySelected
+2728-      ) {
+2729-        pendingTouchRef.current = {
+2730-          pointerId: event.pointerId,
+2731-          startedAt: performance.now(),
+2732-          startX: event.clientX,
+2733-          startY: event.clientY,
+2734-          x,
+2735-          y,
+2736-          action: 'erase',
+2737-          occupied: null,
+--
+3027-    const height = maxY - minY + 1;
+3028-
+3029-    if (pixels.length !== width * height) {
+3030-      return null;
+3031-    }
+3032-
+3033-    for (let y = minY; y <= maxY; y += 1) {
+3034-      for (let x = minX; x <= maxX; x += 1) {
+3035:        if (!selectedPixels.has(`${x}:${y}`)) {
+3036-          return null;
+3037-        }
+3038-      }
+3039-    }
+3040-
+3041-    return {
+3042-      minX,
+3043-      minY,
+3044-      maxX,
+3045-      maxY,
+3046-      width,
+3047-      height,
+3048-    };
+3049-  };
+3050-
+3051-  const openImageEditor = () => {
+--
+5073-    ctx.fillRect(
+5074-      0,
+===== CSS DOS BOTOES =====
+1920-
+1921-/* total de pixels / valor */
+1922-.pixel-editor-total {
+1923-  color: #f5f4ef !important;
+1924-}
+1925-
+--
+2026-.pixel-customizer {
+2027-  background: #111111 !important;
+2028-  color: #f5f4ef !important;
+2029-  border-color: #333333 !important;
+2030-}
+2031-
+2032:.pixel-customizer-head,
+2033-.pixel-customizer-body {
+2034-  background: #111111 !important;
+2035-  color: #f5f4ef !important;
+2036-}
+2037-
+2038-.pixel-customizer-body p {
+2039-  color: #9b9b9b !important;
+2040-}
+2041-
+2042-/* banner de recolor */
+2043-.recolor-banner {
+2044-  background: #121212 !important;
+2045-  color: #f5f4ef !important;
+2046-  border-color: #333333 !important;
+2047-}
+2048-
+2049-/* avisos */
+2050-.demo-notice {
+2051-  background: #151515 !important;
+2052-  color: #d8d8d8 !important;
+--
+5418-  }
+5419-
+5420-  .pixel-editor-total span {
+5421-    font-size: 6.5px !important;
+5422-  }
+5423-
+5424:  .pixel-editor-actions {
+5425-    margin: 0 !important;
+5426-    gap: 3px !important;
+5427-  }
+5428-
+5429:  .pixel-editor-actions button {
+5430-    min-height: 30px !important;
+5431-    padding: 0 6px !important;
+5432-    font-size: 7px !important;
+5433-  }
+5434-
+5435:  .pixel-editor-actions button svg {
+5436-    width: 12px !important;
+5437-    height: 12px !important;
+5438-  }
+5439-
+5440-  /* =====================================================
+5441-     ZOOM FLUTUANTE MENOR
+5442-     ===================================================== */
+5443-
+5444-  .floating-zoom {
+5445-    left: 6px !important;
+5446-    bottom: 6px !important;
+5447-    width: 36px !important;
+5448-    padding: 3px 0 !important;
+5449-    border-radius: 13px !important;
+5450-  }
+5451-
+5452-  .floating-zoom button {
+5453-    width: 32px !important;
+5454-    height: 28px !important;
+5455-  }
+--
+5678-  .pixel-editor-tools button {
+5679-    font-size: 8.5px !important;
+5680-    font-weight: 700 !important;
+5681-    letter-spacing: .01em !important;
+5682-  }
+5683-
+5684:  .pixel-editor-actions button {
+5685-    font-size: 8.5px !important;
+5686-    font-weight: 700 !important;
+5687-    letter-spacing: .01em !important;
+5688-  }
+5689-
+5690-  .pixel-editor-tools button svg,
+5691:  .pixel-editor-actions button svg {
+5692-    width: 14px !important;
+5693-    height: 14px !important;
+5694-  }
+5695-}
+5696-
+5697-@media (max-width: 390px) {
+5698-  .pixel-editor-tools button,
+5699:  .pixel-editor-actions button {
+5700-    font-size: 8px !important;
+5701-  }
+5702-}
+5703-
+5704-
+5705-/* CLEANUP_UI_FINAL_V1 */
+5706-
+5707-/* ==========================================================
+5708-   HOME — remove o antigo bloco "04 — A PAREDE"
+5709-   ========================================================== */
+5710-
+5711-.preview-section {
+5712-  display: none !important;
+5713-}
+5714-
+5715-/* ==========================================================
+5716-   HOME — COMO FUNCIONA MAIS COMPACTO
+5717-   ========================================================== */
+5718-
+5719-.how-section {
+--
+5815-  }
+5816-
+5817-  .pixel-editor-tools {
+5818-    grid-column: 1 / -1 !important;
+5819-  }
+5820-
+5821:  .pixel-editor-actions {
+5822-    grid-column: 1 / -1 !important;
+5823-    width: 100% !important;
+5824-    display: grid !important;
+5825-    grid-template-columns: 1fr 1fr !important;
+5826-    gap: 5px !important;
+5827-  }
+5828-
+5829:  .pixel-editor-actions button {
+5830-    width: 100% !important;
+5831-    justify-content: center !important;
+5832-  }
+5833-
+5834-  /* Remove espaço deixado pelo antigo card */
+5835-  .selection-panel .panel-foot {
+5836-    margin-top: 0 !important;
+5837-  }
+5838-
+5839-  .wall-bottom-note {
+5840-    margin-top: 6px !important;
+5841-    padding: 0 3px !important;
+5842-  }
+5843-}
+5844-
+5845-
+5846-/* MOBILE_WALL_HEIGHT_V4 */
+5847-
+5848-@media (max-width: 620px) {
+5849-
+--
+6088-    width: 100%;
+6089-  }
+6090-}
+6091-
+6092-
+6093-/* IMAGE_EDITOR_V1 */
+6094:.editor-image {
+6095-  min-height: 42px;
+6096-}
+6097-
+6098-.image-customizer {
+6099-  z-index: 40;
+6100-}
+6101-
+6102-.image-customizer-body {
+6103-  display: flex;
+6104-  flex-direction: column;
+6105-  gap: 18px;
+6106-}
+6107-
+6108-.image-selection-info {
+6109-  display: grid;
+6110-  grid-template-columns: repeat(3, minmax(0, 1fr));
+6111-  gap: 8px;
+6112-}
+6113-
+6114-.image-selection-info span {

@@ -1,0 +1,422 @@
+===== POINTER UP/CANCEL =====
+2904-
+2905-    const paint = paintRef.current;
+2906-    if (!paint || paint.pointerId !== event.pointerId) return;
+2907-    const world = screenToWorld(event.clientX, event.clientY);
+2908-    const x = Math.floor(world.x);
+2909-    const y = Math.floor(world.y);
+2910-    if (x === paint.lastX && y === paint.lastY) return;
+2911-    paintLine(paint.lastX, paint.lastY, x, y, paint.action);
+2912-    paintRef.current = { ...paint, lastX: x, lastY: y };
+2913-    setIsDragging(true);
+2914-  };
+2915-
+2916:  const onPointerUp = (event: PointerEvent<HTMLCanvasElement>) => {
+2917-    const wasMultiTouch = gestureRef.current.multiTouch;
+2918-    const pending = pendingTouchRef.current?.pointerId === event.pointerId ? pendingTouchRef.current : null;
+2919-
+2920:    pointersRef.current.delete(event.pointerId);
+2921-
+2922-    if (
+2923-      rectangleSelectRef.current?.pointerId === event.pointerId
+2924-    ) {
+2925-      rectangleSelectRef.current = null;
+2926-      setSelectionArmed(true);
+2927-      setAvailablePixelPrompt(null);
+2928-    }
+2929-
+2930-    if (pending && !wasMultiTouch) {
+2931-      pendingTouchRef.current = null;
+2932-
+2933-      // Se houve arraste, foi apenas navegação.
+2934-      // Nunca selecionamos/pintamos pixels durante o movimento.
+2935-      if (!pending.moved) {
+2936-        if (pending.occupied) {
+2937-          setSelectedBlock(pending.occupied);
+2938-        } else if (
+2939-          pending.action === 'add' &&
+2940-          !selectionArmed
+2941-        ) {
+2942-          focusPixelForEditing(
+2943-            pending.x,
+2944-            pending.y,
+2945-          );
+2946-
+2947-          setAvailablePixelPrompt({
+2948-            x: pending.x,
+2949-            y: pending.y,
+2950-          });
+2951-        } else {
+2952-          updatePixel(
+2953-            pending.x,
+2954-            pending.y,
+2955-            pending.action,
+2956-          );
+2957-        }
+2958-      }
+2959-    }
+2960-
+2961-    // Ao terminar um gesto de pinça, não reinicie o pinch com
+2962-    // ponteiros remanescentes. Isso evita saltos de câmera/zoom
+2963-    // no Safari/iPad e a parede aparentemente preta.
+2964-    pinchRef.current = null;
+2965-
+2966-    if (paintRef.current?.pointerId === event.pointerId) {
+2967-      paintRef.current = null;
+2968-    }
+2969-
+2970-    if (pointersRef.current.size < 2) {
+2971-      gestureRef.current.multiTouch = false;
+2972-    }
+2973-
+2974-    setIsDragging(false);
+2975-  };
+2976-
+2977:  const onPointerCancel = (event: PointerEvent<HTMLCanvasElement>) => {
+2978:    pointersRef.current.delete(event.pointerId);
+2979-
+2980-    if (
+2981-      rectangleSelectRef.current?.pointerId === event.pointerId
+2982-    ) {
+2983-      setSelectedPixels(
+2984-        new Map(rectangleSelectRef.current.base),
+2985-      );
+2986-      rectangleSelectRef.current = null;
+2987-    }
+2988-
+2989-    if (pendingTouchRef.current?.pointerId === event.pointerId) pendingTouchRef.current = null;
+2990-    paintRef.current = null;
+2991-    pinchRef.current = null;
+2992-    if (pointersRef.current.size === 0) gestureRef.current.multiTouch = false;
+2993-    setIsDragging(false);
+2994-  };
+2995-
+2996-  const clearSelection = () => {
+2997-    setSelectedPixels(new Map());
+2998-    setSelectedBlock(null);
+2999-    setAvailablePixelPrompt(null);
+3000-    setSelectionArmed(false);
+3001-    setSelectionCustomized(false);
+3002-    setSelectionNudgeOpen(false);
+3003-    rectangleSelectRef.current = null;
+3004-    setCustomizeOpen(false);
+3005-    setRecolorMode(false);
+3006-    setLastReservation(null);
+3007-  };
+3008-
+3009-  const fillAll = (color: string) => {
+3010-    if (lastReservation) return;
+3011-    setActiveColor(color);
+3012-    setSelectionCustomized(true);
+3013-    setSelectedPixels((current) => {
+3014-      const next = new Map<string, SelectedPixel>();
+3015-      current.forEach((pixel, key) => next.set(key, { ...pixel, color }));
+3016-      return next;
+3017-    });
+3018-  };
+3019-
+3020-  const getSelectedRectangle = () => {
+3021-    const pixels = Array.from(selectedPixels.values());
+3022-
+3023-    if (!pixels.length) {
+3024-      return null;
+3025-    }
+3026-
+3027-    const xs = pixels.map((pixel) => pixel.x);
+3028-    const ys = pixels.map((pixel) => pixel.y);
+3029-
+3030-    const minX = Math.min(...xs);
+3031-    const maxX = Math.max(...xs);
+3032-    const minY = Math.min(...ys);
+3033-    const maxY = Math.max(...ys);
+--
+4013-                      >
+4014-                        <Paintbrush size={16} />
+4015-                        PERSONALIZAR
+4016-                      </button>
+4017-                    </div>
+4018-                  </div>
+4019-                )}
+4020-
+4021-              <canvas
+4022-                ref={canvasRef}
+4023-                onPointerDown={onPointerDown}
+4024-                onPointerMove={onPointerMove}
+4025:                onPointerUp={onPointerUp}
+4026:                onPointerCancel={onPointerCancel}
+4027-                onWheel={(event) => { event.preventDefault(); zoomAt(cameraRef.current.scale + (event.deltaY > 0 ? -0.1 : 0.1), event.clientX, event.clientY); }}
+4028-                data-testid="canvas-pixel-wall"
+4029-                aria-label="Parede interativa de um milhão de pixels"
+4030-              />
+4031-            </div>
+4032-
+4033-            <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
+4034-              <div className="pixel-editor-tools">
+4035-                <button className={tool === 'select' && !recolorMode ? 'active' : ''} onClick={() => { setTool('select'); setRecolorMode(false); setSelectionArmed(true); setAvailablePixelPrompt(null); }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
+4036-
+4037-                <button className={tool === 'pan' ? 'active' : ''} onClick={() => { setTool('pan'); setRecolorMode(false); }}><Hand size={17} /> Mover</button>
+4038-              </div>
+4039-
+4040-              <div className="pixel-editor-actions">
+4041-                <button className="editor-clear" onClick={clearSelection} disabled={!selectedCount || !!lastReservation}>Limpar</button>
+4042-                <button className="editor-customize" onClick={() => { setSelectionNudgeOpen(false); setCustomizeOpen(true); }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
+4043-              <button
+4044-                className="editor-image"
+4045-                type="button"
+4046-                onClick={() => {
+4047-                  setSelectionNudgeOpen(false);
+4048-                  setCustomizeOpen(false);
+4049-                  openImageEditor();
+4050-                }}
+4051-                disabled={!selectedCount || !!lastReservation}
+4052-              >
+4053-                IMAGEM
+4054-              </button>
+4055-              </div>
+4056-            </div>
+4057-
+4058-    
+4059-        {imageEditorOpen && (
+4060-          <div
+4061-            className="pixel-customizer image-customizer"
+4062-            role="dialog"
+4063-            aria-label="Adicionar imagem"
+4064-          >
+4065-            <div className="pixel-customizer-head">
+4066-              <strong>ADICIONAR UMA IMAGEM</strong>
+4067-
+4068-              <button
+4069-                type="button"
+4070-                onClick={() => setImageEditorOpen(false)}
+4071-                aria-label="Fechar"
+4072-              >
+4073-                <X size={20} />
+4074-              </button>
+4075-            </div>
+4076-
+4077-            <div className="pixel-customizer-body image-customizer-body">
+4078-              {(() => {
+4079-                const rectangle = getSelectedRectangle();
+4080-
+4081-                return (
+===== CANVAS TOUCH CSS =====
+3355-
+3356-/*
+3357-  Grade fina como na parede oficial.
+3358-  Fica por cima do branco e abaixo do conteúdo real.
+3359-*/
+3360-.hero-wall-link::before {
+3361-  background-image:
+3362-    linear-gradient(
+3363-      to right,
+3364-      rgba(184, 188, 194, .26) .7px,
+3365-      transparent .7px
+--
+3399-   ========================================================= */
+3400-
+3401-.hero-visual .pixel-mosaic.compact {
+3402-  background: #fff !important;
+3403-  border: 1px solid #ff681d !important;
+3404-  cursor: pointer;
+3405-}
+3406-
+3407:.hero-visual .pixel-mosaic.compact canvas {
+3408-  width: 100% !important;
+3409-  height: 100% !important;
+3410-  display: block;
+3411-  background: #fff !important;
+3412-  image-rendering: pixelated;
+3413-}
+3414-
+3415-/*
+3416- * Desliga a grade CSS artificial anterior.
+3417: * Agora a grade é desenhada no próprio canvas,
+3418- * junto com os pixels reais.
+3419- */
+3420-.hero-wall-link::before,
+3421-.hero-wall-link::after {
+3422-  display: none !important;
+3423-}
+3424-
+3425-
+3426-/* =========================================================
+3427-   PÁGINA PÚBLICA DA OBRA
+3428-   ========================================================= */
+3429-
+3430-.public-art-main {
+3431-  min-height: 75vh;
+3432-  padding:
+3433-    clamp(46px, 7vw, 100px)
+3434-    clamp(20px, 6vw, 90px);
+3435-}
+3436-
+3437-.public-art-layout {
+--
+3524-  letter-spacing: .07em;
+3525-}
+3526-
+3527-.public-art-frame-bottom {
+3528-  justify-content: flex-start;
+3529-  color: #ff681d;
+3530-}
+3531-
+3532:.public-art-canvas-wrap {
+3533-  aspect-ratio: 1 / 1;
+3534-  margin: 0 14px;
+3535-  display: grid;
+3536-  place-items: center;
+3537-  overflow: hidden;
+3538-  background: #fff;
+3539-  border: 1px solid #ff681d;
+3540-}
+3541-
+3542:.public-art-canvas {
+3543-  width: 88%;
+3544-  height: 88%;
+3545-  object-fit: contain;
+3546-  image-rendering: pixelated;
+3547-}
+3548-
+3549-.public-art-error {
+3550-  max-width: 780px;
+3551-  margin: 0 auto;
+3552-}
+3553-
+3554-.public-art-error p {
+3555-  max-width: 500px;
+3556-  margin: 24px 0;
+3557-  color: #999;
+3558-}
+3559-
+3560-@media (max-width: 820px) {
+3561-  .public-art-layout {
+3562-    grid-template-columns: 1fr;
+--
+5342-    padding-left: 5px !important;
+5343-    padding-right: 5px !important;
+5344-  }
+5345-
+5346-  .wall-layout {
+5347-    gap: 5px !important;
+5348-  }
+5349-
+5350:  .canvas-card,
+5351-  .pixel-editor-card {
+5352-    width: 100% !important;
+5353-  }
+5354-
+5355-  /*
+5356-   * Aumentamos mais um pouco o palco.
+5357-   * A parede passa a ocupar uma fatia maior da tela.
+5358-   */
+5359:  .canvas-stage {
+5360-    height: 112vw !important;
+5361-    min-height: 430px !important;
+5362-    max-height: 610px !important;
+5363-  }
+5364-
+5365-  /*
+5366-   * Antes reservávamos mais espaço para a barra.
+5367-   * Agora ela fica mais compacta.
+5368-   */
+5369-  .pixel-editor-card {
+5370-    padding-bottom: 82px !important;
+5371-  }
+5372-
+5373-  /* =====================================================
+5374-     BARRA DO EDITOR MAIS COMPACTA
+5375-     ===================================================== */
+5376-
+5377-  .pixel-editor-bar {
+5378-    left: 4px !important;
+5379-    right: 4px !important;
+--
+5650-    font-size: 7px !important;
+5651-  }
+5652-}
+5653-
+5654-/*
+5655- * iPhones estreitos.
+5656- */
+5657-@media (max-width: 390px) {
+5658:  .canvas-stage {
+5659-    height: 116vw !important;
+5660-    min-height: 420px !important;
+5661-  }
+5662-
+5663-  .available-pixel-prompt,
+5664-  .selection-next-step {
+5665-    width: calc(100% - 24px) !important;
+5666-  }
+5667-}
+5668-
+5669-
+5670-/* MOBILE_EDITOR_FONT_READABILITY_V1 */
+5671-
+5672-@media (max-width: 620px) {
+5673-
+5674-  /*
+5675-   * Mantém a barra compacta, mas aumenta a leitura de:
+5676-   * Selecionar / Apagar / Mover / Limpar / Personalizar.
+5677-   */
+5678-  .pixel-editor-tools button {
+--
+5848-@media (max-width: 620px) {
+5849-
+5850-  /*
+5851-   * A parede estava alta demais no celular.
+5852-   * Agora fica próxima do retângulo marcado no print:
+5853-   * ainda grande o suficiente para editar, mas deixando
+5854-   * ferramentas e resumo mais próximos da mesma tela.
+5855-   */
+5856:  .canvas-stage {
+5857-    height: 80vw !important;
+5858-    min-height: 320px !important;
+5859-    max-height: 430px !important;
+5860-  }
+5861-
+5862-  /*
+5863-   * Reduzimos o espaço reservado em volta da parede.
+5864-   */
+5865-  .pixel-editor-card {
+5866-    padding-bottom: 76px !important;
+5867-  }
+5868-
+5869-  /*
+5870-   * Ferramentas encostam um pouco mais na parede.
+5871-   */
+5872-  .pixel-editor-bar {
+5873-    bottom: 3px !important;
+5874-  }
+5875-
+5876-  /*
+--
+5881-  }
+5882-
+5883-  .selection-panel {
+5884-    margin-top: 4px !important;
+5885-  }
+5886-}
+5887-
+5888-@media (max-width: 390px) {
+5889:  .canvas-stage {
+5890-    height: 82vw !important;
+5891-    min-height: 305px !important;
+5892-    max-height: 400px !important;
+5893-  }
+5894-}
+5895-
+5896-/* MOBILE_BOTTOM_INFO_READABILITY_V1 */
+5897-@media (max-width: 620px) {
+5898-  .wall-status-bar,
+5899-  .wall-status-bar * {
+5900-    font-size: 14px !important;
+5901-  }
+5902-
+5903-  .wall-selection-hint,
+5904-  .wall-selection-hint * {
+5905-    font-size: 15px !important;
+5906-    line-height: 1.5 !important;
+5907-  }
+5908-}
+5909-

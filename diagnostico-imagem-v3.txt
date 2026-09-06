@@ -1,0 +1,883 @@
+===== MOVE / SELECAO / RETANGULO =====
+1727-
+1728-const PIXEL_PALETTE = [
+1729-  '#ef4444', '#f97316', '#f59e0b', '#facc15', '#a3e635', '#22c55e', '#15803d',
+1730-  '#14b8a6', '#06b6d4', '#38bdf8', '#3b82f6', '#1d4ed8', '#9333ea', '#db2777',
+1731-  '#7c5c4f', '#ffffff', '#8b8b8b', '#3f3f46', '#111111',
+1732-];
+1733-
+1734-function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
+1735-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+1736-  const stageRef = useRef<HTMLDivElement | null>(null);
+1737-  const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
+1738-  const [tool, setTool] = useState<PixelTool>('select');
+1739:  const [selectedPixels, setSelectedPixels] = useState<Map<string, SelectedPixel>>(() => loadPendingPixelSelection());
+1740:  const [selectedBlock, setSelectedBlock] = useState<PixelBlock | null>(null);
+1741-  const [availablePixelPrompt, setAvailablePixelPrompt] = useState<{ x: number; y: number } | null>(null);
+1742-  const [selectionArmed, setSelectionArmed] = useState(false);
+1743-  const [isDragging, setIsDragging] = useState(false);
+1744-  const [customizeOpen, setCustomizeOpen] = useState(false);
+1745-
+1746-  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+1747-  const [imageEditorError, setImageEditorError] = useState<string | null>(null);
+1748-  const [imageFileName, setImageFileName] = useState("");
+1749-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+1750-  const [imagePixelPreview, setImagePixelPreview] = useState<string | null>(null);
+1751-  const [imagePixelColors, setImagePixelColors] = useState<string[]>([]);
+1752-
+1753-  const [selectionCustomized, setSelectionCustomized] = useState(false);
+1754-  const [selectionNudgeOpen, setSelectionNudgeOpen] = useState(false);
+1755-  const [activeColor, setActiveColor] = useState('#ef4444');
+1756-  const [customColor, setCustomColor] = useState('#ff681d');
+1757-  const [customColorActive, setCustomColorActive] = useState(false);
+1758-  const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
+1759-  const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
+1760-  const publicPixelBucketsRef = useRef(
+1761-    new Map<string, PublicWallPixel[]>(),
+1762-  );
+1763-  const publicPixelBucketSize = 50;
+1764-  const [wallSyncError, setWallSyncError] = useState<string | null>(null);
+1765-
+1766-  const wallSyncInFlightRef = useRef(false);
+1767-  const wallLastSyncAtRef = useRef(0);
+1768-
+1769-  const cameraRef = useRef(camera);
+1770-  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+1771-  const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
+1772-  const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
+1773:  const rectangleSelectRef = useRef<{
+1774-    pointerId: number;
+1775-    startX: number;
+1776-    startY: number;
+1777-    base: Map<string, SelectedPixel>;
+1778-  } | null>(null);
+1779-  const pendingTouchRef = useRef<{
+1780-    pointerId: number;
+1781-    startedAt: number;
+1782-    startX: number;
+1783-    startY: number;
+1784-    x: number;
+1785-    y: number;
+1786-    action: 'add' | 'erase' | 'recolor';
+1787-    occupied: PixelBlock | null;
+1788-    moved: boolean;
+1789-  } | null>(null);
+1790-  const [recolorMode, setRecolorMode] = useState(false);
+1791-  const gestureRef = useRef({ multiTouch: false });
+1792-  const pinchRef = useRef<{
+1793-    distance: number;
+1794-    midpoint: { x: number; y: number };
+1795-    worldAtMidpoint: { x: number; y: number };
+1796-    camera: { x: number; y: number; scale: number };
+1797-  } | null>(null);
+1798-  const minZoom = 0.24;
+1799-  const maxZoom = 30;
+1800-  const hasFittedInitialViewRef = useRef(false);
+1801-
+1802-  useEffect(() => { cameraRef.current = camera; }, [camera]);
+1803-
+--
+1837-          bucketKey,
+1838-          bucket,
+1839-        );
+1840-      });
+1841-
+1842-      publicPixelBucketsRef.current =
+1843-        nextBuckets;
+1844-
+1845-      setPublicPixels(next);
+1846-      setWallSyncError(null);
+1847-
+1848-      if (!lastReservation) {
+1849:        setSelectedPixels((current) => {
+1850-          let changed = false;
+1851-          const filtered = new Map(current);
+1852-          current.forEach((_pixel, key) => {
+1853-            if (next.has(key)) {
+1854-              filtered.delete(key);
+1855-              changed = true;
+1856-            }
+1857-          });
+1858-          return changed ? filtered : current;
+1859-        });
+1860-      }
+1861-    } catch (caught) {
+1862-      setWallSyncError(
+1863-        caught instanceof Error
+1864-          ? caught.message
+1865-          : 'Não foi possível atualizar a parede.',
+1866-      );
+1867-    } finally {
+1868-      wallLastSyncAtRef.current = Date.now();
+1869-      wallSyncInFlightRef.current = false;
+1870-    }
+1871-  }, [lastReservation]);
+1872-
+1873-  useEffect(() => {
+1874-    void refreshPublicPixels();
+1875-
+1876-    const interval = window.setInterval(
+1877-      () => {
+1878-        void refreshPublicPixels();
+1879-      },
+--
+1930-      );
+1931-
+1932-      window.removeEventListener(
+1933-        'focus',
+1934-        handleFocus,
+1935-      );
+1936-    };
+1937-  }, [refreshPublicPixels]);
+1938-
+1939-  const selectedList = Array.from(selectedPixels.values());
+1940-  const selectedCount = selectedPixels.size;
+1941-  const firstSelected = selectedList[0] ?? null;
+1942:  const coordinateText = firstSelected ? `${String(firstSelected.x).padStart(3, '0')}, ${String(firstSelected.y).padStart(3, '0')}` : selectedBlock ? `${String(selectedBlock.x).padStart(3, '0')}, ${String(selectedBlock.y).padStart(3, '0')}` : '—';
+1943-
+1944-  const draw = useCallback(() => {
+1945-    const canvas = canvasRef.current;
+1946-    const stage = stageRef.current;
+1947-    if (!canvas || !stage) return;
+1948-    const rect = stage.getBoundingClientRect();
+1949-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+1950-    canvas.width = rect.width * dpr;
+1951-    canvas.height = rect.height * dpr;
+1952-    canvas.style.width = `${rect.width}px`;
+1953-    canvas.style.height = `${rect.height}px`;
+1954-    const ctx = canvas.getContext('2d');
+1955-    if (!ctx) return;
+1956-    ctx.scale(dpr, dpr);
+1957-    ctx.fillStyle = '#090909';
+1958-    ctx.fillRect(0, 0, rect.width, rect.height);
+1959-    const originX = rect.width / 2 - 500 * camera.scale + camera.x;
+1960-    const originY = rect.height / 2 - 500 * camera.scale + camera.y;
+1961-    const wallSize = 1000 * camera.scale;
+1962-    ctx.fillStyle = '#f7f7f4';
+1963-    ctx.fillRect(originX, originY, wallSize, wallSize);
+1964-    ctx.save();
+1965-    ctx.beginPath();
+1966-    ctx.rect(originX, originY, wallSize, wallSize);
+1967-    ctx.clip();
+1968-
+1969-    const drawGrid = (
+1970-      logicalStep: number,
+1971-      strokeStyle: string,
+1972-      lineWidth: number,
+--
+2073-        ctx.fillStyle = '#24203b';
+2074-        ctx.font = `600 ${Math.max(10, 13 * camera.scale)}px "DM Mono", monospace`;
+2075-        ctx.fillText(block.initials, x + 8 * camera.scale, y + 20 * camera.scale);
+2076-      }
+2077-    });
+2078-
+2079-    /*
+2080-     * PERFORMANCE:
+2081-     * só percorremos os buckets que cruzam
+2082-     * a área visível do Canvas.
+2083-     *
+2084-     * O Map completo continua disponível para
+2085:     * claimedAt(), portanto a segurança da seleção
+2086-     * não muda.
+2087-     */
+2088-
+2089-    const visibleMinX = Math.max(
+2090-      0,
+2091-      Math.floor(
+2092-        (-originX) / camera.scale,
+2093-      ),
+2094-    );
+2095-
+2096-    const visibleMinY = Math.max(
+2097-      0,
+2098-      Math.floor(
+2099-        (-originY) / camera.scale,
+2100-      ),
+2101-    );
+2102-
+2103-    const visibleMaxX = Math.min(
+2104-      999,
+2105-      Math.ceil(
+2106-        (rect.width - originX) /
+2107-          camera.scale,
+2108-      ),
+2109-    );
+2110-
+2111-    const visibleMaxY = Math.min(
+2112-      999,
+2113-      Math.ceil(
+2114-        (rect.height - originY) /
+2115-          camera.scale,
+--
+2363-        0.8,
+2364-        Math.min(1.6, camera.scale * 0.07),
+2365-      );
+2366-
+2367-      ctx.strokeRect(
+2368-        x + 0.5,
+2369-        y + 0.5,
+2370-        Math.max(1, size - 1),
+2371-        Math.max(1, size - 1),
+2372-      );
+2373-    }
+2374-
+2375:    if (selectedBlock) {
+2376:      const x = originX + selectedBlock.x * camera.scale;
+2377:      const y = originY + selectedBlock.y * camera.scale;
+2378-      ctx.save();
+2379-      ctx.strokeStyle = '#fff4c9';
+2380-      ctx.lineWidth = 3;
+2381-      ctx.setLineDash([8, 6]);
+2382:      ctx.strokeRect(x - 3, y - 3, selectedBlock.width * camera.scale + 6, selectedBlock.height * camera.scale + 6);
+2383-      ctx.restore();
+2384-    }
+2385-  }, [
+2386-    blocks,
+2387-    camera,
+2388-    publicPixels,
+2389:    selectedBlock,
+2390-    selectedPixels,
+2391-    availablePixelPrompt,
+2392-    selectionCustomized,
+2393-  ]);
+2394-
+2395-  const fitInitialView = useCallback(() => {
+2396-    const stage = stageRef.current;
+2397-    if (!stage || hasFittedInitialViewRef.current) return;
+2398-
+2399-    const rect = stage.getBoundingClientRect();
+2400-    if (!rect.width || !rect.height) return;
+2401-
+2402-    const focus = readWallFocusBounds();
+2403-
+2404-    if (focus) {
+2405-      const width = focus.maxX - focus.minX + 1;
+2406-      const height = focus.maxY - focus.minY + 1;
+2407-
+2408-      const paddingPixels = Math.max(
+2409-        6,
+2410-        Math.min(40, Math.max(width, height) * 0.35),
+2411-      );
+2412-
+===== PINCH / ZOOM / POINTERS =====
+1757-  const [customColorActive, setCustomColorActive] = useState(false);
+1758-  const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
+1759-  const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
+1760-  const publicPixelBucketsRef = useRef(
+1761-    new Map<string, PublicWallPixel[]>(),
+1762-  );
+1763-  const publicPixelBucketSize = 50;
+1764-  const [wallSyncError, setWallSyncError] = useState<string | null>(null);
+1765-
+1766-  const wallSyncInFlightRef = useRef(false);
+1767-  const wallLastSyncAtRef = useRef(0);
+1768-
+1769:  const cameraRef = useRef(camera);
+1770-  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+1771-  const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
+1772-  const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
+1773-  const rectangleSelectRef = useRef<{
+1774-    pointerId: number;
+1775-    startX: number;
+1776-    startY: number;
+1777-    base: Map<string, SelectedPixel>;
+1778-  } | null>(null);
+1779-  const pendingTouchRef = useRef<{
+1780-    pointerId: number;
+1781-    startedAt: number;
+1782-    startX: number;
+1783-    startY: number;
+1784-    x: number;
+1785-    y: number;
+1786-    action: 'add' | 'erase' | 'recolor';
+1787-    occupied: PixelBlock | null;
+1788-    moved: boolean;
+1789-  } | null>(null);
+1790-  const [recolorMode, setRecolorMode] = useState(false);
+1791-  const gestureRef = useRef({ multiTouch: false });
+1792:  const pinchRef = useRef<{
+1793-    distance: number;
+1794-    midpoint: { x: number; y: number };
+1795-    worldAtMidpoint: { x: number; y: number };
+1796-    camera: { x: number; y: number; scale: number };
+1797-  } | null>(null);
+1798-  const minZoom = 0.24;
+1799-  const maxZoom = 30;
+1800-  const hasFittedInitialViewRef = useRef(false);
+1801-
+1802:  useEffect(() => { cameraRef.current = camera; }, [camera]);
+1803-
+1804-  const refreshPublicPixels = useCallback(async () => {
+1805-    if (wallSyncInFlightRef.current) {
+1806-      return;
+1807-    }
+1808-
+1809-    wallSyncInFlightRef.current = true;
+1810-
+1811-    try {
+1812-      const pixels = await loadPublicWallPixels();
+1813-      const next = new Map<string, PublicWallPixel>();
+1814-      const nextBuckets =
+1815-        new Map<string, PublicWallPixel[]>();
+1816-
+1817-      pixels.forEach((pixel) => {
+1818-        next.set(`${pixel.x}:${pixel.y}`, pixel);
+1819-
+1820-        const bucketX = Math.floor(
+1821-          pixel.x / publicPixelBucketSize,
+1822-        );
+1823-
+1824-        const bucketY = Math.floor(
+1825-          pixel.y / publicPixelBucketSize,
+1826-        );
+1827-
+1828-        const bucketKey =
+1829-          `${bucketX}:${bucketY}`;
+1830-
+1831-        const bucket =
+1832-          nextBuckets.get(bucketKey) ?? [];
+1833-
+1834-        bucket.push(pixel);
+1835-
+1836-        nextBuckets.set(
+1837-          bucketKey,
+--
+2425-      );
+2426-
+2427-      const centerX = (focus.minX + focus.maxX + 1) / 2;
+2428-      const centerY = (focus.minY + focus.maxY + 1) / 2;
+2429-
+2430-      const nextCamera = {
+2431-        x: -(centerX - 500) * fittedScale,
+2432-        y: -(centerY - 500) * fittedScale,
+2433-        scale: fittedScale,
+2434-      };
+2435-
+2436-      hasFittedInitialViewRef.current = true;
+2437:      cameraRef.current = nextCamera;
+2438-      setCamera(nextCamera);
+2439-      return;
+2440-    }
+2441-
+2442-    const fittedScale = Math.min(
+2443-      maxZoom,
+2444-      Math.max(
+2445-        minZoom,
+2446-        Math.min(rect.width, rect.height) / 1000 * 0.985,
+2447-      ),
+2448-    );
+2449-
+2450-    const nextCamera = {
+2451-      x: 0,
+2452-      y: 0,
+2453-      scale: fittedScale,
+2454-    };
+2455-
+2456-    hasFittedInitialViewRef.current = true;
+2457:    cameraRef.current = nextCamera;
+2458-    setCamera(nextCamera);
+2459-  }, []);
+2460-
+2461-  useLayoutEffect(() => { fitInitialView(); }, [fitInitialView]);
+2462-  useEffect(() => {
+2463-    draw();
+2464-    const onResize = () => draw();
+2465-    window.addEventListener('resize', onResize);
+2466-    return () => window.removeEventListener('resize', onResize);
+2467-  }, [draw]);
+2468-
+2469-  const screenToWorld = (clientX: number, clientY: number) => {
+2470-    const stage = stageRef.current;
+2471-    if (!stage) return { x: 0, y: 0 };
+2472-    const rect = stage.getBoundingClientRect();
+2473:    const current = cameraRef.current;
+2474-    return {
+2475-      x: (clientX - rect.left - rect.width / 2 - current.x) / current.scale + 500,
+2476-      y: (clientY - rect.top - rect.height / 2 - current.y) / current.scale + 500,
+2477-    };
+2478-  };
+2479-
+2480-  const occupiedAt = (x: number, y: number) => blocks.find((block) => (
+2481-    block.status !== 'available' && x >= block.x && x < block.x + block.width && y >= block.y && y < block.y + block.height
+2482-  ));
+2483-
+2484-  const claimedAt = (x: number, y: number) => publicPixels.get(`${Math.floor(x)}:${Math.floor(y)}`) ?? null;
+2485-
+2486-  const updatePixel = (x: number, y: number, action: 'add' | 'erase' | 'recolor') => {
+2487-    if (lastReservation) return;
+2488-    if (x < 0 || y < 0 || x >= 1000 || y >= 1000) return;
+2489-    if (occupiedAt(x + 0.5, y + 0.5) || claimedAt(x, y)) return;
+2490-    const key = `${x}:${y}`;
+2491-    setSelectedBlock(null);
+2492-    setSelectedPixels((current) => {
+2493-      const next = new Map(current);
+2494-      if (action === 'erase') next.delete(key);
+2495-      else if (action === 'recolor') {
+2496-        const pixel = next.get(key);
+2497-
+2498-        if (pixel) {
+2499-          next.set(
+2500-            key,
+2501-            {
+2502-              ...pixel,
+2503-              color: activeColor,
+2504-            },
+2505-          );
+2506-
+2507-          setSelectionCustomized(true);
+2508-        }
+--
+2575-  };
+2576-
+2577-  const focusPixelForEditing = (
+2578-    pixelX: number,
+2579-    pixelY: number,
+2580-  ) => {
+2581-    const stage = stageRef.current;
+2582-    if (!stage) return;
+2583-
+2584-    const rect = stage.getBoundingClientRect();
+2585-    if (!rect.width || !rect.height) return;
+2586-
+2587:    const currentScale = cameraRef.current.scale;
+2588-
+2589-    /*
+2590-     * Queremos aproximadamente 35–45 pixels visíveis
+2591-     * na menor dimensão ao redor do pixel escolhido.
+2592-     */
+2593-    const targetScale = Math.min(
+2594-      maxZoom,
+2595-      Math.max(
+2596-        currentScale,
+2597-        Math.min(rect.width, rect.height) / 42,
+2598-      ),
+2599-    );
+2600-
+2601-    /*
+2602-     * Só faz o zoom automático se a visão atual estiver
+2603-     * realmente distante. Se o usuário já ampliou a parede,
+2604-     * não interfere na escolha dele.
+2605-     */
+2606-    if (currentScale >= targetScale * 0.72) {
+2607-      return;
+2608-    }
+2609-
+2610-    const centerX = pixelX + 0.5;
+2611-    const centerY = pixelY + 0.5;
+2612-
+2613-    const nextCamera = {
+2614-      x: -(centerX - 500) * targetScale,
+2615-      y: -(centerY - 500) * targetScale,
+2616-      scale: targetScale,
+2617-    };
+2618-
+2619:    cameraRef.current = nextCamera;
+2620-    setCamera(nextCamera);
+2621-  };
+2622-
+2623:  const zoomAt = (nextScale: number, clientX?: number, clientY?: number) => {
+2624-    const bounded = Math.min(maxZoom, Math.max(minZoom, nextScale));
+2625-    if (clientX === undefined || clientY === undefined) {
+2626:      const nextCamera = { ...cameraRef.current, scale: bounded };
+2627:      cameraRef.current = nextCamera;
+2628-      setCamera(nextCamera);
+2629-      return;
+2630-    }
+2631-    const before = screenToWorld(clientX, clientY);
+2632-    setCamera((current) => {
+2633-      const stage = stageRef.current;
+2634-      if (!stage) return { ...current, scale: bounded };
+2635-      const rect = stage.getBoundingClientRect();
+2636-      const nextCamera = {
+2637-        x: clientX - rect.left - rect.width / 2 - (before.x - 500) * bounded,
+2638-        y: clientY - rect.top - rect.height / 2 - (before.y - 500) * bounded,
+2639-        scale: bounded,
+2640-      };
+2641:      cameraRef.current = nextCamera;
+2642-      return nextCamera;
+2643-    });
+2644-  };
+2645-
+2646-  const getPinchGeometry = () => {
+2647-    const points = Array.from(pointersRef.current.values()).slice(0, 2);
+2648-    if (points.length < 2) return null;
+2649-    const [first, second] = points;
+2650-    return { distance: Math.max(1, Math.hypot(second.x - first.x, second.y - first.y)), midpoint: { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 } };
+2651-  };
+2652-
+2653-  const startPinch = () => {
+2654-    const geometry = getPinchGeometry();
+2655-    const stage = stageRef.current;
+2656-    if (!geometry || !stage) return;
+2657:    const current = cameraRef.current;
+2658-    const rect = stage.getBoundingClientRect();
+2659:    pinchRef.current = {
+2660-      ...geometry,
+2661-      worldAtMidpoint: {
+2662-        x: (geometry.midpoint.x - rect.left - rect.width / 2 - current.x) / current.scale + 500,
+2663-        y: (geometry.midpoint.y - rect.top - rect.height / 2 - current.y) / current.scale + 500,
+2664-      },
+2665-      camera: current,
+2666-    };
+2667-  };
+2668-
+2669-  const applyPinch = () => {
+2670:    const pinch = pinchRef.current;
+2671-    const geometry = getPinchGeometry();
+2672-    const stage = stageRef.current;
+2673:    if (!pinch || !geometry || !stage) return;
+2674-    const rect = stage.getBoundingClientRect();
+2675:    const nextScale = Math.min(maxZoom, Math.max(minZoom, pinch.camera.scale * geometry.distance / pinch.distance));
+2676-    const nextCamera = {
+2677:      x: geometry.midpoint.x - rect.left - rect.width / 2 - (pinch.worldAtMidpoint.x - 500) * nextScale,
+2678:      y: geometry.midpoint.y - rect.top - rect.height / 2 - (pinch.worldAtMidpoint.y - 500) * nextScale,
+2679-      scale: nextScale,
+2680-    };
+2681:    cameraRef.current = nextCamera;
+2682-    setCamera(nextCamera);
+2683-  };
+2684-
+2685:  const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
+2686-    event.preventDefault();
+2687-    event.currentTarget.setPointerCapture(event.pointerId);
+2688-    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+2689-
+2690-    if (pointersRef.current.size >= 2) {
+2691-      gestureRef.current.multiTouch = true;
+2692-
+2693-      if (rectangleSelectRef.current) {
+2694-        setSelectedPixels(
+2695-          new Map(rectangleSelectRef.current.base),
+2696-        );
+2697-        rectangleSelectRef.current = null;
+2698-      }
+2699-
+2700-      paintRef.current = null;
+2701-      pendingTouchRef.current = null;
+2702-      startPinch();
+2703-      return;
+2704-    }
+2705-
+2706:    const current = cameraRef.current;
+2707-    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: current.x, originY: current.y, moved: false };
+2708-    if (tool === 'pan') return;
+2709-
+2710-    const world = screenToWorld(event.clientX, event.clientY);
+2711-    const x = Math.floor(world.x);
+2712-    const y = Math.floor(world.y);
+2713-    const occupied = occupiedAt(world.x, world.y) ?? null;
+2714-    if (!occupied && (world.x < 0 || world.x >= 1000 || world.y < 0 || world.y >= 1000)) return;
+2715-
+2716-    const action: 'add' | 'erase' | 'recolor' = recolorMode ? 'recolor' : tool === 'erase' ? 'erase' : 'add';
+2717-    if (action === 'add' && claimedAt(x, y)) return;
+2718-
+2719-    const selectedKey = `${x}:${y}`;
+2720-    const isAlreadySelected =
+2721-      selectedPixels.has(selectedKey);
+2722-
+2723-    if (event.pointerType === 'touch') {
+2724-      if (
+2725-        action === 'add' &&
+2726-        !occupied &&
+2727-        isAlreadySelected
+===== IMAGE MODAL =====
+
+    
+        {imageEditorOpen && (
+          <div
+            className="pixel-customizer image-customizer"
+            role="dialog"
+            aria-label="Adicionar imagem"
+          >
+            <div className="pixel-customizer-head">
+              <strong>ADICIONAR UMA IMAGEM</strong>
+
+              <button
+                type="button"
+                onClick={() => setImageEditorOpen(false)}
+                aria-label="Fechar"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="pixel-customizer-body image-customizer-body">
+              {(() => {
+                const rectangle = getSelectedRectangle();
+
+                return (
+                  <>
+                    <p>
+                      Envie uma imagem para transformar sua
+                      seleção em pixels reais da parede.
+                    </p>
+
+                    {rectangle && (
+                      <div className="image-selection-info">
+                        <span>
+                          ÁREA
+                          <strong>
+                            {rectangle.width}×{rectangle.height}
+                          </strong>
+                        </span>
+
+                        <span>
+                          PIXELS
+                          <strong>
+                            {rectangle.width * rectangle.height}
+                          </strong>
+                        </span>
+
+                        <span>
+                          VALOR
+                          <strong>
+                            R${" "}
+                            {(
+                              rectangle.width *
+                              rectangle.height
+                            )
+                              .toFixed(2)
+                              .replace(".", ",")}
+                          </strong>
+                        </span>
+                      </div>
+                    )}
+
+                    <label className="image-upload-box">
+                      <input
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+                        onChange={(event) =>
+                          processImageFile(
+                            event.target.files?.[0] ?? null,
+                          )
+                        }
+                      />
+
+                      <strong>
+                        {imageFileName
+                          ? "TROCAR IMAGEM"
+                          : "ESCOLHER IMAGEM"}
+                      </strong>
+
+                      <span>
+                        PNG, JPG, JPEG ou WEBP · até 5 MB
+                      </span>
+                    </label>
+
+                    {imageEditorError && (
+                      <div
+                        className="image-editor-error"
+                        role="alert"
+                      >
+                        {imageEditorError}
+                      </div>
+                    )}
+
+                    {imagePreviewUrl &&
+                      imagePixelPreview && (
+                        <div className="image-preview-grid">
+                          <div>
+                            <span>ORIGINAL</span>
+                            <div className="image-preview-frame">
+                              <img
+                                src={imagePreviewUrl}
+                                alt="Imagem original"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <span>
+                              COMO FICARÁ NA PAREDE
+                            </span>
+                            <div className="image-preview-frame image-preview-pixelated">
+                              <img
+                                src={imagePixelPreview}
+                                alt="Prévia pixelada"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    <div className="image-editor-note">
+                      <strong>V1 · AJUSTE AUTOMÁTICO</strong>
+                      <span>
+                        A imagem mantém a proporção e é
+                        centralizada para preencher toda a
+                        área selecionada.
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="customizer-primary"
+                      disabled={!imagePixelColors.length}
+                      onClick={applyImageToSelection}
+                    >
+                      APLICAR IMAGEM AOS{" "}
+                      {selectedCount.toLocaleString("pt-BR")} PIXELS
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+===== IMAGE CSS =====
+}
+
+
+/* IMAGE_EDITOR_V1 */
+.editor-image {
+  min-height: 42px;
+}
+
+.image-customizer {
+  z-index: 40;
+}
+
+.image-customizer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.image-selection-info {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.image-selection-info span {
+  border: 1px solid #343434;
+  padding: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 9px;
+  letter-spacing: .06em;
+  opacity: .85;
+}
+
+.image-selection-info strong {
+  font-size: 14px;
+  letter-spacing: 0;
+  opacity: 1;
+}
+
+.image-upload-box {
+  min-height: 92px;
+  border: 1px dashed #ff681d;
+  padding: 18px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.image-upload-box input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.image-upload-box strong {
+  color: #ff681d;
+  font-size: 12px;
+}
+
+.image-upload-box span {
+  font-size: 10px;
+  opacity: .58;
+}
+
+.image-editor-error {
+  border: 1px solid rgba(255, 104, 29, .65);
+  padding: 11px 12px;
+  color: #ff9c6b;
+  font-size: 11px;
+}
+
+.image-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.image-preview-grid > div {
+  min-width: 0;
+}
+
+.image-preview-grid > div > span {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  opacity: .65;
+}
+
+.image-preview-frame {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #343434;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.image-preview-frame img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.image-preview-pixelated img {
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
+.image-editor-note {
+  padding: 11px 12px;
+  border-left: 2px solid #ff681d;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 10px;
+}
+
+.image-editor-note span {
+  opacity: .65;
+  line-height: 1.5;
+}
+
+@media (max-width: 620px) {
+  .image-customizer {
+    width: calc(100% - 24px);
+    max-height: 78vh;
+    overflow-y: auto;
+  }
+
+  .image-selection-info {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .image-selection-info span {
+    padding: 9px 7px;
+  }
+
+  .image-selection-info strong {
+    font-size: 12px;
+  }
+
+  .image-preview-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+}
+
+

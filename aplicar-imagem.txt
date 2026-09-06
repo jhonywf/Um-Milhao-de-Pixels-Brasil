@@ -1,0 +1,81 @@
+      image.onerror = () => {
+        setImageEditorError(
+          "Não foi possível abrir essa imagem.",
+        );
+      };
+
+      image.src = source;
+    };
+
+    reader.onerror = () => {
+      setImageEditorError(
+        "Não foi possível ler o arquivo selecionado.",
+      );
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const applyImageToSelection = () => {
+    const rectangle = getSelectedRectangle();
+
+    if (!rectangle) {
+      setImageEditorError(
+        "A seleção não é mais uma área retangular válida.",
+      );
+      return;
+    }
+
+    if (
+      imagePixelColors.length !==
+      rectangle.width * rectangle.height
+    ) {
+      setImageEditorError(
+        "Envie uma imagem antes de aplicar.",
+      );
+      return;
+    }
+
+    setSelectedPixels((current) => {
+      const next =
+        new Map<string, SelectedPixel>(current);
+
+      let colorIndex = 0;
+
+      for (
+        let y = rectangle.minY;
+        y <= rectangle.maxY;
+        y += 1
+      ) {
+        for (
+          let x = rectangle.minX;
+          x <= rectangle.maxX;
+          x += 1
+        ) {
+          const key = `${x}:${y}`;
+          const pixel = next.get(key);
+
+          if (pixel) {
+            next.set(key, {
+              ...pixel,
+              color: imagePixelColors[colorIndex],
+            });
+          }
+
+          colorIndex += 1;
+        }
+      }
+
+      return next;
+    });
+
+    setImageEditorOpen(false);
+  };
+
+
+  const handleReserved = (reservation: WallReservationSuccess) => {
+    clearPendingPixelSelection();
+    setLastReservation(reservation);
+    setCustomizeOpen(false);
+    setRecolorMode(false);
+    setAvailablePixelPrompt(null);
