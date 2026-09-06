@@ -5938,3 +5938,153 @@ body::before {
     font-size: 9px !important;
   }
 }
+
+
+/* ADMIN_INSIGHTS_V1 */
+.admin-insights-section {
+  margin-top: 28px;
+  border: 1px solid #343434;
+  background: #111111;
+  padding: 24px;
+}
+
+.admin-visit-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.admin-visit-card {
+  min-height: 132px;
+  border: 1px solid #343434;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.admin-visit-card span,
+.admin-abandoned-summary span,
+.admin-date-filter label span {
+  font-size: 10px;
+  letter-spacing: .08em;
+  font-weight: 800;
+  opacity: .65;
+}
+
+.admin-visit-card strong {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.admin-visit-card small {
+  opacity: .58;
+  font-size: 11px;
+}
+
+.admin-visit-custom {
+  border-color: #ff681d;
+}
+
+.admin-date-filter {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.admin-date-filter label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-date-filter input {
+  height: 42px;
+  min-width: 165px;
+  padding: 0 12px;
+  border: 1px solid #343434;
+  background: #0b0b0b;
+  color: #f5f4ef;
+  font: inherit;
+}
+
+.admin-date-filter input:focus {
+  outline: 1px solid #ff681d;
+  border-color: #ff681d;
+}
+
+.admin-insights-error {
+  margin-top: 14px;
+  border: 1px solid rgba(255, 104, 29, .55);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #ff9a68;
+}
+
+.admin-abandoned-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.admin-abandoned-summary article {
+  border: 1px solid #343434;
+  padding: 18px;
+}
+
+.admin-abandoned-summary strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 24px;
+}
+
+@media (max-width: 900px) {
+  .admin-visit-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-abandoned-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .admin-insights-section {
+    padding: 15px;
+    margin-top: 18px;
+  }
+
+  .admin-visit-metrics {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .admin-visit-card {
+    min-height: 110px;
+    padding: 13px;
+  }
+
+  .admin-visit-card strong {
+    font-size: 24px;
+  }
+
+  .admin-date-filter {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-date-filter label,
+  .admin-date-filter input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-date-filter button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}

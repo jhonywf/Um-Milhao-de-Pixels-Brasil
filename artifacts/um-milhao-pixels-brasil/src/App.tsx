@@ -53,6 +53,33 @@ type AdminOrder = {
   created_at: string;
 };
 
+type AdminInsights = {
+  admin_user_id: string;
+  visits: {
+    last_24_hours: number;
+    last_7_days: number;
+    last_30_days: number;
+    custom: {
+      start: string | null;
+      end: string | null;
+      count: number | null;
+    };
+  };
+  abandoned_carts: {
+    count: number;
+    total_pixels: number;
+    total_value_cents: number;
+    items: Array<{
+      id: string;
+      user_id: string;
+      status: string;
+      pixel_count: number;
+      amount_cents: number;
+      expires_at: string;
+    }>;
+  };
+};
+
 type AdminOverview = {
   admin_user_id: string;
   metrics: {
@@ -4854,6 +4881,21 @@ function AdminPage() {
   const [overview, setOverview] =
     useState<AdminOverview | null>(null);
 
+  const [insights, setInsights] =
+    useState<AdminInsights | null>(null);
+
+  const [insightsLoading, setInsightsLoading] =
+    useState(false);
+
+  const [insightsError, setInsightsError] =
+    useState<string | null>(null);
+
+  const [analyticsStart, setAnalyticsStart] =
+    useState("");
+
+  const [analyticsEnd, setAnalyticsEnd] =
+    useState("");
+
   const [adminLoading, setAdminLoading] =
     useState(true);
 
@@ -4938,6 +4980,100 @@ function AdminPage() {
       cancelled = true;
     };
   }, [loading, user, session?.access_token]);
+
+
+  const loadAdminInsights = useCallback(
+    async (start?: string, end?: string) => {
+      if (!session?.access_token) return;
+
+      setInsightsLoading(true);
+      setInsightsError(null);
+
+      try {
+        const params = new URLSearchParams();
+
+        if (start && end) {
+          params.set("start", start);
+          params.set("end", end);
+        }
+
+        const query = params.toString();
+
+        const response = await fetch(
+          `/api/payments/mercado-pago/admin/insights${query ? `?${query}` : ""}`,
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization:
+                `Bearer ${session.access_token}`,
+            },
+            cache: "no-store",
+          },
+        );
+
+        const payload =
+          await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.message ||
+              "Não foi possível carregar as métricas.",
+          );
+        }
+
+        setInsights(payload as AdminInsights);
+      } catch (error) {
+        setInsightsError(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível carregar as métricas.",
+        );
+      } finally {
+        setInsightsLoading(false);
+      }
+    },
+    [session?.access_token],
+  );
+
+  useEffect(() => {
+    if (
+      loading ||
+      !user ||
+      !session?.access_token ||
+      forbidden
+    ) {
+      return;
+    }
+
+    void loadAdminInsights();
+  }, [
+    loading,
+    user,
+    session?.access_token,
+    forbidden,
+    loadAdminInsights,
+  ]);
+
+  const handleCustomAnalytics = () => {
+    if (!analyticsStart || !analyticsEnd) {
+      setInsightsError(
+        "Escolha a data inicial e a data final.",
+      );
+      return;
+    }
+
+    if (analyticsStart > analyticsEnd) {
+      setInsightsError(
+        "A data inicial não pode ser posterior à data final.",
+      );
+      return;
+    }
+
+    void loadAdminInsights(
+      analyticsStart,
+      analyticsEnd,
+    );
+  };
 
   if (loading || adminLoading) {
     return (
@@ -5105,6 +5241,232 @@ function AdminPage() {
             <small>Média por compra</small>
           </article>
         </div>
+
+
+        <section className="admin-insights-section">
+          <div className="admin-panel-heading">
+            <div>
+              <span className="admin-eyebrow">
+                AUDIÊNCIA
+              </span>
+              <h2>VISITAS AO SITE</h2>
+            </div>
+
+            {insightsLoading && (
+              <span className="admin-count">
+                ...
+              </span>
+            )}
+          </div>
+
+          {insightsError && (
+            <div className="admin-insights-error">
+              {insightsError}
+            </div>
+          )}
+
+          <div className="admin-visit-metrics">
+            <article className="admin-visit-card">
+              <span>ÚLTIMAS 24H</span>
+              <strong>
+                {insights
+                  ? insights.visits.last_24_hours
+                      .toLocaleString("pt-BR")
+                  : "—"}
+              </strong>
+              <small>visitas</small>
+            </article>
+
+            <article className="admin-visit-card">
+              <span>ÚLTIMOS 7 DIAS</span>
+              <strong>
+                {insights
+                  ? insights.visits.last_7_days
+                      .toLocaleString("pt-BR")
+                  : "—"}
+              </strong>
+              <small>visitas</small>
+            </article>
+
+            <article className="admin-visit-card">
+              <span>ÚLTIMOS 30 DIAS</span>
+              <strong>
+                {insights
+                  ? insights.visits.last_30_days
+                      .toLocaleString("pt-BR")
+                  : "—"}
+              </strong>
+              <small>visitas</small>
+            </article>
+
+            <article className="admin-visit-card admin-visit-custom">
+              <span>PERÍODO ESCOLHIDO</span>
+              <strong>
+                {insights?.visits.custom.count != null
+                  ? insights.visits.custom.count
+                      .toLocaleString("pt-BR")
+                  : "—"}
+              </strong>
+              <small>
+                {insights?.visits.custom.start &&
+                insights?.visits.custom.end
+                  ? `${insights.visits.custom.start} → ${insights.visits.custom.end}`
+                  : "Escolha um período abaixo"}
+              </small>
+            </article>
+          </div>
+
+          <div className="admin-date-filter">
+            <label>
+              <span>DE</span>
+              <input
+                type="date"
+                value={analyticsStart}
+                onChange={(event) =>
+                  setAnalyticsStart(event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              <span>ATÉ</span>
+              <input
+                type="date"
+                value={analyticsEnd}
+                onChange={(event) =>
+                  setAnalyticsEnd(event.target.value)
+                }
+              />
+            </label>
+
+            <button
+              type="button"
+              className="admin-primary-button"
+              onClick={handleCustomAnalytics}
+              disabled={insightsLoading}
+            >
+              {insightsLoading
+                ? "CARREGANDO..."
+                : "VER PERÍODO"}
+            </button>
+          </div>
+        </section>
+
+        <section className="admin-insights-section">
+          <div className="admin-panel-heading">
+            <div>
+              <span className="admin-eyebrow">
+                CHECKOUT
+              </span>
+              <h2>CARRINHOS ABANDONADOS</h2>
+            </div>
+
+            <span className="admin-count">
+              {insights?.abandoned_carts.count ?? 0}
+            </span>
+          </div>
+
+          <div className="admin-abandoned-summary">
+            <article>
+              <span>CARRINHOS</span>
+              <strong>
+                {(insights?.abandoned_carts.count ?? 0)
+                  .toLocaleString("pt-BR")}
+              </strong>
+            </article>
+
+            <article>
+              <span>PIXELS ABANDONADOS</span>
+              <strong>
+                {(insights?.abandoned_carts.total_pixels ?? 0)
+                  .toLocaleString("pt-BR")}
+              </strong>
+            </article>
+
+            <article>
+              <span>VALOR POTENCIAL</span>
+              <strong>
+                {formatAdminMoney(
+                  insights?.abandoned_carts
+                    .total_value_cents ?? 0,
+                )}
+              </strong>
+            </article>
+          </div>
+
+          {!insights ||
+          insights.abandoned_carts.items.length === 0 ? (
+            <div className="admin-empty">
+              <strong>
+                NENHUM CARRINHO ABANDONADO
+              </strong>
+              <p>
+                Reservas não concluídas aparecerão aqui
+                depois que expirarem ou forem canceladas.
+              </p>
+            </div>
+          ) : (
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>STATUS</th>
+                    <th>PIXELS</th>
+                    <th>VALOR</th>
+                    <th>EXPIRADO EM</th>
+                    <th>RESERVA</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {insights.abandoned_carts.items.map(
+                    (cart) => (
+                      <tr key={cart.id}>
+                        <td>
+                          <span
+                            className={
+                              "admin-status admin-status-" +
+                              cart.status
+                            }
+                          >
+                            {cart.status === "expired"
+                              ? "expirado"
+                              : cart.status === "cancelled"
+                                ? "cancelado"
+                                : cart.status}
+                          </span>
+                        </td>
+
+                        <td>
+                          {cart.pixel_count
+                            .toLocaleString("pt-BR")}
+                        </td>
+
+                        <td>
+                          {formatAdminMoney(
+                            cart.amount_cents,
+                          )}
+                        </td>
+
+                        <td>
+                          {formatAdminDate(
+                            cart.expires_at,
+                          )}
+                        </td>
+
+                        <td className="admin-reference">
+                          {cart.id
+                            .slice(0, 8)
+                            .toUpperCase()}
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
         <div className="admin-grid">
           <section className="admin-panel">
@@ -5571,12 +5933,84 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
+
+function SiteVisitTracker() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    try {
+      const storageKey = "umpb_visit_session_id";
+      let sessionId = window.sessionStorage.getItem(storageKey);
+
+      if (!sessionId) {
+        sessionId =
+          typeof crypto !== "undefined" &&
+          typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2)}`;
+
+        window.sessionStorage.setItem(
+          storageKey,
+          sessionId,
+        );
+      }
+
+      const alreadyTrackedKey =
+        "umpb_visit_already_tracked";
+
+      const alreadyTracked =
+        window.sessionStorage.getItem(
+          alreadyTrackedKey,
+        );
+
+      if (alreadyTracked === "1") {
+        return;
+      }
+
+      window.sessionStorage.setItem(
+        alreadyTrackedKey,
+        "1",
+      );
+
+      void fetch(
+        "/api/payments/mercado-pago/analytics/visit",
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            session_id: sessionId,
+            path: location || "/",
+            referrer:
+              document.referrer || null,
+          }),
+          keepalive: true,
+        },
+      ).catch(() => {
+        window.sessionStorage.removeItem(
+          alreadyTrackedKey,
+        );
+      });
+    } catch {
+      // Analytics nunca deve impedir o site de funcionar.
+    }
+  }, [location]);
+
+  return null;
+}
+
+
 function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <SiteVisitTracker />
             <Router />
           </WouterRouter>
           <Toaster />

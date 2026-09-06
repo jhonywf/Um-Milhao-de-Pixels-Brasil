@@ -262,6 +262,44 @@ async function serviceRoleGet<T>(path: string): Promise<T> {
   return await response.json() as T;
 }
 
+
+async function serviceRoleInsert(
+  table: string,
+  payload: Record<string, unknown>,
+) {
+  if (!supabaseServiceRoleKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY_MISSING");
+  }
+
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/${table}`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+        apikey: supabaseServiceRoleKey,
+        ...(supabaseServiceRoleKey.startsWith("sb_secret_")
+          ? {}
+          : {
+              Authorization:
+                `Bearer ${supabaseServiceRoleKey}`,
+            }),
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+    throw new Error(
+      `SUPABASE_SERVICE_ROLE_INSERT_FAILED:${response.status}:${details}`,
+    );
+  }
+}
+
 async function loadReservationForWebhook(reservationId: string) {
   const query = new URLSearchParams({
     select: "id,user_id,status,pixel_count,amount_cents,expires_at",
@@ -677,6 +715,325 @@ router.get("/mercado-pago/status", async (req: Request, res: Response) => {
     res.status(500).json({ message: "Não foi possível confirmar o pagamento agora." });
   }
 });
+
+
+/*
+ * ANALYTICS_V1
+ *
+ * Registra somente identificador aleatório da sessão,
+ * caminho visitado e referenciador.
+ * Não grava IP, nome ou e-mail.
+ */
+router.post(
+  "/mercado-pago/analytics/visit",
+  async (req: Request, res: Response) => {
+    try {
+      const sessionId =
+        typeof req.body?.session_id === "string"
+          ? req.body.session_id.trim().slice(0, 100)
+          : "";
+
+      const path =
+        typeof req.body?.path === "string"
+          ? req.body.path.trim().slice(0, 500)
+          : "/";
+
+      const referrer =
+        typeof req.body?.referrer === "string"
+          ? req.body.referrer.trim().slice(0, 1000)
+          : "";
+
+      if (!sessionId) {
+        res.status(400).json({
+          message: "Identificador da visita ausente.",
+        });
+        return;
+      }
+
+      await serviceRoleInsert("site_visits", {
+        session_id: sessionId,
+        path: path || "/",
+        referrer: referrer || null,
+      });
+
+      res.status(204).end();
+    } catch (error) {
+      req.log?.error(
+        { err: error },
+        "Could not register site visit",
+      );
+
+      res.status(500).json({
+        message: "Não foi possível registrar a visita.",
+      });
+    }
+  },
+);
+
+
+/*
+ * ADMIN_INSIGHTS_V1
+ *
+ * Retorna visitas e carrinhos abandonados.
+ */
+router.get(
+  "/mercado-pago/admin/insights",
+  async (req: Request, res: Response) => {
+    try {
+      const admin = await requireAdmin(req, res);
+
+      if (!admin) return;
+
+      const now = new Date();
+
+      const thirtyDaysAgo = new Date(
+        now.getTime() - 30 * 24 * 60 * 60 * 1000,
+      );
+
+      const visitsQuery = new URLSearchParams({
+        select: "session_id,created_at",
+        created_at: `gte.${thirtyDaysAgo.toISOString()}`,
+        order: "created_at.desc",
+      });
+
+      const visits = await serviceRoleGet<
+        Array<{
+          session_id: string;
+          created_at: string;
+        }>
+      >(
+        `site_visits?${visitsQuery.toString()}`,
+      );
+
+      const nowMs = now.getTime();
+
+      const countSince = (milliseconds: number) =>
+        visits.filter((visit) => {
+          const time =
+            new Date(visit.created_at).getTime();
+
+          return (
+            Number.isFinite(time) &&
+            time >= nowMs - milliseconds
+          );
+        }).length;
+
+      const visits24h = countSince(
+        24 * 60 * 60 * 1000,
+      );
+
+      const visits7d = countSince(
+        7 * 24 * 60 * 60 * 1000,
+      );
+
+      const visits30d = visits.length;
+
+      let customVisits: number | null = null;
+      let customStart: string | null = null;
+      let customEnd: string | null = null;
+
+      const rawStart = readQueryString(req.query.start);
+      const rawEnd = readQueryString(req.query.end);
+
+      if (rawStart && rawEnd) {
+        const startDate = new Date(
+          `${rawStart}T00:00:00.000`,
+        );
+
+        const endDate = new Date(
+          `${rawEnd}T23:59:59.999`,
+        );
+
+        if (
+          Number.isFinite(startDate.getTime()) &&
+          Number.isFinite(endDate.getTime()) &&
+          startDate.getTime() <= endDate.getTime()
+        ) {
+          const customQuery =
+            new URLSearchParams({
+              select: "session_id,created_at",
+              created_at:
+                `gte.${startDate.toISOString()}`,
+              order: "created_at.desc",
+            });
+
+          const customRows =
+            await serviceRoleGet<
+              Array<{
+                session_id: string;
+                created_at: string;
+              }>
+            >(
+              `site_visits?${customQuery.toString()}`,
+            );
+
+          customVisits =
+            customRows.filter((visit) => {
+              const time =
+                new Date(
+                  visit.created_at,
+                ).getTime();
+
+              return (
+                Number.isFinite(time) &&
+                time <= endDate.getTime()
+              );
+            }).length;
+
+          customStart = rawStart;
+          customEnd = rawEnd;
+        }
+      }
+
+      /*
+       * Carrinho abandonado:
+       *
+       * - reserva expirada/cancelada;
+       * - OU reserva ainda marcada active,
+       *   mas cujo expires_at já passou;
+       * - sem pedido pago correspondente.
+       */
+      const reservations =
+        await serviceRoleGet<
+          Array<{
+            id: string;
+            user_id: string;
+            status: string;
+            pixel_count: number;
+            amount_cents: number;
+            expires_at: string;
+          }>
+        >(
+          "wall_reservations?select=id,user_id,status,pixel_count,amount_cents,expires_at&order=expires_at.desc",
+        );
+
+      const orders =
+        await serviceRoleGet<
+          Array<{
+            reservation_id: string;
+            status: string;
+          }>
+        >(
+          "wall_orders?select=reservation_id,status",
+        );
+
+      const paidReservationIds =
+        new Set(
+          orders
+            .filter(
+              (order) =>
+                order.status === "paid",
+            )
+            .map(
+              (order) =>
+                order.reservation_id,
+            ),
+        );
+
+      const abandoned =
+        reservations
+          .filter((reservation) => {
+            if (
+              paidReservationIds.has(
+                reservation.id,
+              )
+            ) {
+              return false;
+            }
+
+            const expiredByTime =
+              new Date(
+                reservation.expires_at,
+              ).getTime() < nowMs;
+
+            return (
+              reservation.status ===
+                "expired" ||
+              reservation.status ===
+                "cancelled" ||
+              (
+                reservation.status ===
+                  "active" &&
+                expiredByTime
+              )
+            );
+          })
+          .map((reservation) => ({
+            id: reservation.id,
+            user_id:
+              reservation.user_id,
+            status:
+              reservation.status ===
+                "active"
+                ? "expired"
+                : reservation.status,
+            pixel_count:
+              Number(
+                reservation.pixel_count ||
+                  0,
+              ),
+            amount_cents:
+              Number(
+                reservation.amount_cents ||
+                  0,
+              ),
+            expires_at:
+              reservation.expires_at,
+          }));
+
+      const abandonedValueCents =
+        abandoned.reduce(
+          (total, reservation) =>
+            total +
+            reservation.amount_cents,
+          0,
+        );
+
+      res.status(200).json({
+        admin_user_id: admin.id,
+
+        visits: {
+          last_24_hours: visits24h,
+          last_7_days: visits7d,
+          last_30_days: visits30d,
+
+          custom: {
+            start: customStart,
+            end: customEnd,
+            count: customVisits,
+          },
+        },
+
+        abandoned_carts: {
+          count: abandoned.length,
+          total_pixels:
+            abandoned.reduce(
+              (total, reservation) =>
+                total +
+                reservation.pixel_count,
+              0,
+            ),
+          total_value_cents:
+            abandonedValueCents,
+
+          items:
+            abandoned.slice(0, 100),
+        },
+      });
+    } catch (error) {
+      req.log?.error(
+        { err: error },
+        "Could not load admin insights",
+      );
+
+      res.status(500).json({
+        message:
+          "Não foi possível carregar as métricas administrativas agora.",
+      });
+    }
+  },
+);
+
 
 router.get("/mercado-pago/admin/overview", async (req: Request, res: Response) => {
   try {
