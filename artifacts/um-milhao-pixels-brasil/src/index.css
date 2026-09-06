@@ -5700,3 +5700,144 @@ body::before {
     font-size: 8px !important;
   }
 }
+
+
+/* CLEANUP_UI_FINAL_V1 */
+
+/* ==========================================================
+   HOME — remove o antigo bloco "04 — A PAREDE"
+   ========================================================== */
+
+.preview-section {
+  display: none !important;
+}
+
+/* ==========================================================
+   HOME — COMO FUNCIONA MAIS COMPACTO
+   ========================================================== */
+
+.how-section {
+  padding-top: 54px !important;
+  padding-bottom: 54px !important;
+}
+
+.how-heading {
+  margin-top: 0 !important;
+  margin-bottom: 24px !important;
+}
+
+.steps-list {
+  gap: 0 !important;
+}
+
+.step {
+  min-height: 0 !important;
+  padding-top: 18px !important;
+  padding-bottom: 18px !important;
+}
+
+.step-icon {
+  margin-top: 8px !important;
+  margin-bottom: 10px !important;
+}
+
+.step h3 {
+  margin-top: 0 !important;
+  margin-bottom: 7px !important;
+}
+
+.step p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* ==========================================================
+   PAREDE — remove "Monte seu desenho"
+   Mantém panel-foot / seleção livre / voltar ao início.
+   ========================================================== */
+
+.selection-empty {
+  display: none !important;
+}
+
+/* O painel deixa de reservar altura desnecessária */
+.selection-panel {
+  min-height: 0 !important;
+}
+
+/* ==========================================================
+   RESUMO — com apenas o valor fica muito mais limpo
+   ========================================================== */
+
+.selection-detail {
+  grid-template-columns: 1fr !important;
+}
+
+@media (max-width: 620px) {
+
+  /* COMO FUNCIONA — mobile ainda mais compacto */
+  .how-section {
+    padding: 38px 20px !important;
+  }
+
+  .how-heading {
+    margin: 0 0 14px !important;
+  }
+
+  .steps-list {
+    margin: 0 !important;
+  }
+
+  .step,
+  .step:not(:first-child) {
+    padding: 13px 0 15px !important;
+  }
+
+  .step-icon {
+    width: 42px !important;
+    height: 42px !important;
+    margin: 5px 0 8px !important;
+  }
+
+  .step h3 {
+    margin: 0 0 4px !important;
+    font-size: 24px !important;
+  }
+
+  .step p {
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+  }
+
+  /* Sem o contador, barra fica muito mais enxuta */
+  .pixel-editor-bar {
+    padding: 5px !important;
+  }
+
+  .pixel-editor-tools {
+    grid-column: 1 / -1 !important;
+  }
+
+  .pixel-editor-actions {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 5px !important;
+  }
+
+  .pixel-editor-actions button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Remove espaço deixado pelo antigo card */
+  .selection-panel .panel-foot {
+    margin-top: 0 !important;
+  }
+
+  .wall-bottom-note {
+    margin-top: 6px !important;
+    padding: 0 3px !important;
+  }
+}

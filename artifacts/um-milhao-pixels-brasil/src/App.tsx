@@ -3687,10 +3687,10 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
             <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
               <div className="pixel-editor-tools">
                 <button className={tool === 'select' && !recolorMode ? 'active' : ''} onClick={() => { setTool('select'); setRecolorMode(false); setSelectionArmed(true); setAvailablePixelPrompt(null); }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
-                <button className={tool === 'erase' ? 'active' : ''} onClick={() => { setTool('erase'); setRecolorMode(false); }} disabled={!!lastReservation}><Eraser size={17} /> Apagar</button>
+
                 <button className={tool === 'pan' ? 'active' : ''} onClick={() => { setTool('pan'); setRecolorMode(false); }}><Hand size={17} /> Mover</button>
               </div>
-              <div className="pixel-editor-total"><strong>{selectedCount}</strong><span>pixels</span><strong>R${selectedCount.toFixed(2).replace('.', ',')}</strong></div>
+
               <div className="pixel-editor-actions">
                 <button className="editor-clear" onClick={clearSelection} disabled={!selectedCount || !!lastReservation}>Limpar</button>
                 <button className="editor-customize" onClick={() => { setSelectionNudgeOpen(false); setCustomizeOpen(true); }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
@@ -3763,7 +3763,10 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
           />
         </div>
         {wallSyncError && <div className="demo-notice" role="status">{wallSyncError} A proteção do banco continua ativa; tente atualizar a página.</div>}
-        <div className="wall-bottom-note"><Grid2X2 size={17} /> Toque e arraste para selecionar vários pixels. Toque novamente em um pixel selecionado para removê-lo. Ao continuar, sua seleção fica reservada por 15 minutos.</div>
+        <div className="wall-bottom-note">
+        <Grid2X2 size={17} />
+        Toque e arraste para selecionar vários pixels. Para remover um pixel selecionado, toque nele novamente. Ao continuar, sua seleção fica reservada por 15 minutos.
+      </div>
       </main>
     </div>
   );
@@ -4047,7 +4050,7 @@ function SelectionPanel({
           <div className="selection-summary-title"><span>Resumo da seleção</span><strong>{selectedCount} pixels</strong></div>
           <div className="selection-summary-grid">
             <div><span>valor atual</span><b>R$ {selectedCount.toFixed(2).replace('.', ',')}</b></div>
-            <div><span>primeiro pixel</span><b>{coordinateText}</b></div>
+
           </div>
           <button className="selection-button" onClick={handleReserve} disabled={reserving || !!lastReservation}>
             {reserving ? 'Reservando...' : lastReservation ? 'Seleção reservada' : 'Continuar com esta seleção'}
