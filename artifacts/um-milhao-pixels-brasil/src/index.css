@@ -5893,46 +5893,16 @@ body::before {
   }
 }
 
-/* MOBILE_TOOLBAR_READABILITY_V1 */
+/* MOBILE_BOTTOM_INFO_READABILITY_V1 */
 @media (max-width: 620px) {
-
-  /* Botões: Selecionar, Mover, Limpar e Personalizar */
-  .pixel-editor-bar button {
-    font-size: 15px !important;
-  }
-
-  /* Linha: seleção livre / voltar ao início */
-  .wall-status-bar,
-  .wall-status-bar * {
-    font-size: 12px !important;
-  }
-
-  /* Texto explicativo abaixo das ferramentas */
-  .wall-selection-hint,
-  .wall-selection-hint * {
-    font-size: 13px !important;
-    line-height: 1.45 !important;
-  }
-}
-
-/* MOBILE_TOOLBAR_READABILITY_V2 */
-@media (max-width: 620px) {
-
-  /* VERDE — ferramentas: reduzir um pouco */
-  .pixel-editor-bar button {
-    font-size: 13px !important;
-  }
-
-  /* VERMELHO — Seleção livre / Voltar ao início */
   .wall-status-bar,
   .wall-status-bar * {
     font-size: 14px !important;
   }
 
-  /* VERMELHO — instrução abaixo da barra */
   .wall-selection-hint,
   .wall-selection-hint * {
     font-size: 15px !important;
-    line-height: 1.45 !important;
+    line-height: 1.5 !important;
   }
 }
