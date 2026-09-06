@@ -73,7 +73,7 @@ function readableReservationError(payload: unknown) {
 
   if (message.includes('AUTH_REQUIRED')) return 'Entre na sua conta para reservar pixels.';
   if (message.includes('PROFILE_REQUIRED')) return 'Complete seu perfil antes de continuar.';
-  if (message.includes('MINIMUM_PIXELS')) return 'Selecione pelo menos 5 pixels para continuar.';
+  if (message.includes('MINIMUM_PIXELS')) return 'Selecione pelo menos 1 pixel para continuar.';
   if (message.includes('MAXIMUM_PIXELS')) return 'Essa seleção ultrapassa o limite máximo permitido por reserva.';
   if (message.includes('DUPLICATE_PIXELS')) return 'A seleção contém pixels duplicados. Limpe a seleção e tente novamente.';
   if (message.includes('INVALID_PIXEL')) return 'Encontramos um pixel inválido na seleção. Limpe e tente novamente.';

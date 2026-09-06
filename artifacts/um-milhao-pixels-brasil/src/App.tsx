@@ -3048,7 +3048,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     },
     {
       title: 'Confira sua seleção',
-      text: 'Depois de aplicar uma cor, sua arte aparece com as cores escolhidas e o azul fica apenas como contorno da seleção. Use Mover quando quiser navegar sem alterar os pixels. Confira a quantidade selecionada e o valor total antes de continuar. O mínimo atual é de 5 pixels.',
+      text: 'Depois de aplicar uma cor, sua arte aparece com as cores escolhidas e o azul fica apenas como contorno da seleção. Use Mover quando quiser navegar sem alterar os pixels. Confira a quantidade selecionada e o valor total antes de continuar. É possível comprar a partir de 1 pixel.',
       target: '.selection-panel',
       placement: 'top-left',
     },
@@ -3897,10 +3897,10 @@ function SelectionPanel({
 
     if (!session) return;
 
-    if (selectedCount < 5) {
+    if (selectedCount < 1) {
       clearPendingCheckoutIntent();
       autoCheckoutStartedRef.current = false;
-      setReservationError('Selecione pelo menos 5 pixels para continuar.');
+      setReservationError('Selecione pelo menos 1 pixel para continuar.');
       return;
     }
 
@@ -3949,8 +3949,8 @@ function SelectionPanel({
     setReservationError(null);
 
     if (!user || !session) {
-      if (selectedCount < 5) {
-        setReservationError('Selecione pelo menos 5 pixels para continuar.');
+      if (selectedCount < 1) {
+        setReservationError('Selecione pelo menos 1 pixel para continuar.');
         return;
       }
 
@@ -4049,7 +4049,7 @@ function SelectionPanel({
       !user ||
       !session ||
       lastReservation ||
-      selectedCount < 5 ||
+      selectedCount < 1 ||
       !hasPendingCheckoutIntent() ||
       autoCheckoutStartedRef.current
     ) {
@@ -4079,7 +4079,7 @@ function SelectionPanel({
             {!reserving && !lastReservation && <ArrowRight size={17} />}
             {lastReservation && <Check size={17} />}
           </button>
-          {selectedCount < 5 && !lastReservation && (
+          {selectedCount < 1 && !lastReservation && (
             <div className="demo-notice" role="status">Selecione mais {5 - selectedCount} {5 - selectedCount === 1 ? 'pixel' : 'pixels'} para atingir o mínimo de R$ 5,00.</div>
           )}
           {reservationError && <div className="demo-notice" role="alert">{reservationError}</div>}
