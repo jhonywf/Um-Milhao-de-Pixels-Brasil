@@ -1278,37 +1278,6 @@ function PaymentReturnExperience() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const previewPayment = params.get('preview_payment');
-
-    if (previewPayment) {
-      setPixelCount(25);
-      setAmountCents(2500);
-      setFocusHref('/parede?focus=100,100,104,104');
-      setPublicPurchaseHref(null);
-
-      if (previewPayment === 'paid') {
-        setMode('paid');
-        return;
-      }
-
-      if (previewPayment === 'pending') {
-        setMode('pending');
-        setMessage('O pagamento ainda está sendo confirmado. Seus pixels serão atualizados automaticamente após a confirmação segura.');
-        return;
-      }
-
-      if (previewPayment === 'failure') {
-        setMode('failure');
-        return;
-      }
-
-      if (previewPayment === 'error') {
-        setMode('error');
-        setMessage('Não foi possível confirmar o pagamento agora.');
-        return;
-      }
-    }
-
     const paymentReturn = params.get('payment');
     if (!paymentReturn) return;
 
@@ -5897,63 +5866,6 @@ function PublicPurchasePage() {
   useEffect(() => {
     if (!orderId) {
       setError('Obra inválida.');
-      setLoading(false);
-      return;
-    }
-
-    if (orderId === 'preview') {
-      const previewPixels = [
-        { x: 100, y: 100, color: '#ff681d' },
-        { x: 101, y: 100, color: '#ff681d' },
-        { x: 102, y: 100, color: '#111111' },
-        { x: 103, y: 100, color: '#ff681d' },
-        { x: 104, y: 100, color: '#ff681d' },
-
-        { x: 100, y: 101, color: '#111111' },
-        { x: 101, y: 101, color: '#ff681d' },
-        { x: 102, y: 101, color: '#111111' },
-        { x: 103, y: 101, color: '#ff681d' },
-        { x: 104, y: 101, color: '#111111' },
-
-        { x: 100, y: 102, color: '#111111' },
-        { x: 101, y: 102, color: '#111111' },
-        { x: 102, y: 102, color: '#ff681d' },
-        { x: 103, y: 102, color: '#111111' },
-        { x: 104, y: 102, color: '#111111' },
-
-        { x: 100, y: 103, color: '#111111' },
-        { x: 101, y: 103, color: '#ff681d' },
-        { x: 102, y: 103, color: '#111111' },
-        { x: 103, y: 103, color: '#ff681d' },
-        { x: 104, y: 103, color: '#111111' },
-
-        { x: 100, y: 104, color: '#ff681d' },
-        { x: 101, y: 104, color: '#ff681d' },
-        { x: 102, y: 104, color: '#111111' },
-        { x: 103, y: 104, color: '#ff681d' },
-        { x: 104, y: 104, color: '#ff681d' },
-      ];
-
-      setPurchase({
-        order_id: 'preview-obra-publica',
-        pixel_count: previewPixels.length,
-        paid_at: '2026-09-06T15:00:00-03:00',
-        owner: {
-          name: 'Comprador de exemplo',
-          username: null,
-          avatar_emoji: null,
-          avatar_path: null,
-        },
-        bounds: {
-          min_x: 100,
-          min_y: 100,
-          max_x: 104,
-          max_y: 104,
-        },
-        pixels: previewPixels,
-      });
-
-      setError(null);
       setLoading(false);
       return;
     }
