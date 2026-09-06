@@ -5892,3 +5892,25 @@ body::before {
     max-height: 400px !important;
   }
 }
+
+/* MOBILE_TOOLBAR_READABILITY_V1 */
+@media (max-width: 620px) {
+
+  /* Botões: Selecionar, Mover, Limpar e Personalizar */
+  .pixel-editor-bar button {
+    font-size: 15px !important;
+  }
+
+  /* Linha: seleção livre / voltar ao início */
+  .wall-status-bar,
+  .wall-status-bar * {
+    font-size: 12px !important;
+  }
+
+  /* Texto explicativo abaixo das ferramentas */
+  .wall-selection-hint,
+  .wall-selection-hint * {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+}
