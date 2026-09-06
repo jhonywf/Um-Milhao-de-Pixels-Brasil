@@ -1,0 +1,494 @@
+===== JSX ENTRE EDITOR E SELECTION PANEL =====
+4433-                        <Paintbrush size={16} />
+4434-                        PERSONALIZAR
+4435-                      </button>
+4436-                    </div>
+4437-                  </div>
+4438-                )}
+4439-
+4440-              <canvas
+4441-                ref={canvasRef}
+4442-                onPointerDown={onPointerDown}
+4443-                onPointerMove={onPointerMove}
+4444-                onPointerUp={onPointerUp}
+4445-                onPointerCancel={onPointerCancel}
+4446-                onLostPointerCapture={onPointerCancel}
+4447-                onWheel={(event) => { event.preventDefault(); zoomAt(cameraRef.current.scale + (event.deltaY > 0 ? -0.1 : 0.1), event.clientX, event.clientY); }}
+4448-                data-testid="canvas-pixel-wall"
+4449-                aria-label="Parede interativa de um milhão de pixels"
+4450-              />
+4451-            </div>
+4452-
+4453:            <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
+4454-              <div className="pixel-editor-tools">
+4455-                <button className={tool === 'select' && !recolorMode && !clearMenuOpen && !eraseAreaMode ? 'active' : ''} onClick={() => {
+4456-                  setClearMenuOpen(false);
+4457-                  setEraseAreaMode(false);
+4458-                  setImageMoveMode(false);
+4459-                  setTool('select');
+4460-                  setRecolorMode(false);
+4461-                  setSelectionArmed(true);
+4462-                  setAvailablePixelPrompt(null);
+4463-                }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
+4464-
+4465-                <button className={tool === 'pan' && !clearMenuOpen && !eraseAreaMode ? 'active' : ''} onClick={() => {
+4466-                  setClearMenuOpen(false);
+4467-                  setEraseAreaMode(false);
+4468-                  setSelectionArmed(false);
+4469-                  setTool('pan');
+4470-                  setRecolorMode(false);
+4471-                }}><Hand size={17} /> {imageMoveMode && selectionCustomized ? 'Mover imagem' : 'Mover'}</button>
+4472-              </div>
+4473-
+4474-              <div className="pixel-editor-actions">
+4475-                <div className="editor-clear-wrap">
+4476-                  <button
+4477-                    className={`editor-clear ${clearMenuOpen ? 'active' : ''}`}
+4478-                    type="button"
+4479-                    onClick={() => {
+4480-                      setClearMenuOpen((current) => !current);
+4481-                      setSelectionArmed(false);
+4482-                      setEraseAreaMode(false);
+4483-                      setCustomizeOpen(false);
+4484-                      setImageEditorOpen(false);
+4485-                      setAvailablePixelPrompt(null);
+4486-                    }}
+4487-                    disabled={!selectedCount || !!lastReservation}
+4488-                  >
+4489-                    Limpar
+4490-                  </button>
+4491-                </div>
+4492-
+4493-                {clearMenuOpen && (
+4494-                  <div
+4495-                    className="clear-floating-dialog"
+4496-                    role="dialog"
+4497-                    aria-label="Opções de limpeza"
+4498-                  >
+4499-                    <p>
+4500-                      Escolha como deseja remover os pixels selecionados.
+4501-                    </p>
+4502-
+4503-                    <div className="clear-floating-actions">
+4504-                      <button
+4505-                        type="button"
+4506-                        onClick={clearSelection}
+4507-                      >
+4508-                        LIMPAR TUDO
+4509-                      </button>
+4510-
+4511-                      <button
+4512-                        type="button"
+4513-                        onClick={() => {
+4514-                          setEraseAreaMode(true);
+4515-                          setSelectionArmed(false);
+4516-                          setTool('select');
+4517-                          setRecolorMode(false);
+4518-                          setClearMenuOpen(false);
+4519-                          setAvailablePixelPrompt(null);
+4520-                        }}
+4521-                      >
+4522-                        SELECIONAR ÁREA PARA LIMPAR
+4523-                      </button>
+4524-                    </div>
+4525-                  </div>
+4526-                )}
+4527-                <button className="editor-customize" onClick={() => {
+4528-                  setClearMenuOpen(false);
+4529-                  setEraseAreaMode(false);
+4530-                  setSelectionArmed(false);
+4531-                  setSelectionNudgeOpen(false);
+4532-                  setCustomizeOpen(true);
+4533-                }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
+4534-
+4535-              </div>
+4536-            </div>
+4537-
+4538-    
+4539-
+4540-        {imageSizePickerOpen && (
+4541-          <div
+4542-            className="pixel-customizer image-size-picker"
+4543-            role="dialog"
+4544-            aria-label="Escolher tamanho da imagem"
+4545-          >
+4546-            <div className="pixel-customizer-head">
+4547-              <strong>TAMANHO DA IMAGEM</strong>
+4548-
+4549-              <button
+4550-                type="button"
+4551-                onClick={() => {
+4552-                  setImageSizePickerOpen(false);
+4553-                  setImageSizeError(null);
+4554-                }}
+4555-                aria-label="Fechar"
+4556-              >
+4557-                <X size={20} />
+4558-              </button>
+4559-            </div>
+4560-
+4561-            <div className="pixel-customizer-body image-size-picker-body">
+4562-              <div className="image-size-intro">
+4563-                <strong>Tamanho mínimo: 10 × 10 pixels</strong>
+4564-
+4565-                <span>
+4566-                  Escolha um tamanho pronto ou informe um tamanho personalizado.
+4567-                </span>
+4568-              </div>
+4569-
+4570-              <div className="image-size-presets">
+4571-                {[10, 20, 50, 100, 200].map((size) => {
+4572-                  const total = size * size;
+4573-
+
+===== CSS SELECTION PANEL / EDITOR =====
+5935-  }
+5936-
+5937:  .selection-panel .panel-foot a {
+5938-    font-size: 9px !important;
+5939-  }
+5940-}
+5941-
+5942-
+5943-/* ADMIN_INSIGHTS_V1 */
+5944-.admin-insights-section {
+5945-  margin-top: 28px;
+5946-  border: 1px solid #343434;
+5947-  background: #111111;
+5948-  padding: 24px;
+5949-}
+--
+7111-  /*
+7112-   * Barra das quatro ferramentas.
+7113-   * Fica presa acima do resumo de compra.
+7114-   */
+7115:  .pixel-editor-bar {
+7116-    position: fixed !important;
+7117-    left: 50% !important;
+7118-    bottom: calc(100px + env(safe-area-inset-bottom)) !important;
+7119-    transform: translateX(-50%) !important;
+7120-
+7121-    z-index: 108 !important;
+7122-
+7123-    width: min(calc(100vw - 24px), 520px) !important;
+7124-    box-sizing: border-box !important;
+7125-
+7126-    margin: 0 !important;
+7127-    padding: 5px !important;
+--
+7143-  .pixel-editor-actions {
+7144-    gap: 4px !important;
+7145-  }
+7146-
+7147:  .pixel-editor-bar button {
+7148-    min-height: 31px !important;
+7149-    padding-top: 5px !important;
+7150-    padding-bottom: 5px !important;
+7151-  }
+7152-
+7153-  /*
+7154-   * Quando há seleção, o painel vira a segunda metade
+7155-   * da dock e fica grudado na parte inferior.
+7156-   */
+7157:  .selection-panel.has-selection {
+7158-    position: fixed !important;
+7159-    left: 50% !important;
+7160-    bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+7161-    transform: translateX(-50%) !important;
+7162-
+7163-    z-index: 107 !important;
+7164-
+7165-    width: min(calc(100vw - 24px), 520px) !important;
+7166-    box-sizing: border-box !important;
+7167-
+7168-    margin: 0 !important;
+7169-    padding: 6px !important;
+--
+7179-  /*
+7180-   * Remove elementos que ocupam espaço sem serem essenciais
+7181-   * durante a etapa final de posicionamento/compra.
+7182-   */
+7183:  .selection-panel.has-selection .panel-foot {
+7184-    display: none !important;
+7185-  }
+7186-
+7187:  .selection-panel.has-selection .selection-summary {
+7188-    padding: 0 !important;
+7189-    margin: 0 !important;
+7190-
+7191-    display: grid !important;
+7192-    grid-template-columns: 1fr !important;
+7193-    gap: 5px !important;
+7194-  }
+7195-
+7196-  /*
+7197-   * Transforma o cabeçalho em uma linha compacta.
+7198-   * Sai "Resumo da seleção" e fica só a quantidade.
+7199-   */
+7200:  .selection-panel.has-selection .selection-summary-title {
+7201-    min-height: 0 !important;
+7202-    margin: 0 !important;
+7203-    padding: 0 2px !important;
+7204-
+7205-    display: flex !important;
+7206-    justify-content: flex-end !important;
+7207-    align-items: center !important;
+7208-  }
+7209-
+7210:  .selection-panel.has-selection .selection-summary-title > span {
+7211-    display: none !important;
+7212-  }
+7213-
+7214:  .selection-panel.has-selection .selection-summary-title > strong {
+7215-    font-size: 9px !important;
+7216-    line-height: 1 !important;
+7217-  }
+7218-
+7219-  /*
+7220-   * Valor numa faixa pequena.
+7221-   */
+7222:  .selection-panel.has-selection .selection-summary-grid {
+7223-    margin: 0 !important;
+7224-    padding: 0 !important;
+7225-    min-height: 0 !important;
+7226-
+7227-    display: block !important;
+7228-  }
+7229-
+7230:  .selection-panel.has-selection .selection-summary-grid > div {
+7231-    min-height: 25px !important;
+7232-    padding: 4px 8px !important;
+7233-
+7234-    display: flex !important;
+7235-    align-items: center !important;
+7236-    justify-content: space-between !important;
+7237-
+7238-    border: 1px solid #292929 !important;
+7239-  }
+7240-
+7241:  .selection-panel.has-selection .selection-summary-grid span {
+7242-    font-size: 7px !important;
+7243-    line-height: 1 !important;
+7244-  }
+7245-
+7246:  .selection-panel.has-selection .selection-summary-grid b {
+7247-    font-size: 10px !important;
+7248-    line-height: 1 !important;
+7249-  }
+7250-
+7251-  /*
+7252-   * CTA principal sempre ao alcance do dedo.
+7253-   */
+7254:  .selection-panel.has-selection .selection-button {
+7255-    min-height: 34px !important;
+7256-    margin: 0 !important;
+7257-    padding: 7px 10px !important;
+7258-
+7259-    font-size: 8px !important;
+7260-    line-height: 1 !important;
+7261-  }
+7262-
+7263-  /*
+7264-   * Avisos de erro/reserva continuam aparecendo,
+7265-   * mas sem criar enormes espaços.
+7266-   */
+7267:  .selection-panel.has-selection .demo-notice {
+7268-    margin: 3px 0 0 !important;
+7269-    padding: 5px 7px !important;
+7270-    font-size: 8px !important;
+7271-  }
+7272-}
+7273-
+7274-/*
+7275- * Em celulares menores, ocupa praticamente toda a largura
+7276- * sem encostar nas bordas.
+7277- */
+7278-@media (max-width: 520px) {
+7279:  .pixel-editor-bar,
+7280:  .selection-panel.has-selection {
+7281-    width: calc(100vw - 14px) !important;
+7282-  }
+7283-
+7284:  .pixel-editor-bar {
+7285-    bottom: calc(98px + env(safe-area-inset-bottom)) !important;
+7286-  }
+7287-
+7288:  .selection-panel.has-selection {
+7289-    bottom: calc(7px + env(safe-area-inset-bottom)) !important;
+7290-  }
+7291-}
+7292-
+7293-
+7294-/* ==========================================================
+7295-   REVERTE MOBILE FLOATING DOCK V1
+7296-   Volta editor + resumo para o fluxo normal da página
+7297-   ========================================================== */
+7298-
+7299-@media (max-width: 820px) {
+7300-
+7301:  .pixel-editor-bar {
+7302-    position: relative !important;
+7303-    left: auto !important;
+7304-    bottom: auto !important;
+7305-    transform: none !important;
+7306-
+7307-    z-index: auto !important;
+7308-
+7309-    width: 100% !important;
+7310-    margin: 0 !important;
+7311-
+7312-    border-radius: 0 !important;
+7313-    box-shadow: none !important;
+7314-  }
+7315-
+7316:  .selection-panel.has-selection {
+7317-    position: relative !important;
+7318-    left: auto !important;
+7319-    bottom: auto !important;
+7320-    transform: none !important;
+7321-
+7322-    z-index: auto !important;
+7323-
+7324-    width: 100% !important;
+7325-    margin: 0 !important;
+7326-
+7327-    border-top: 1px solid #353535 !important;
+7328-    border-radius: 0 !important;
+--
+7331-
+7332-  /*
+7333-   * Volta os elementos do painel que a dock anterior escondia.
+7334-   */
+7335:  .selection-panel.has-selection .panel-foot {
+7336-    display: flex !important;
+7337-  }
+7338-
+7339:  .selection-panel.has-selection .selection-summary-title {
+7340-    justify-content: space-between !important;
+7341-    padding: initial !important;
+7342-  }
+7343-
+7344:  .selection-panel.has-selection .selection-summary-title > span {
+7345-    display: inline !important;
+7346-  }
+7347-}
+7348-
+7349-
+7350-/* ==========================================================
+7351-   PAINEL INFERIOR MAIS COMPACTO
+7352-   Mantém tudo no fluxo normal, mas reduz altura
+7353-   ========================================================== */
+7354-
+7355-@media (max-width: 820px) {
+7356-
+7357:  .pixel-editor-bar {
+7358-    padding: 5px !important;
+7359-  }
+7360-
+7361-  .pixel-editor-tools,
+7362-  .pixel-editor-actions {
+7363-    gap: 4px !important;
+7364-  }
+7365-
+7366:  .pixel-editor-bar button {
+7367-    min-height: 32px !important;
+7368-    padding: 5px 7px !important;
+7369-  }
+7370-
+7371:  .selection-panel.has-selection {
+7372-    padding: 7px !important;
+7373-  }
+7374-
+7375:  .selection-panel.has-selection .selection-content {
+7376-    padding: 0 !important;
+7377-  }
+7378-
+7379:  .selection-panel.has-selection .selection-summary {
+7380-    gap: 5px !important;
+7381-  }
+7382-
+7383:  .selection-panel.has-selection .selection-summary-title {
+7384-    margin-bottom: 4px !important;
+7385-  }
+7386-
+7387:  .selection-panel.has-selection .selection-summary-grid {
+7388-    margin: 0 0 5px !important;
+7389-  }
+7390-
+7391:  .selection-panel.has-selection .selection-summary-grid > div {
+7392-    min-height: 30px !important;
+7393-    padding: 5px 8px !important;
+7394-  }
+7395-
+7396:  .selection-panel.has-selection .selection-button {
+7397-    min-height: 38px !important;
+7398-    margin: 0 !important;
+7399-    padding: 7px 10px !important;
+7400-  }
+7401-
+7402:  .selection-panel.has-selection .panel-foot {
+7403-    min-height: 28px !important;
+7404-    padding: 5px 2px 0 !important;
+7405-  }
+7406-}
+7407-
+7408-
+7409-/* ==========================================================
+7410-   PROMPTS COMPACTOS V5
+7411-   Reserva espaço à esquerda para os controles de zoom
+7412-   ========================================================== */
+7413-
+7414-@media (max-width: 820px) {
+--
+7498-  /*
+7499-   * O painel não precisa reservar uma altura fixa.
+7500-   * Ele passa a ocupar somente a altura do conteúdo real.
+7501-   */
+7502:  .selection-panel,
+7503:  .selection-panel.has-selection {
+7504-    min-height: 0 !important;
+7505-    height: auto !important;
+7506-  }
+7507-
+7508:  .selection-panel .selection-content,
+7509:  .selection-panel.has-selection .selection-content,
+7510:  .selection-panel .selection-summary {
+7511-    min-height: 0 !important;
+7512-    height: auto !important;
+7513-  }
+7514-
+7515-  /*
+7516-   * Evita grid/flex esticando artificialmente o painel.
+7517-   */
+7518:  .selection-panel {
+7519-    grid-template-rows: auto !important;
+7520-  }
+7521-
+7522-  /*
+7523-   * Quando ainda não existe seleção, o bloco informativo vazio
+7524-   * não precisa ocupar uma grande área preta.
+7525-   */
+7526:  .selection-panel:not(.has-selection) .selection-empty {
+7527-    min-height: 0 !important;
+7528-    height: auto !important;
+7529-    margin: 0 !important;
+7530-    padding: 0 !important;
+7531-  }
+7532-
+7533-  /*
+7534-   * No mobile já temos as instruções na própria parede.
+7535-   * Portanto o bloco "Monte seu desenho" pode ser eliminado
+7536-   * para não reservar espaço sem necessidade.
+7537-   */
+7538:  .selection-panel:not(.has-selection) .compact-empty {
+7539-    display: none !important;
+7540-  }
+7541-
+7542-  /*
+7543-   * Rodapé passa a vir imediatamente depois do conteúdo.
+7544-   */
+7545:  .selection-panel .panel-foot {
+7546-    margin-top: 0 !important;
+7547-  }
+7548-}
+7549-

@@ -1,0 +1,96 @@
+        </span>
+      </div>
+
+      {tutorialOpen && (
+        <div
+          className="wall-tutorial-overlay"
+          role="presentation"
+        >
+          <div
+            className="wall-tutorial-dialog"
+            style={
+              tutorialPosition
+                ? {
+                    top: tutorialPosition.top,
+                    left: tutorialPosition.left,
+                    right: 'auto',
+                    bottom: 'auto',
+                  }
+                : undefined
+            }
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="wall-tutorial-title"
+          >
+            <div className="wall-tutorial-topline">
+              <span>
+                Tutorial da parede
+              </span>
+
+              <button
+                type="button"
+                onClick={closeWallTutorial}
+                aria-label="Fechar tutorial"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="wall-tutorial-progress">
+              <strong>
+                {tutorialStep + 1}
+              </strong>
+              <span>
+                de {wallTutorialSteps.length}
+              </span>
+
+              <div>
+                {wallTutorialSteps.map((_, index) => (
+                  <i
+                    key={index}
+                    className={
+                      index <= tutorialStep
+                        ? 'complete'
+                        : ''
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+
+            <h2 id="wall-tutorial-title">
+              {wallTutorialSteps[tutorialStep].title}
+            </h2>
+
+            <p>
+              {wallTutorialSteps[tutorialStep].text}
+            </p>
+
+            <div className="wall-tutorial-actions">
+              <button
+                type="button"
+                className="wall-tutorial-secondary"
+                onClick={() =>
+                  setTutorialStep((current) =>
+                    Math.max(0, current - 1)
+                  )
+                }
+                disabled={tutorialStep === 0}
+              >
+                Voltar
+              </button>
+
+              {tutorialStep <
+              wallTutorialSteps.length - 1 ? (
+                <button
+                  type="button"
+                  className="wall-tutorial-primary"
+                  onClick={() =>
+                    setTutorialStep((current) =>
+                      Math.min(
+                        wallTutorialSteps.length - 1,
+                        current + 1,
+                      )
+                    )
+                  }
+                >

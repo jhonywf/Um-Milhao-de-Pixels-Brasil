@@ -1,0 +1,488 @@
+
+===== TRECHO =====
+1515:                 {message}
+1516:               </p>
+1517:             )}
+1518: 
+1519:             <div
+1520:               style={{
+1521:                 display: 'grid',
+1522:                 gap: 10,
+1523:                 marginTop: 22,
+1524:               }}
+1525:             >
+1526:               <button
+1527:                 className="selection-button"
+1528:                 type="button"
+1529:                 onClick={() => window.location.assign('/meus-pixels')}
+1530:               >
+1531:                 Ver meus pixels
+1532:                 <ArrowRight size={17} />
+1533:               </button>
+1534: 
+1535:               <button
+1536:                 className="editor-customize"
+1537:                 type="button"
+1538:                 onClick={() => window.location.assign(focusHref)}
+1539:               >
+1540:                 <Crosshair size={16} />
+1541:                 Ver na parede
+1542:               </button>
+1543: 
+1544:               <button
+1545:                 className="editor-customize"
+1546:                 type="button"
+1547:                 onClick={share}
+1548:               >
+1549:                 <Share2 size={16} />
+1550:                 Compartilhar minha marca
+1551:               </button>
+1552:             </div>
+1553:           </>
+1554:         )}
+1555: 
+1556:         {mode === 'pending' && (
+1557:           <>
+1558:             <h2 style={{ fontSize: 30, lineHeight: 1, margin: '0 0 12px' }}>Pagamento em confirmação</h2>
+1559:             <p style={{ lineHeight: 1.55 }}>{message || 'Estamos aguardando a confirmação do Mercado Pago.'}</p>
+1560:             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
+1561:               {!session && <button className="selection-button" type="button" onClick={openAuth}>Entrar na minha conta</button>}
+1562:               <button className="editor-customize" type="button" onClick={close}>Voltar para a parede</button>
+1563:               
+1564:             </div>
+1565:           </>
+1566:         )}
+1567: 
+1568:         {mode === 'failure' && (
+1569:           <>
+1570:             <div style={{ width: 52, height: 52, display: 'grid', placeItems: 'center', background: '#ff681d', border: '2px solid #f5f4ef', color: '#111111' }}>
+1571:               <X size={28} />
+1572:             </div>
+1573:             <h2 style={{ fontSize: 30, lineHeight: 1, margin: '16px 0 10px' }}>Pagamento não concluído</h2>
+1574:             <p style={{ lineHeight: 1.55 }}>Nenhum pixel foi marcado como comprado. Você pode voltar à parede e tentar novamente enquanto sua reserva estiver disponível.</p>
+1575:             <button className="selection-button" type="button" onClick={close} style={{ marginTop: 18 }}>Voltar para a parede</button>
+1576:           </>
+1577:         )}
+1578: 
+1579:         {mode === 'error' && (
+1580:           <>
+1581:             <h2 style={{ fontSize: 30, lineHeight: 1, margin: '0 0 12px' }}>Não conseguimos confirmar agora</h2>
+1582:             <p style={{ lineHeight: 1.55 }}>{message}</p>
+1583:             <button className="selection-button" type="button" onClick={close} style={{ marginTop: 18 }}>Voltar para a parede</button>
+1584:           </>
+1585:         )}
+1586:       </div>
+1587:     </div>
+1588:   );
+1589: }
+1590: 
+1591: function WallPage() {
+1592:   return (
+1593:     <>
+1594:       <PaymentReturnExperience />
+1595:       <WallCanvas blocks={getPixelBlocks()} />
+1596:     </>
+1597:   );
+1598: }
+1599: 
+1600: type SelectedPixel = { x: number; y: number; color: string };
+1601: 
+1602: const pendingPixelSelectionKey = 'um-milhao-pixels.pending-selection';
+1603: const pendingPixelSelectionMaxAgeMs = 30 * 60 * 1000;
+1604: 
+
+===== TRECHO =====
+3770:       text: 'Toque em um pixel livre e escolha Selecionar pixel. Depois, toque ou arraste sobre a parede para montar a área que deseja comprar.',
+3771:       target: '[data-testid="canvas-pixel-wall"]',
+3772:       placement: 'bottom-right',
+3773:     },
+3774:     {
+3775:       title: 'Selecione vários de uma vez',
+3776:       text: 'Com Selecionar ativo, toque e arraste para marcar vários pixels de uma só vez. Você pode repetir o gesto e aumentar sua seleção.',
+3777:       target: '[data-testid="pixel-editor-bar"]',
+3778:       placement: 'top-right',
+3779:     },
+3780:     {
+3781:       title: 'Personalize sua seleção',
+3782:       text: 'Toque em Personalizar para escolher uma cor, pintar pixels individualmente ou usar uma imagem na área selecionada.',
+3783:       target: '[data-testid="pixel-editor-bar"]',
+3784:       placement: 'top-right',
+3785:     },
+3786:     {
+3787:       title: 'Use uma imagem',
+3788:       text: 'Em Personalizar, escolha Usar uma imagem. Selecione um tamanho pronto ou informe um tamanho personalizado, envie sua imagem e aplique na parede.',
+3789:       target: '[data-testid="pixel-editor-bar"]',
+3790:       placement: 'top-right',
+3791:     },
+3792:     {
+3793:       title: 'Limpe o que não quiser',
+3794:       text: 'Toque em Limpar para remover toda a seleção ou escolha Selecionar área para limpar e apague somente a parte que desejar.',
+3795:       target: '[data-testid="pixel-editor-bar"]',
+3796:       placement: 'top-right',
+3797:     },
+3798:     {
+3799:       title: 'Mova e posicione',
+3800:       text: 'Use Mover para navegar pela parede. Quando uma imagem estiver aplicada, arraste a própria imagem para posicioná-la em uma área disponível. Pixels já ocupados não podem ser sobrepostos.',
+3801:       target: '[data-testid="canvas-pixel-wall"]',
+3802:       placement: 'bottom-right',
+3803:     },
+3804:     {
+3805:       title: 'Confira e compre',
+3806:       text: 'Confira a quantidade de pixels e o valor total. Quando estiver tudo certo, toque em Continuar com esta seleção para reservar seus pixels e seguir para o pagamento.',
+3807:       target: '.selection-panel',
+3808:       placement: 'top-left',
+3809:     },
+3810:   ] as const;
+3811: 
+3812:   const closeWallTutorial = () => {
+3813:     setTutorialOpen(false);
+3814:     setTutorialStep(0);
+3815:   };
+3816: 
+3817:   useEffect(() => {
+3818:     document
+3819:       .querySelectorAll('.wall-tutorial-highlight')
+3820:       .forEach((element) =>
+3821:         element.classList.remove('wall-tutorial-highlight')
+3822:       );
+3823: 
+3824:     if (!tutorialOpen) {
+3825:       setTutorialPosition(null);
+3826:       return;
+3827:     }
+
+===== TRECHO =====
+4485:                     className={`editor-clear ${clearMenuOpen ? 'active' : ''}`}
+4486:                     type="button"
+4487:                     onClick={() => {
+4488:                       setClearMenuOpen((current) => !current);
+4489:                       setSelectionArmed(false);
+4490:                       setEraseAreaMode(false);
+4491:                       setCustomizeOpen(false);
+4492:                       setImageEditorOpen(false);
+4493:                       setAvailablePixelPrompt(null);
+4494:                     }}
+4495:                     disabled={!selectedCount || !!lastReservation}
+4496:                   >
+4497:                     Limpar
+4498:                   </button>
+4499:                 </div>
+4500: 
+4501:                 {clearMenuOpen && (
+4502:                   <div
+4503:                     className="clear-floating-dialog"
+4504:                     role="dialog"
+4505:                     aria-label="Opções de limpeza"
+4506:                   >
+4507:                     <p>
+4508:                       Escolha como deseja remover os pixels selecionados.
+4509:                     </p>
+4510: 
+4511:                     <div className="clear-floating-actions">
+4512:                       <button
+4513:                         type="button"
+4514:                         onClick={clearSelection}
+4515:                       >
+4516:                         LIMPAR TUDO
+4517:                       </button>
+4518: 
+4519:                       <button
+4520:                         type="button"
+4521:                         onClick={() => {
+4522:                           setEraseAreaMode(true);
+4523:                           setSelectionArmed(false);
+4524:                           setTool('select');
+4525:                           setRecolorMode(false);
+4526:                           setClearMenuOpen(false);
+4527:                           setAvailablePixelPrompt(null);
+4528:                         }}
+4529:                       >
+4530:                         SELECIONAR ÁREA PARA LIMPAR
+4531:                       </button>
+4532:                     </div>
+4533:                   </div>
+4534:                 )}
+4535:                 <button className="editor-customize" onClick={() => {
+4536:                   setClearMenuOpen(false);
+4537:                   setEraseAreaMode(false);
+4538:                   setSelectionArmed(false);
+4539:                   setSelectionNudgeOpen(false);
+4540:                   setCustomizeOpen(true);
+4541:                 }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
+4542: 
+4543:               </div>
+4544:             </div>
+4545: 
+4546:     
+4547: 
+4548:         {imageSizePickerOpen && (
+4549:           <div
+4550:             className="pixel-customizer image-size-picker"
+4551:             role="dialog"
+4552:             aria-label="Escolher tamanho da imagem"
+4553:           >
+4554:             <div className="pixel-customizer-head">
+4555:               <strong>TAMANHO DA IMAGEM</strong>
+4556: 
+4557:               <button
+4558:                 type="button"
+4559:                 onClick={() => {
+4560:                   setImageSizePickerOpen(false);
+4561:                   setImageSizeError(null);
+4562:                 }}
+4563:                 aria-label="Fechar"
+4564:               >
+4565:                 <X size={20} />
+4566:               </button>
+4567:             </div>
+4568: 
+4569:             <div className="pixel-customizer-body image-size-picker-body">
+4570:               <div className="image-size-intro">
+4571:                 <strong>Tamanho mínimo: 10 × 10 pixels</strong>
+4572: 
+4573:                 <span>
+4574:                   Escolha um tamanho pronto ou informe um tamanho personalizado.
+4575:                 </span>
+4576:               </div>
+4577: 
+4578:               <div className="image-size-presets">
+4579:                 {[10, 20, 50, 100, 200].map((size) => {
+4580:                   const total = size * size;
+4581: 
+4582:                   return (
+4583:                     <button
+4584:                       key={size}
+4585:                       type="button"
+4586:                       className="image-size-preset"
+4587:                       onClick={() =>
+4588:                         selectAutomaticImageSquare(size)
+4589:                       }
+4590:                     >
+
+===== TRECHO =====
+4652: 
+4653:               {imageSizeError && (
+4654:                 <div className="image-size-error">
+4655:                   {imageSizeError}
+4656:                 </div>
+4657:               )}
+4658:             </div>
+4659:           </div>
+4660:         )}
+4661: 
+4662:         {imageEditorOpen && (
+4663:           <div
+4664:             className="pixel-customizer image-customizer"
+4665:             role="dialog"
+4666:             aria-label="Adicionar imagem"
+4667:           >
+4668:             <div className="pixel-customizer-head">
+4669:               <strong>ADICIONAR UMA IMAGEM</strong>
+4670: 
+4671:               <button
+4672:                 type="button"
+4673:                 onClick={() => setImageEditorOpen(false)}
+4674:                 aria-label="Fechar"
+4675:               >
+4676:                 <X size={20} />
+4677:               </button>
+4678:             </div>
+4679: 
+4680:             <div className="pixel-customizer-body image-customizer-body">
+4681:               {(() => {
+4682:                 const rectangle = getSelectedRectangle();
+4683: 
+4684:                 return (
+4685:                   <>
+4686:                     <p>
+4687:                       Envie uma imagem para transformar sua
+4688:                       seleção em pixels reais da parede.
+4689:                     </p>
+4690: 
+4691:                     {rectangle && (
+4692:                       <div className="image-selection-info">
+4693:                         <span>
+4694:                           ÁREA
+4695:                           <strong>
+4696:                             {rectangle.width}×{rectangle.height}
+4697:                           </strong>
+4698:                         </span>
+4699: 
+4700:                         <span>
+4701:                           PIXELS
+
+===== TRECHO =====
+4723:                       <input
+4724:                         type="file"
+4725:                         accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+4726:                         onChange={(event) =>
+4727:                           processImageFile(
+4728:                             event.target.files?.[0] ?? null,
+4729:                           )
+4730:                         }
+4731:                       />
+4732: 
+4733:                       <strong>
+4734:                         {imageFileName
+4735:                           ? "TROCAR IMAGEM"
+4736:                           : "ESCOLHER IMAGEM"}
+4737:                       </strong>
+4738: 
+4739:                       <span>
+4740:                         PNG, JPG, JPEG ou WEBP · até 5 MB
+4741:                       </span>
+4742:                     </label>
+4743: 
+4744:                     {imageEditorError && (
+4745:                       <div
+4746:                         className="image-editor-error"
+4747:                         role="alert"
+4748:                       >
+4749:                         {imageEditorError}
+4750:                       </div>
+4751:                     )}
+4752: 
+4753:                     {imagePreviewUrl &&
+4754:                       imagePixelPreview && (
+4755:                         <div className="image-preview-grid">
+4756:                           <div>
+4757:                             <span>ORIGINAL</span>
+
+===== TRECHO =====
+4783:                         A imagem mantém a proporção e é
+4784:                         centralizada para preencher toda a
+4785:                         área selecionada.
+4786:                       </span>
+4787:                     </div>
+4788: 
+4789:                     <button
+4790:                       type="button"
+4791:                       className="customizer-primary"
+4792:                       disabled={!imagePixelColors.length}
+4793:                       onClick={applyImageToSelection}
+4794:                     >
+4795:                       APLICAR IMAGEM AOS{" "}
+4796:                       {selectedCount.toLocaleString("pt-BR")} PIXELS
+4797:                     </button>
+4798:                   </>
+4799:                 );
+4800:               })()}
+4801:             </div>
+4802:           </div>
+4803:         )}
+4804: 
+4805:         {customizeOpen && (
+4806:               <div className="pixel-customizer" role="dialog" aria-label="Personalizar pixels">
+4807:                 <div className="pixel-customizer-head"><strong>Personalizar {selectedCount} pixels</strong><button onClick={() => setCustomizeOpen(false)} aria-label="Fechar"><X size={20} /></button></div>
+4808:                 <div className="pixel-customizer-body">
+4809:                   <div className="customizer-image-section">
+4810:                     <span className="customizer-method-label">
+4811:                       IMAGEM
+4812:                     </span>
+4813: 
+4814:                     <button
+4815:                       className="customizer-image-option"
+4816:                       type="button"
+4817:                       onClick={() => {
+4818:                         setCustomizeOpen(false);
+4819:                         setImageSizeError(null);
+4820:                         setImageSizePickerOpen(true);
+4821:                       }}
+4822:                       disabled={!selectedCount || !!lastReservation}
+4823:                     >
+4824:                       <strong className="customizer-image-option-title">
+4825:                         USAR UMA IMAGEM
+4826:                       </strong>
+4827: 
+4828:                       <span className="customizer-image-option-description">
+4829:                         Envie uma foto, logo ou arte para preencher os pixels selecionados
+4830:                       </span>
+4831:                     </button>
+4832: 
+4833:                     <div className="customizer-method-divider">
+4834:                       <span>OU PERSONALIZE COM UMA COR</span>
+4835:                     </div>
+4836:                   </div>
+4837:                   <p>Escolha uma cor. Você pode aplicar em todos ou pintar somente os pixels que quiser.</p>
+4838:                   <div className="pixel-palette">
+4839:                     {PIXEL_PALETTE.map((color) => (
+4840:                     <button
+4841:                       key={color}
+4842:                       type="button"
+4843:                       className={activeColor === color && !customColorActive ? 'active' : ''}
+4844:                       onClick={() => {
+4845:                         setActiveColor(color);
+4846:                         setCustomColorActive(false);
+
+===== TRECHO =====
+5184:       {selectedBlock ? (
+5185:         <div className="selection-content compact-selection">
+5186:           <span className="selection-type">área ocupada</span><h2>{selectedBlock.name}</h2><p>{selectedBlock.detail}</p>
+5187:           <div className="selection-detail"><span>coordenada</span><b>{coordinateText}</b></div>
+5188:         </div>
+5189:       ) : selectedCount > 0 ? (
+5190:         <div className="selection-content selection-summary">
+5191:           <div className="selection-summary-title"><span>Resumo da seleção</span><strong>{selectedCount} pixels</strong></div>
+5192:           <div className="selection-summary-grid">
+5193:             <div><span>valor atual</span><b>R$ {selectedCount.toFixed(2).replace('.', ',')}</b></div>
+5194: 
+5195:           </div>
+5196:           <button className="selection-button" onClick={handleReserve} disabled={reserving || !!lastReservation}>
+5197:             {reserving ? 'Reservando...' : lastReservation ? 'Seleção reservada' : 'Continuar com esta seleção'}
+5198:             {!reserving && !lastReservation && <ArrowRight size={17} />}
+5199:             {lastReservation && <Check size={17} />}
+5200:           </button>
+5201:           {selectedCount < 1 && !lastReservation && (
+5202:             <div className="demo-notice" role="status">Selecione mais {5 - selectedCount} {5 - selectedCount === 1 ? 'pixel' : 'pixels'} para atingir o mínimo de R$ 5,00.</div>
+5203:           )}
+5204:           {reservationError && <div className="demo-notice" role="alert">{reservationError}</div>}
+5205:           {lastReservation && (
+5206:             <>
+5207:               <div
+5208:                 className={`demo-notice reservation-countdown ${
+5209:                   reservationExpired
+5210:                     ? 'reservation-expired'
+5211:                     : reservationSecondsLeft !== null && reservationSecondsLeft <= 180
+5212:                       ? 'reservation-warning'
+5213:                       : ''
+5214:                 }`}
+5215:                 role="status"
+5216:               >
+5217:                 {reservationExpired ? (
+5218:                   <>
+
+===== TRECHO =====
+5224:                     <Check size={15} />
+5225:                     <span>{lastReservation.pixel_count} pixels reservados</span>
+5226:                     {reservationClock && (
+5227:                       <strong className="reservation-clock">{reservationClock}</strong>
+5228:                     )}
+5229:                     <span>
+5230:                       Valor: R$ {(lastReservation.amount_cents / 100).toFixed(2).replace('.', ',')}
+5231:                     </span>
+5232:                   </>
+5233:                 )}
+5234:               </div>
+5235:               <button
+5236:                 className="selection-button"
+5237:                 type="button"
+5238:                 onClick={
+5239:                   reservationExpired
+5240:                     ? handleExpiredReservationReset
+5241:                     : handlePayment
+5242:                 }
+5243:                 disabled={openingCheckout}
+5244:               >
+5245:                 {reservationExpired
+5246:                   ? 'Selecionar novamente'
+5247:                   : openingCheckout
+5248:                     ? 'Abrindo Mercado Pago...'
+5249:                     : 'Voltar ao checkout'}
+5250:                 {!openingCheckout && <ArrowRight size={17} />}
+5251:               </button>
+5252:               {paymentError && <div className="demo-notice" role="alert">{paymentError}</div>}
+5253:             </>
+5254:           )}
+5255:         </div>
+5256:       ) : (
+5257:         <div className="selection-empty compact-empty"><div className="empty-cross"><Crosshair size={24} /></div><div><h2>Monte seu desenho.</h2><p>Arraste com um dedo para navegar. Toque em um pixel livre para selecioná-lo. Use dois dedos para ampliar ou reduzir.</p></div></div>

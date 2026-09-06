@@ -1,0 +1,1003 @@
+===== TUTORIAL NO APP.TSX =====
+3724-          if (pixel) {
+3725-            next.set(key, {
+3726-              ...pixel,
+3727-              color: imagePixelColors[colorIndex],
+3728-            });
+3729-          }
+3730-
+3731-          colorIndex += 1;
+3732-        }
+3733-      }
+3734-
+3735-      return next;
+3736-    });
+3737-
+3738-    setImageEditorOpen(false);
+3739-    setImageMoveMode(true);
+3740-    setTool('pan');
+3741-    setSelectionArmed(false);
+3742-  };
+3743-
+3744-
+3745-  const handleReserved = (reservation: WallReservationSuccess) => {
+3746-    clearPendingPixelSelection();
+3747-    setLastReservation(reservation);
+3748-    setCustomizeOpen(false);
+3749-    setRecolorMode(false);
+3750-    setAvailablePixelPrompt(null);
+3751-  };
+3752-
+3753-
+3754:  const [tutorialOpen, setTutorialOpen] = useState(false);
+3755:  const [tutorialStep, setTutorialStep] = useState(0);
+3756:  const [tutorialPosition, setTutorialPosition] = useState<{
+3757-    top: number;
+3758-    left: number;
+3759-  } | null>(null);
+3760-
+3761:  const wallTutorialSteps = [
+3762-    {
+3763-      title: 'Bem-vindo à parede',
+3764-      text: 'Esta é uma parede compartilhada de 1 milhão de pixels. Você escolhe espaços livres, personaliza sua seleção e, após o pagamento confirmado, aqueles pixels passam a fazer parte permanentemente da parede.',
+3765-      target: '[data-testid="canvas-pixel-wall"]',
+3766-      placement: 'bottom-right',
+3767-    },
+3768-    {
+3769-      title: 'Explore a parede',
+3770-      text: 'Enquanto estiver apenas explorando, arraste com um dedo para navegar pela parede. Use dois dedos para ampliar ou reduzir. Você também pode usar os botões + e − ao lado da parede.',
+3771-      target: '.floating-zoom',
+3772-      placement: 'top-right',
+3773-    },
+3774-    {
+3775-      title: 'Escolha o primeiro pixel',
+3776-      text: 'Toque em um pixel livre. Ele ficará destacado e aparecerá a opção Selecionar pixel. Confirme para começar sua seleção. Os pixels selecionados aparecem em azul claro enquanto você monta sua área.',
+3777-      target: '[data-testid="canvas-pixel-wall"]',
+3778-      placement: 'bottom-right',
+3779-    },
+3780-    {
+3781-      title: 'Selecione vários de uma vez',
+3782-      text: 'Depois de entrar no modo Selecionar, toque e arraste com um dedo para criar um bloco retangular inteiro de pixels de uma vez. Você pode soltar o dedo e repetir o gesto em outro lugar para juntar vários blocos e criar letras, formas ou desenhos.',
+3783-      target: '[data-testid="pixel-editor-bar"]',
+3784-      placement: 'top-right',
+3785-    },
+3786-    {
+3787-      title: 'Corrija e personalize',
+3788-      text: 'Selecionou um pixel por engano? Basta tocar novamente nele para desselecioná-lo. A ferramenta Apagar continua disponível para remoções maiores. Quando sua forma estiver pronta, toque em Personalizar para escolher uma cor para todos ou pintar pixel por pixel.',
+3789-      target: '[data-testid="pixel-editor-bar"]',
+3790-      placement: 'top-right',
+3791-    },
+3792-    {
+3793-      title: 'Confira sua seleção',
+3794-      text: 'Depois de aplicar uma cor, sua arte aparece com as cores escolhidas e o azul fica apenas como contorno da seleção. Use Mover quando quiser navegar sem alterar os pixels. Confira a quantidade selecionada e o valor total antes de continuar. É possível comprar a partir de 1 pixel.',
+3795-      target: '.selection-panel',
+3796-      placement: 'top-left',
+3797-    },
+3798-    {
+3799-      title: 'Reserva e pagamento',
+3800-      text: 'Quando estiver satisfeito, toque em Continuar com esta seleção. Se ainda não estiver conectado, você fará login. Seus pixels ficam reservados por 15 minutos enquanto você conclui o pagamento pelo Mercado Pago. Após a confirmação, eles passam a ser seus na parede.',
+3801-      target: '.selection-panel',
+3802-      placement: 'auto',
+3803-    },
+3804-  ] as const;
+3805-
+3806:  const closeWallTutorial = () => {
+3807:    setTutorialOpen(false);
+3808:    setTutorialStep(0);
+3809-  };
+3810-
+3811-  useEffect(() => {
+3812-    document
+3813:      .querySelectorAll('.wall-tutorial-highlight')
+3814-      .forEach((element) =>
+3815:        element.classList.remove('wall-tutorial-highlight')
+3816-      );
+3817-
+3818:    if (!tutorialOpen) {
+3819:      setTutorialPosition(null);
+3820-      return;
+3821-    }
+3822-
+3823:    const step = wallTutorialSteps[tutorialStep];
+3824-    const target = step?.target
+3825-      ? document.querySelector(step.target)
+3826-      : null;
+3827-
+3828-    if (target instanceof HTMLElement) {
+3829:      target.classList.add('wall-tutorial-highlight');
+3830-
+3831-      target.scrollIntoView({
+3832-        behavior: 'smooth',
+3833-        block: 'center',
+3834-        inline: 'center',
+3835-      });
+3836-    }
+3837-
+3838-    const calculatePosition = () => {
+3839-      const dialog = document.querySelector(
+3840:        '.wall-tutorial-dialog'
+3841-      );
+3842-
+3843-      if (!(dialog instanceof HTMLElement)) return;
+3844-
+3845-      const viewportWidth = window.innerWidth;
+3846-      const viewportHeight = window.innerHeight;
+3847-
+3848-      const margin = 18;
+3849-      const gap = 18;
+3850-
+3851-      const dialogRect = dialog.getBoundingClientRect();
+3852-      const dialogWidth = dialogRect.width;
+3853-      const dialogHeight = dialogRect.height;
+3854-
+3855-      if (!(target instanceof HTMLElement)) {
+3856:        setTutorialPosition({
+3857-          top: margin,
+3858-          left: Math.max(
+3859-            margin,
+3860-            viewportWidth - dialogWidth - margin,
+3861-          ),
+3862-        });
+3863-        return;
+3864-      }
+3865-
+3866-      const targetRect = target.getBoundingClientRect();
+3867-
+3868-
+3869-      /*
+3870-       * Etapas críticas:
+3871-       * 4 e 5 precisam deixar o editor completamente visível.
+3872-       * 6 precisa deixar o resumo/CTA completamente visível.
+3873-       *
+3874:       * tutorialStep é zero-based:
+3875-       * passo 4 = 3
+3876-       * passo 5 = 4
+3877-       * passo 6 = 5
+3878-       */
+3879-      const criticalStep =
+3880:        tutorialStep === 3 ||
+3881:        tutorialStep === 4 ||
+3882:        tutorialStep === 5;
+3883-
+3884-      if (criticalStep) {
+3885-        const safeGap = 24;
+3886-
+3887-        const clampCritical = (
+3888-          value: number,
+3889-          min: number,
+3890-          max: number,
+3891-        ) => Math.min(Math.max(value, min), max);
+3892-
+3893-        let preferredTop: number;
+3894-
+3895:        if (tutorialStep === 5) {
+3896-          /*
+3897-           * PASSO 6:
+3898-           * caixa acima do resumo/CTA.
+3899-           */
+3900-          preferredTop =
+3901-            targetRect.top -
+3902-            dialogHeight -
+3903-            safeGap;
+3904-        } else {
+3905-          /*
+3906-           * PASSOS 4 e 5:
+3907-           * caixa abaixo do painel de ferramentas.
+3908-           */
+3909-          preferredTop =
+3910-            targetRect.bottom +
+3911-            safeGap;
+3912-        }
+3913-
+3914-        let preferredLeft =
+3915-          targetRect.left +
+3916-          targetRect.width / 2 -
+3917-          dialogWidth / 2;
+3918-
+3919-        preferredLeft = clampCritical(
+3920-          preferredLeft,
+3921-          margin,
+3922-          Math.max(
+3923-            margin,
+3924-            viewportWidth - dialogWidth - margin,
+3925-          ),
+3926-        );
+3927-
+3928-        preferredTop = clampCritical(
+3929-          preferredTop,
+3930-          margin,
+3931-          Math.max(
+3932-            margin,
+3933-            viewportHeight - dialogHeight - margin,
+3934-          ),
+3935-        );
+3936-
+3937-        /*
+3938-         * Segurança extra:
+3939-         * se a posição preferida ainda cruzar o alvo por falta
+3940-         * de espaço vertical, move para o lado com mais espaço.
+3941-         */
+3942-        const proposedBottom =
+3943-          preferredTop + dialogHeight;
+3944-
+3945-        const overlapsVertically =
+3946-          proposedBottom > targetRect.top &&
+3947-          preferredTop < targetRect.bottom;
+3948-
+3949-        const proposedRight =
+3950-          preferredLeft + dialogWidth;
+3951-
+3952-        const overlapsHorizontally =
+3953-          proposedRight > targetRect.left &&
+3954-          preferredLeft < targetRect.right;
+3955-
+3956-        if (
+3957-          overlapsVertically &&
+3958-          overlapsHorizontally
+3959-        ) {
+3960-          const spaceRight =
+3961-            viewportWidth -
+3962-            targetRect.right -
+3963-            safeGap;
+3964-
+3965-          const spaceLeft =
+3966-            targetRect.left -
+3967-            safeGap;
+3968-
+3969-          if (
+3970-            spaceRight >= dialogWidth ||
+3971-            spaceRight >= spaceLeft
+3972-          ) {
+3973-            preferredLeft =
+3974-              targetRect.right + safeGap;
+3975-          } else {
+3976-            preferredLeft =
+3977-              targetRect.left -
+3978-              dialogWidth -
+3979-              safeGap;
+3980-          }
+3981-
+3982-          preferredLeft = clampCritical(
+3983-            preferredLeft,
+3984-            margin,
+3985-            Math.max(
+3986-              margin,
+3987-              viewportWidth -
+3988-                dialogWidth -
+3989-                margin,
+3990-            ),
+3991-          );
+3992-        }
+3993-
+3994:        setTutorialPosition({
+3995-          top: preferredTop,
+3996-          left: preferredLeft,
+3997-        });
+3998-
+3999-        return;
+4000-      }
+4001-
+4002-      const candidates = [
+4003-        {
+4004-          name: 'right',
+4005-          top:
+4006-            targetRect.top +
+4007-            targetRect.height / 2 -
+4008-            dialogHeight / 2,
+4009-          left: targetRect.right + gap,
+4010-        },
+4011-        {
+4012-          name: 'left',
+4013-          top:
+4014-            targetRect.top +
+4015-            targetRect.height / 2 -
+4016-            dialogHeight / 2,
+4017-          left: targetRect.left - dialogWidth - gap,
+4018-        },
+4019-        {
+4020-          name: 'bottom',
+4021-          top: targetRect.bottom + gap,
+4022-          left:
+4023-            targetRect.left +
+4024-            targetRect.width / 2 -
+4025-            dialogWidth / 2,
+4026-        },
+4027-        {
+4028-          name: 'top',
+4029-          top: targetRect.top - dialogHeight - gap,
+4030-          left:
+4031-            targetRect.left +
+4032-            targetRect.width / 2 -
+4033-            dialogWidth / 2,
+4034-        },
+4035-      ];
+4036-
+4037-      const clamp = (
+4038-        value: number,
+4039-        min: number,
+4040-        max: number,
+4041-      ) =>
+4042-        Math.min(Math.max(value, min), max);
+4043-
+4044-      const overlapArea = (
+4045-        a: {
+4046-          left: number;
+4047-          top: number;
+4048-          right: number;
+4049-          bottom: number;
+4050-        },
+4051-        b: {
+4052-          left: number;
+4053-          top: number;
+4054-          right: number;
+4055-          bottom: number;
+4056-        },
+4057-      ) => {
+4058-        const width = Math.max(
+4059-          0,
+4060-          Math.min(a.right, b.right) -
+4061-            Math.max(a.left, b.left),
+4062-        );
+4063-
+4064-        const height = Math.max(
+4065-          0,
+4066-          Math.min(a.bottom, b.bottom) -
+4067-            Math.max(a.top, b.top),
+4068-        );
+4069-
+4070-        return width * height;
+4071-      };
+4072-
+4073-      const scored = candidates.map((candidate) => {
+4074-        const left = clamp(
+4075-          candidate.left,
+4076-          margin,
+4077-          Math.max(
+4078-            margin,
+4079-            viewportWidth - dialogWidth - margin,
+4080-          ),
+4081-        );
+4082-
+4083-        const top = clamp(
+4084-          candidate.top,
+4085-          margin,
+4086-          Math.max(
+4087-            margin,
+4088-            viewportHeight - dialogHeight - margin,
+4089-          ),
+4090-        );
+4091-
+4092-        const rect = {
+4093-          left,
+4094-          top,
+4095-          right: left + dialogWidth,
+4096-          bottom: top + dialogHeight,
+4097-        };
+4098-
+4099-        const overlap = overlapArea(rect, targetRect);
+4100-
+4101-        const overflow =
+4102-          Math.max(0, margin - left) +
+4103-          Math.max(0, margin - top) +
+4104-          Math.max(
+4105-            0,
+4106-            rect.right - (viewportWidth - margin),
+4107-          ) +
+4108-          Math.max(
+4109-            0,
+4110-            rect.bottom - (viewportHeight - margin),
+4111-          );
+4112-
+4113-        return {
+4114-          ...candidate,
+4115-          left,
+4116-          top,
+4117-          overlap,
+4118-          overflow,
+4119-        };
+4120-      });
+4121-
+4122-      scored.sort((a, b) => {
+4123-        if (a.overlap !== b.overlap) {
+4124-          return a.overlap - b.overlap;
+4125-        }
+4126-
+4127-        return a.overflow - b.overflow;
+4128-      });
+4129-
+4130-      const best = scored[0];
+4131-
+4132:      setTutorialPosition({
+4133-        top: best.top,
+4134-        left: best.left,
+4135-      });
+4136-    };
+4137-
+4138-    const firstTimer = window.setTimeout(
+4139-      calculatePosition,
+4140-      360,
+4141-    );
+4142-
+4143-    const secondTimer = window.setTimeout(
+4144-      calculatePosition,
+4145-      700,
+4146-    );
+4147-
+4148-    window.addEventListener(
+4149-      'resize',
+4150-      calculatePosition,
+4151-    );
+4152-
+4153-    return () => {
+4154-      window.clearTimeout(firstTimer);
+4155-      window.clearTimeout(secondTimer);
+4156-      window.removeEventListener(
+4157-        'resize',
+4158-        calculatePosition,
+4159-      );
+4160-
+4161-      if (target instanceof HTMLElement) {
+4162-        target.classList.remove(
+4163:          'wall-tutorial-highlight'
+4164-        );
+4165-      }
+4166-    };
+4167:  }, [tutorialOpen, tutorialStep]);
+4168-
+4169-  return (
+4170-    <div className="wall-page">
+4171-      <Header />
+4172-      <LiveWallTicker />
+4173-
+4174:      <div className="wall-tutorial-bar">
+4175-        <button
+4176-          type="button"
+4177:          className="wall-tutorial-launch"
+4178-          onClick={() => {
+4179:            setTutorialStep(0);
+4180:            setTutorialOpen(true);
+4181-          }}
+4182:          data-testid="button-wall-tutorial"
+4183-        >
+4184:          <span className="wall-tutorial-question">?</span>
+4185:          Tutorial da parede
+4186-        </button>
+4187-
+4188-        <span>
+4189-          primeira vez aqui? veja como funciona em menos de 1 minuto
+4190-        </span>
+4191-      </div>
+4192-
+4193:      {tutorialOpen && (
+4194-        <div
+4195:          className="wall-tutorial-overlay"
+4196-          role="presentation"
+4197-        >
+4198-          <div
+4199:            className="wall-tutorial-dialog"
+4200-            style={
+4201:              tutorialPosition
+4202-                ? {
+4203:                    top: tutorialPosition.top,
+4204:                    left: tutorialPosition.left,
+4205-                    right: 'auto',
+4206-                    bottom: 'auto',
+4207-                  }
+4208-                : undefined
+4209-            }
+4210-            role="dialog"
+4211-            aria-modal="true"
+4212:            aria-labelledby="wall-tutorial-title"
+4213-          >
+4214:            <div className="wall-tutorial-topline">
+4215-              <span>
+4216:                Tutorial da parede
+4217-              </span>
+4218-
+4219-              <button
+4220-                type="button"
+4221:                onClick={closeWallTutorial}
+4222:                aria-label="Fechar tutorial"
+4223-              >
+
+===== CSS DO TUTORIAL =====
+2376-  }
+2377-}
+2378-
+2379-
+2380-/* =========================================================
+2381-   TUTORIAL DA PAREDE
+2382-   ========================================================= */
+2383-
+2384:.wall-tutorial-bar {
+2385-  min-height: 48px;
+2386-  padding: 8px clamp(18px, 4vw, 56px);
+2387-  display: flex;
+2388-  align-items: center;
+2389-  gap: 16px;
+2390-  background: #101010;
+2391-  border-bottom: 1px solid #292929;
+2392-  color: #777;
+2393-  font-size: 10px;
+2394-  font-weight: 700;
+2395-  text-transform: uppercase;
+2396-  letter-spacing: .04em;
+2397-}
+2398-
+2399:.wall-tutorial-launch {
+2400-  flex: 0 0 auto;
+2401-  display: inline-flex;
+2402-  align-items: center;
+2403-  gap: 9px;
+2404-  min-height: 32px;
+2405-  padding: 6px 12px;
+2406-  background: transparent;
+2407-  color: #f5f4ef;
+2408-  border: 1px solid #3a3a3a;
+2409-  font: inherit;
+2410-  font-size: 10px;
+2411-  font-weight: 800;
+2412-  text-transform: uppercase;
+2413-  letter-spacing: .04em;
+2414-  cursor: pointer;
+2415-}
+2416-
+2417:.wall-tutorial-launch:hover {
+2418-  color: #ff681d;
+2419-  border-color: #ff681d;
+2420-}
+2421-
+2422:.wall-tutorial-question {
+2423-  width: 20px;
+2424-  height: 20px;
+2425-  display: grid;
+2426-  place-items: center;
+2427-  border-radius: 50%;
+2428-  background: #ff681d;
+2429-  color: #090909;
+2430-  font-size: 13px;
+2431-  font-weight: 900;
+2432-}
+2433-
+2434:.wall-tutorial-overlay {
+2435-  position: fixed;
+2436-  inset: 0;
+2437-  z-index: 9998;
+2438-  background: rgba(0, 0, 0, .58);
+2439-  pointer-events: none;
+2440-}
+2441-
+2442:.wall-tutorial-dialog {
+2443-  position: fixed;
+2444-  right: clamp(16px, 4vw, 48px);
+2445-  bottom: clamp(16px, 4vw, 48px);
+2446-  z-index: 10000;
+2447-  width: min(440px, calc(100vw - 32px));
+2448-  padding: 24px;
+2449-  background: #111;
+2450-  color: #f5f4ef;
+2451-  border: 1px solid #4a4a4a;
+2452-  box-shadow: 10px 10px 0 rgba(255, 104, 29, .28);
+2453-  pointer-events: auto;
+2454-}
+2455-
+2456:.wall-tutorial-topline {
+2457-  display: flex;
+2458-  justify-content: space-between;
+2459-  align-items: center;
+2460-  margin-bottom: 18px;
+2461-  color: #ff681d;
+2462-  font-size: 10px;
+2463-  font-weight: 900;
+2464-  text-transform: uppercase;
+2465-  letter-spacing: .08em;
+2466-}
+2467-
+2468:.wall-tutorial-topline button {
+2469-  width: 32px;
+2470-  height: 32px;
+2471-  display: grid;
+2472-  place-items: center;
+2473-  background: transparent;
+2474-  color: #f5f4ef;
+2475-  border: 1px solid #333;
+2476-  font-size: 22px;
+2477-  cursor: pointer;
+2478-}
+2479-
+2480:.wall-tutorial-progress {
+2481-  display: grid;
+2482-  grid-template-columns: auto auto 1fr;
+2483-  align-items: center;
+2484-  gap: 7px;
+2485-  margin-bottom: 24px;
+2486-}
+2487-
+2488:.wall-tutorial-progress strong {
+2489-  color: #ff681d;
+2490-  font-size: 25px;
+2491-}
+2492-
+2493:.wall-tutorial-progress > span {
+2494-  color: #777;
+2495-  font-size: 11px;
+2496-}
+2497-
+2498:.wall-tutorial-progress > div {
+2499-  display: flex;
+2500-  gap: 4px;
+2501-  margin-left: 8px;
+2502-}
+2503-
+2504:.wall-tutorial-progress i {
+2505-  height: 3px;
+2506-  flex: 1;
+2507-  min-width: 16px;
+2508-  background: #303030;
+2509-}
+2510-
+2511:.wall-tutorial-progress i.complete {
+2512-  background: #ff681d;
+2513-}
+2514-
+2515:.wall-tutorial-dialog h2 {
+2516-  margin: 0 0 12px;
+2517-  color: #f5f4ef;
+2518-  font-size: clamp(24px, 4vw, 34px);
+2519-  line-height: .98;
+2520-}
+2521-
+2522:.wall-tutorial-dialog p {
+2523-  margin: 0 0 24px;
+2524-  color: #aaa;
+2525-  font-size: 14px;
+2526-  line-height: 1.6;
+2527-}
+2528-
+2529:.wall-tutorial-actions {
+2530-  display: grid;
+2531-  grid-template-columns: auto 1fr;
+2532-  gap: 8px;
+2533-}
+2534-
+2535:.wall-tutorial-actions button {
+2536-  min-height: 46px;
+2537-  padding: 10px 16px;
+2538-  font: inherit;
+2539-  font-size: 11px;
+2540-  font-weight: 900;
+2541-  text-transform: uppercase;
+2542-  cursor: pointer;
+2543-}
+2544-
+2545:.wall-tutorial-primary {
+2546-  background: #ff681d;
+2547-  color: #090909;
+2548-  border: 1px solid #ff681d;
+2549-}
+2550-
+2551:.wall-tutorial-secondary {
+2552-  background: #181818;
+2553-  color: #f5f4ef;
+2554-  border: 1px solid #383838;
+2555-}
+2556-
+2557:.wall-tutorial-secondary:disabled {
+2558-  opacity: .35;
+2559-  cursor: default;
+2560-}
+2561-
+2562:.wall-tutorial-skip {
+2563-  width: 100%;
+2564-  margin-top: 10px;
+2565-  padding: 8px;
+2566-  background: transparent;
+2567-  border: 0;
+2568-  color: #6f6f6f;
+2569-  font: inherit;
+2570-  font-size: 10px;
+2571-  font-weight: 700;
+2572-  text-decoration: underline;
+2573-  cursor: pointer;
+2574-}
+2575-
+2576:.wall-tutorial-highlight {
+2577-  position: relative;
+2578-  z-index: 9999 !important;
+2579-  outline: 3px solid #ff681d !important;
+2580-  outline-offset: 6px;
+2581-  box-shadow:
+2582-    0 0 0 9999px rgba(0, 0, 0, .12),
+2583-    0 0 28px rgba(255, 104, 29, .45) !important;
+2584-}
+2585-
+2586-@media (max-width: 620px) {
+2587:  .wall-tutorial-bar {
+2588-    justify-content: space-between;
+2589-  }
+2590-
+2591:  .wall-tutorial-bar > span {
+2592-    display: none;
+2593-  }
+2594-
+2595:  .wall-tutorial-dialog {
+2596-    right: 12px;
+2597-    bottom: 12px;
+2598-    width: calc(100vw - 24px);
+2599-    padding: 20px;
+2600-  }
+2601-
+2602:  .wall-tutorial-actions {
+2603-    grid-template-columns: 1fr;
+2604-  }
+2605-
+2606:  .wall-tutorial-primary {
+2607-    grid-row: 1;
+2608-  }
+2609-
+2610:  .wall-tutorial-secondary {
+2611-    grid-row: 2;
+2612-  }
+2613-}
+2614-
+2615-
+2616-/* =========================================================
+2617-   CORREÇÃO DE CAMADAS — TUTORIAL DA PAREDE
+2618-   ========================================================= */
+2619-
+2620-/* Tutorial sempre acima de toda a interface */
+2621:.wall-tutorial-overlay {
+2622-  z-index: 50000 !important;
+2623-  background: rgba(0, 0, 0, .62) !important;
+2624-}
+2625-
+2626:/* Caixa do tutorial é o elemento mais alto */
+2627:.wall-tutorial-dialog {
+2628-  z-index: 50002 !important;
+2629-  isolation: isolate;
+2630-}
+2631-
+2632-/*
+2633-  O elemento explicado NÃO pode criar uma camada
+2634:  acima do overlay, senão cobre o próprio tutorial.
+2635-*/
+2636:.wall-tutorial-highlight {
+2637-  z-index: auto !important;
+2638-  outline: 3px solid #ff681d !important;
+2639-  outline-offset: 5px !important;
+2640-  box-shadow:
+2641-    0 0 0 2px rgba(255, 104, 29, .22),
+2642-    0 0 30px rgba(255, 104, 29, .65) !important;
+2643-}
+2644-
+2645:/* Garante que Canvas / editor não ultrapassem o tutorial */
+2646-.wall-page .canvas-stage,
+2647-.wall-page canvas,
+2648-.wall-page .pixel-editor-card,
+2649-.wall-page .pixel-editor-bar,
+2650-.wall-page .selection-panel,
+2651-.wall-page .floating-zoom {
+2652-  z-index: auto;
+2653-}
+2654-
+2655-/* No tablet/celular a caixa fica totalmente dentro da tela */
+2656-@media (max-width: 900px) {
+2657:  .wall-tutorial-dialog {
+2658-    max-height: calc(100dvh - 36px);
+2659-    overflow-y: auto;
+2660-  }
+2661-}
+2662-
+2663-@media (max-width: 620px) {
+2664:  .wall-tutorial-dialog {
+2665-    width: auto !important;
+2666-    max-height: calc(100dvh - 24px);
+2667-  }
+2668-}
+2669-
+2670-
+2671-/* =========================================================
+2672-   TUTORIAL 2.0 — MENOR E ADAPTATIVO
+2673-   ========================================================= */
+2674-
+2675:.wall-tutorial-dialog {
+2676-  width: min(350px, calc(100vw - 32px)) !important;
+2677-  padding: 18px !important;
+2678-
+2679-  max-height: min(74vh, 520px);
+2680-  overflow-y: auto;
+2681-  transition:
+2682-    top .28s ease,
+2683-    right .28s ease,
+2684-    bottom .28s ease,
+2685-    left .28s ease;
+2686-}
+2687-
+2688-/* posições utilizadas conforme cada etapa */
+2689-
+2690:.wall-tutorial-top-right {
+2691-  top: 20px !important;
+2692-  right: 20px !important;
+2693-  left: auto !important;
+2694-  bottom: auto !important;
+2695-}
+2696-
+2697:.wall-tutorial-top-left {
+2698-  top: 20px !important;
+2699-  left: 20px !important;
+2700-  right: auto !important;
+2701-  bottom: auto !important;
+2702-}
+2703-
+2704:.wall-tutorial-bottom-right {
+2705-  bottom: 20px !important;
+2706-  right: 20px !important;
+2707-  left: auto !important;
+2708-  top: auto !important;
+2709-}
+2710-
+2711:.wall-tutorial-bottom-left {
+2712-  bottom: 20px !important;
+2713-  left: 20px !important;
+2714-  right: auto !important;
+2715-  top: auto !important;
+2716-}
+2717-
+2718-/* tipografia mais compacta */
+2719-
+2720:.wall-tutorial-topline {
+2721-  margin-bottom: 12px !important;
+2722-}
+2723-
+2724:.wall-tutorial-progress {
+2725-  margin-bottom: 16px !important;
+2726-}
+2727-
+2728:.wall-tutorial-progress strong {
+2729-  font-size: 21px !important;
+2730-}
+2731-
+2732:.wall-tutorial-dialog h2 {
+2733-  margin-bottom: 9px !important;
+2734-  font-size: clamp(21px, 3vw, 28px) !important;
+2735-  line-height: 1.05 !important;
+2736-}
+2737-
+2738:.wall-tutorial-dialog p {
+2739-  margin-bottom: 17px !important;
+2740-  font-size: 12.5px !important;
+2741-  line-height: 1.52 !important;
+2742-}
+2743-
+2744:.wall-tutorial-actions button {
+2745-  min-height: 40px !important;
+2746-  padding: 8px 12px !important;
+2747-  font-size: 10px !important;
+2748-}
+2749-
+2750:.wall-tutorial-skip {
+2751-  margin-top: 6px !important;
+2752-}
+2753-
+2754-/* deixa o destaque mais elegante */
+2755:.wall-tutorial-highlight {
+2756-  outline-width: 2px !important;
+2757-  outline-offset: 4px !important;
+2758-}
+2759-
+2760-/* tablet */
+2761-@media (min-width: 621px) and (max-width: 1000px) {
+2762:  .wall-tutorial-dialog {
+2763-    width: min(330px, calc(100vw - 32px)) !important;
+2764-    max-height: 68vh;
+2765-  }
+2766-
+2767:  .wall-tutorial-top-right {
+2768-    top: 14px !important;
+2769-    right: 14px !important;
+2770-  }
+2771-
+2772:  .wall-tutorial-top-left {
+2773-    top: 14px !important;
+2774-    left: 14px !important;
+2775-  }
+2776-
+2777:  .wall-tutorial-bottom-right {
+2778-    right: 14px !important;
+2779-    bottom: 14px !important;
+2780-  }
+2781-
+2782:  .wall-tutorial-bottom-left {
+2783-    left: 14px !important;
+2784-    bottom: 14px !important;
+2785-  }
+2786-}
+2787-
+2788-/* celular */
+2789-@media (max-width: 620px) {
+2790:  .wall-tutorial-dialog {
+2791-    width: auto !important;
+2792-    padding: 16px !important;
+2793-    max-height: 58vh;
+2794-  }
+2795-
+2796-  /*
+2797-    Se estivermos ensinando algo na parte inferior,
+2798:    sobe o tutorial para liberar essa área.
+2799-  */
+2800:  .wall-tutorial-top-right,
+2801:  .wall-tutorial-top-left {
+2802-    top: 10px !important;
+2803-    bottom: auto !important;
+2804-  }
+2805-
+2806:  .wall-tutorial-bottom-right,
+2807:  .wall-tutorial-bottom-left {
+2808-    bottom: 10px !important;
+2809-    top: auto !important;
+2810-  }
+2811-}
+2812-
+2813-
+2814-/* =========================================================
+2815-   TUTORIAL 3.0 — POSIÇÃO REALMENTE DINÂMICA
+2816-   ========================================================= */
+2817-
+2818:.wall-tutorial-dialog {
+2819-  position: fixed !important;
+2820-  width: min(330px, calc(100vw - 28px)) !important;
+2821-  max-height: min(66vh, 470px) !important;
+2822-  padding: 16px !important;
+2823-  margin: 0 !important;
+2824-  transition:
+2825-    top .22s ease,
+2826-    left .22s ease !important;
+2827-}
+2828-
+2829-/* As posições antigas deixam de mandar */
+2830:.wall-tutorial-top-right,
+2831:.wall-tutorial-top-left,
+2832:.wall-tutorial-bottom-right,
+2833:.wall-tutorial-bottom-left {
+2834-  top: auto !important;
+2835-  right: auto !important;
+2836-  bottom: auto !important;
+2837-  left: auto !important;
+2838-}
+2839-
+2840-/* Um pouco mais compacto */
+2841:.wall-tutorial-dialog h2 {
+2842-  font-size: clamp(20px, 2.6vw, 26px) !important;
+2843-}
+2844-
+2845:.wall-tutorial-dialog p {
+2846-  font-size: 12px !important;
+2847-  line-height: 1.48 !important;
+2848-}
+2849-
+2850:.wall-tutorial-progress {
+2851-  margin-bottom: 13px !important;
+2852-}
+2853-
+2854:.wall-tutorial-actions button {
+2855-  min-height: 38px !important;
+2856-}
+2857-
+2858-/* No celular ainda menor */
+2859-@media (max-width: 620px) {
+2860:  .wall-tutorial-dialog {
+2861-    width: min(310px, calc(100vw - 20px)) !important;
+2862-    max-height: 52vh !important;
+2863-    padding: 14px !important;
+2864-  }
+2865-}
+2866-
+2867-
+2868-/* =========================================================
+2869-   TUTORIAL 4.0 — JANELA COMPACTA
+2870-   Mantém toda a lógica de posicionamento existente.
+2871-   ========================================================= */
+2872-
+2873:.wall-tutorial-dialog {
+2874-  width: min(250px, calc(100vw - 24px)) !important;
+2875-  max-height: min(54vh, 360px) !important;

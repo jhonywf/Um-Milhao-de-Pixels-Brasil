@@ -1744,6 +1744,9 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [customizeOpen, setCustomizeOpen] = useState(false);
 
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
+  const [imageSizePickerOpen, setImageSizePickerOpen] = useState(false);
+  const [customImageSize, setCustomImageSize] = useState("50");
+  const [imageSizeError, setImageSizeError] = useState<string | null>(null);
   const [imageEditorError, setImageEditorError] = useState<string | null>(null);
   const [imageFileName, setImageFileName] = useState("");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -1751,6 +1754,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [imagePixelColors, setImagePixelColors] = useState<string[]>([]);
 
   const [selectionCustomized, setSelectionCustomized] = useState(false);
+  const [imageMoveMode, setImageMoveMode] = useState(false);
   const [selectionNudgeOpen, setSelectionNudgeOpen] = useState(false);
   const [clearMenuOpen, setClearMenuOpen] = useState(false);
   const [eraseAreaMode, setEraseAreaMode] = useState(false);
@@ -1777,6 +1781,15 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     startX: number;
     startY: number;
     base: Map<string, SelectedPixel>;
+  } | null>(null);
+
+  const imageMoveRef = useRef<{
+    pointerId: number;
+    startWorldX: number;
+    startWorldY: number;
+    base: Map<string, SelectedPixel>;
+    lastDx: number;
+    lastDy: number;
   } | null>(null);
   const pendingTouchRef = useRef<{
     pointerId: number;
@@ -2652,10 +2665,77 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setCamera(nextCamera);
   };
 
+  const clampCamera = (candidate: {
+    x: number;
+    y: number;
+    scale: number;
+  }) => {
+    const stage = stageRef.current;
+
+    const scale = Math.min(
+      maxZoom,
+      Math.max(minZoom, candidate.scale),
+    );
+
+    if (!stage) {
+      return {
+        ...candidate,
+        scale,
+      };
+    }
+
+    const rect = stage.getBoundingClientRect();
+
+    /*
+     * A parede possui 1000 × 1000 pixels e é desenhada
+     * em torno do ponto central 500,500.
+     */
+    const wallHalfSize = 500 * scale;
+
+    const viewportHalfWidth = rect.width / 2;
+    const viewportHalfHeight = rect.height / 2;
+
+    /*
+     * Se a parede couber inteira em determinado eixo,
+     * ela permanece obrigatoriamente centralizada.
+     *
+     * Se for maior que a área visível, permitimos navegar
+     * somente até que a borda da parede encontre a borda
+     * da área visível.
+     */
+    const maxX = Math.max(
+      0,
+      wallHalfSize - viewportHalfWidth,
+    );
+
+    const maxY = Math.max(
+      0,
+      wallHalfSize - viewportHalfHeight,
+    );
+
+    return {
+      x:
+        maxX === 0
+          ? 0
+          : Math.max(-maxX, Math.min(maxX, candidate.x)),
+
+      y:
+        maxY === 0
+          ? 0
+          : Math.max(-maxY, Math.min(maxY, candidate.y)),
+
+      scale,
+    };
+  };
+
   const zoomAt = (nextScale: number, clientX?: number, clientY?: number) => {
     const bounded = Math.min(maxZoom, Math.max(minZoom, nextScale));
     if (clientX === undefined || clientY === undefined) {
-      const nextCamera = { ...cameraRef.current, scale: bounded };
+      const nextCamera = clampCamera({
+        ...cameraRef.current,
+        scale: bounded,
+      });
+
       cameraRef.current = nextCamera;
       setCamera(nextCamera);
       return;
@@ -2665,11 +2745,12 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       const stage = stageRef.current;
       if (!stage) return { ...current, scale: bounded };
       const rect = stage.getBoundingClientRect();
-      const nextCamera = {
+      const nextCamera = clampCamera({
         x: clientX - rect.left - rect.width / 2 - (before.x - 500) * bounded,
         y: clientY - rect.top - rect.height / 2 - (before.y - 500) * bounded,
         scale: bounded,
-      };
+      });
+
       cameraRef.current = nextCamera;
       return nextCamera;
     });
@@ -2705,11 +2786,12 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     if (!pinch || !geometry || !stage) return;
     const rect = stage.getBoundingClientRect();
     const nextScale = Math.min(maxZoom, Math.max(minZoom, pinch.camera.scale * geometry.distance / pinch.distance));
-    const nextCamera = {
+    const nextCamera = clampCamera({
       x: geometry.midpoint.x - rect.left - rect.width / 2 - (pinch.worldAtMidpoint.x - 500) * nextScale,
       y: geometry.midpoint.y - rect.top - rect.height / 2 - (pinch.worldAtMidpoint.y - 500) * nextScale,
       scale: nextScale,
-    };
+    });
+
     cameraRef.current = nextCamera;
     setCamera(nextCamera);
   };
@@ -2731,12 +2813,43 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
       paintRef.current = null;
       pendingTouchRef.current = null;
+      imageMoveRef.current = null;
       startPinch();
       return;
     }
 
     const current = cameraRef.current;
     dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: current.x, originY: current.y, moved: false };
+
+    if (
+      tool === 'pan' &&
+      imageMoveMode &&
+      selectionCustomized &&
+      selectedPixels.size > 0
+    ) {
+      const world = screenToWorld(
+        event.clientX,
+        event.clientY,
+      );
+
+      const x = Math.floor(world.x);
+      const y = Math.floor(world.y);
+
+      if (selectedPixels.has(`${x}:${y}`)) {
+        imageMoveRef.current = {
+          pointerId: event.pointerId,
+          startWorldX: world.x,
+          startWorldY: world.y,
+          base: new Map(selectedPixels),
+          lastDx: 0,
+          lastDy: 0,
+        };
+
+        setIsDragging(true);
+        return;
+      }
+    }
+
     if (tool === 'pan') return;
 
     const world = screenToWorld(event.clientX, event.clientY);
@@ -2886,12 +2999,109 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       return;
     }
 
+    /*
+     * Se este gesto já virou multitouch/pinch e agora restou
+     * apenas um dedo na tela, não transforme esse dedo
+     * automaticamente em PAN nem em movimento da imagem.
+     *
+     * Esperamos todos os dedos saírem e o próximo gesto começar
+     * do zero. Isso evita saltos gigantes de câmera no Safari/iPad.
+     */
+    if (gestureRef.current.multiTouch) {
+      setIsDragging(false);
+      return;
+    }
+
     const dx = event.clientX - dragRef.current.startX;
     const dy = event.clientY - dragRef.current.startY;
     if (Math.hypot(dx, dy) > 3) dragRef.current.moved = true;
 
+    const imageMove = imageMoveRef.current;
+
+    if (
+      imageMove &&
+      imageMove.pointerId === event.pointerId
+    ) {
+      const world = screenToWorld(
+        event.clientX,
+        event.clientY,
+      );
+
+      const moveX = Math.round(
+        world.x - imageMove.startWorldX,
+      );
+
+      const moveY = Math.round(
+        world.y - imageMove.startWorldY,
+      );
+
+      if (
+        moveX === imageMove.lastDx &&
+        moveY === imageMove.lastDy
+      ) {
+        return;
+      }
+
+      let valid = true;
+
+      for (const pixel of imageMove.base.values()) {
+        const nextX = pixel.x + moveX;
+        const nextY = pixel.y + moveY;
+
+        if (
+          nextX < 0 ||
+          nextX >= 1000 ||
+          nextY < 0 ||
+          nextY >= 1000
+        ) {
+          valid = false;
+          break;
+        }
+
+        if (
+          claimedAt(nextX, nextY) ||
+          occupiedAt(nextX + 0.5, nextY + 0.5)
+        ) {
+          valid = false;
+          break;
+        }
+      }
+
+      if (valid) {
+        const next = new Map<string, SelectedPixel>();
+
+        for (const pixel of imageMove.base.values()) {
+          const movedPixel = {
+            ...pixel,
+            x: pixel.x + moveX,
+            y: pixel.y + moveY,
+          };
+
+          next.set(
+            `${movedPixel.x}:${movedPixel.y}`,
+            movedPixel,
+          );
+        }
+
+        imageMove.lastDx = moveX;
+        imageMove.lastDy = moveY;
+
+        setSelectedPixels(next);
+        setAvailablePixelPrompt(null);
+        setSelectedBlock(null);
+      }
+
+      setIsDragging(true);
+      return;
+    }
+
     if (tool === 'pan') {
-      const nextCamera = { ...cameraRef.current, x: dragRef.current.originX + dx, y: dragRef.current.originY + dy };
+      const nextCamera = clampCamera({
+        ...cameraRef.current,
+        x: dragRef.current.originX + dx,
+        y: dragRef.current.originY + dy,
+      });
+
       cameraRef.current = nextCamera;
       setCamera(nextCamera);
       setIsDragging(true);
@@ -2952,11 +3162,11 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       if (movedDistance > 4) {
         pending.moved = true;
 
-        const nextCamera = {
+        const nextCamera = clampCamera({
           ...cameraRef.current,
           x: dragRef.current.originX + dx,
           y: dragRef.current.originY + dy,
-        };
+        });
 
         cameraRef.current = nextCamera;
         setCamera(nextCamera);
@@ -2982,6 +3192,13 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     const pending = pendingTouchRef.current?.pointerId === event.pointerId ? pendingTouchRef.current : null;
 
     pointersRef.current.delete(event.pointerId);
+
+    if (
+      imageMoveRef.current?.pointerId === event.pointerId
+    ) {
+      imageMoveRef.current = null;
+      setIsDragging(false);
+    }
 
     if (
       rectangleSelectRef.current?.pointerId === event.pointerId
@@ -3039,7 +3256,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       paintRef.current = null;
     }
 
-    if (pointersRef.current.size < 2) {
+    if (pointersRef.current.size === 0) {
       gestureRef.current.multiTouch = false;
     }
 
@@ -3060,9 +3277,10 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
     if (pendingTouchRef.current?.pointerId === event.pointerId) pendingTouchRef.current = null;
     paintRef.current = null;
+    imageMoveRef.current = null;
     pinchRef.current = null;
 
-    if (pointersRef.current.size < 2) {
+    if (pointersRef.current.size === 0) {
       gestureRef.current.multiTouch = false;
     }
 
@@ -3133,6 +3351,126 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       width,
       height,
     };
+  };
+
+
+  const selectAutomaticImageSquare = (requestedSize: number) => {
+    if (lastReservation) return;
+
+    const size = Math.floor(requestedSize);
+
+    if (!Number.isFinite(size) || size < 10 || size > 200) {
+      setImageSizeError(
+        "Informe um tamanho entre 10 e 200 pixels.",
+      );
+      return;
+    }
+
+    /*
+     * Usa a seleção atual como referência.
+     * Se não houver seleção, usa o centro da área visível da parede.
+     */
+    let centerX = 500;
+    let centerY = 500;
+
+    const currentPixels = Array.from(selectedPixels.values());
+
+    if (currentPixels.length) {
+      const xs = currentPixels.map((pixel) => pixel.x);
+      const ys = currentPixels.map((pixel) => pixel.y);
+
+      centerX =
+        (Math.min(...xs) + Math.max(...xs) + 1) / 2;
+
+      centerY =
+        (Math.min(...ys) + Math.max(...ys) + 1) / 2;
+    } else {
+      const canvas = canvasRef.current;
+
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+
+        const world = screenToWorld(
+          rect.left + rect.width / 2,
+          rect.top + rect.height / 2,
+        );
+
+        centerX = world.x;
+        centerY = world.y;
+      }
+    }
+
+    let startX = Math.round(centerX - size / 2);
+    let startY = Math.round(centerY - size / 2);
+
+    startX = Math.max(
+      0,
+      Math.min(1000 - size, startX),
+    );
+
+    startY = Math.max(
+      0,
+      Math.min(1000 - size, startY),
+    );
+
+    /*
+     * Antes de criar a seleção, verifica se existe algum pixel
+     * já comprado/reservado dentro da área.
+     */
+    for (let y = startY; y < startY + size; y += 1) {
+      for (let x = startX; x < startX + size; x += 1) {
+        if (
+          claimedAt(x, y) ||
+          occupiedAt(x + 0.5, y + 0.5)
+        ) {
+          setImageSizeError(
+            "Essa área encontrou pixels já ocupados. Em seguida vamos adicionar a opção de mover a imagem para escolher outra posição.",
+          );
+          return;
+        }
+      }
+    }
+
+    const next = new Map<string, SelectedPixel>();
+
+    for (let y = startY; y < startY + size; y += 1) {
+      for (let x = startX; x < startX + size; x += 1) {
+        const key = `${x}:${y}`;
+
+        next.set(key, {
+          x,
+          y,
+          color: activeColor,
+        });
+      }
+    }
+
+    setSelectedPixels(next);
+    setSelectedBlock(null);
+    setAvailablePixelPrompt(null);
+
+    /*
+     * Depois da seleção automática, deixamos a parede em MOVER.
+     * Isso evita que a pessoa arraste o dedo e selecione pixels
+     * extras sem querer.
+     */
+    setSelectionArmed(false);
+    setSelectionCustomized(false);
+    setSelectionNudgeOpen(false);
+    setEraseAreaMode(false);
+    setClearMenuOpen(false);
+    setTool('pan');
+
+    setImageSizeError(null);
+    setImageSizePickerOpen(false);
+    setCustomizeOpen(false);
+
+    /*
+     * Reaproveita exatamente o editor de imagem que já funciona.
+     */
+    requestAnimationFrame(() => {
+      openImageEditor();
+    });
   };
 
   const openImageEditor = () => {
@@ -3398,6 +3736,9 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     });
 
     setImageEditorOpen(false);
+    setImageMoveMode(true);
+    setTool('pan');
+    setSelectionArmed(false);
   };
 
 
@@ -3419,48 +3760,96 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
   const wallTutorialSteps = [
     {
-      title: 'Bem-vindo à parede',
-      text: 'Esta é uma parede compartilhada de 1 milhão de pixels. Você escolhe espaços livres, personaliza sua seleção e, após o pagamento confirmado, aqueles pixels passam a fazer parte permanentemente da parede.',
-      target: '[data-testid="canvas-pixel-wall"]',
-      placement: 'bottom-right',
-    },
-    {
-      title: 'Explore a parede',
-      text: 'Enquanto estiver apenas explorando, arraste com um dedo para navegar pela parede. Use dois dedos para ampliar ou reduzir. Você também pode usar os botões + e − ao lado da parede.',
+      title: 'Navegue e use o zoom',
+      text: 'Use Mover para explorar a parede. Arraste com um dedo para navegar e use dois dedos para dar zoom. Você também pode usar os botões + e −.',
       target: '.floating-zoom',
       placement: 'top-right',
     },
     {
-      title: 'Escolha o primeiro pixel',
-      text: 'Toque em um pixel livre. Ele ficará destacado e aparecerá a opção Selecionar pixel. Confirme para começar sua seleção. Os pixels selecionados aparecem em azul claro enquanto você monta sua área.',
+      title: 'Selecione seus pixels',
+      text: 'Toque em um pixel livre e escolha Selecionar pixel. Depois, toque ou arraste sobre a parede para montar a área que deseja comprar.',
       target: '[data-testid="canvas-pixel-wall"]',
       placement: 'bottom-right',
     },
     {
       title: 'Selecione vários de uma vez',
-      text: 'Depois de entrar no modo Selecionar, toque e arraste com um dedo para criar um bloco retangular inteiro de pixels de uma vez. Você pode soltar o dedo e repetir o gesto em outro lugar para juntar vários blocos e criar letras, formas ou desenhos.',
+      text: 'Com Selecionar ativo, toque e arraste para marcar vários pixels de uma só vez. Você pode repetir o gesto para aumentar sua seleção.',
       target: '[data-testid="pixel-editor-bar"]',
       placement: 'top-right',
     },
     {
-      title: 'Corrija e personalize',
-      text: 'Selecionou um pixel por engano? Basta tocar novamente nele para desselecioná-lo. A ferramenta Apagar continua disponível para remoções maiores. Quando sua forma estiver pronta, toque em Personalizar para escolher uma cor para todos ou pintar pixel por pixel.',
-      target: '[data-testid="pixel-editor-bar"]',
+      title: 'Personalize sua seleção',
+      text: 'Aqui você pode usar uma imagem ou escolher uma cor para sua seleção. Também é possível pintar pixels individualmente.',
+      target: '.pixel-customizer',
       placement: 'top-right',
     },
     {
-      title: 'Confira sua seleção',
-      text: 'Depois de aplicar uma cor, sua arte aparece com as cores escolhidas e o azul fica apenas como contorno da seleção. Use Mover quando quiser navegar sem alterar os pixels. Confira a quantidade selecionada e o valor total antes de continuar. É possível comprar a partir de 1 pixel.',
-      target: '.selection-panel',
+      title: 'Use uma imagem',
+      text: 'Escolha Usar uma imagem para enviar uma foto, logo ou arte. Depois você poderá definir o tamanho e aplicar a imagem aos pixels.',
+      target: '.customizer-image-option',
+      placement: 'top-right',
+    },
+    {
+      title: 'Limpe o que não quiser',
+      text: 'Você pode limpar toda a seleção de uma vez ou escolher uma área específica para apagar.',
+      target: '.clear-floating-dialog',
+      placement: 'top-right',
+    },
+    {
+      title: 'Mova e posicione',
+      text: 'Use Mover para navegar pela parede. Se você aplicar uma imagem, poderá arrastá-la para posicioná-la em outra área disponível.',
+      target: '[data-testid="canvas-pixel-wall"]',
+      placement: 'bottom-right',
+    },
+    {
+      title: 'Confira e compre',
+      text: 'Confira a quantidade de pixels e o valor total. Quando estiver tudo certo, toque em Continuar com esta seleção para reservar seus pixels e seguir para o pagamento.',
+      target: '.selection-summary .selection-button',
       placement: 'top-left',
     },
-    {
-      title: 'Reserva e pagamento',
-      text: 'Quando estiver satisfeito, toque em Continuar com esta seleção. Se ainda não estiver conectado, você fará login. Seus pixels ficam reservados por 15 minutos enquanto você conclui o pagamento pelo Mercado Pago. Após a confirmação, eles passam a ser seus na parede.',
-      target: '.selection-panel',
-      placement: 'auto',
-    },
   ] as const;
+
+  useEffect(() => {
+    if (!tutorialOpen) return;
+
+    // Fecha interfaces auxiliares antes de preparar a etapa.
+    if (tutorialStep !== 3 && tutorialStep !== 4) {
+      setCustomizeOpen(false);
+    }
+
+    if (tutorialStep !== 5) {
+      setClearMenuOpen(false);
+    }
+
+    setImageSizePickerOpen(false);
+    setImageEditorOpen(false);
+
+    // 4/8 — mostra o painel Personalizar.
+    if (tutorialStep === 3) {
+      setClearMenuOpen(false);
+      setCustomizeOpen(true);
+    }
+
+    // 5/8 — mantém Personalizar aberto e destaca "Usar uma imagem".
+    if (tutorialStep === 4) {
+      setClearMenuOpen(false);
+      setCustomizeOpen(true);
+    }
+
+    // 6/8 — mostra as opções reais de limpeza.
+    if (tutorialStep === 5) {
+      setCustomizeOpen(false);
+      setClearMenuOpen(true);
+    }
+
+    // Recalcula o alvo depois que React renderizar
+    // a interface aberta automaticamente.
+    const timer = window.setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [tutorialOpen, tutorialStep]);
 
   const closeWallTutorial = () => {
     setTutorialOpen(false);
@@ -3536,9 +3925,11 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
        * passo 6 = 5
        */
       const criticalStep =
+        tutorialStep === 2 ||
         tutorialStep === 3 ||
         tutorialStep === 4 ||
-        tutorialStep === 5;
+        tutorialStep === 5 ||
+        tutorialStep === 7;
 
       if (criticalStep) {
         const safeGap = 24;
@@ -3551,7 +3942,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
         let preferredTop: number;
 
-        if (tutorialStep === 5) {
+        if (tutorialStep === 7) {
           /*
            * PASSO 6:
            * caixa acima do resumo/CTA.
@@ -4114,6 +4505,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 <button className={tool === 'select' && !recolorMode && !clearMenuOpen && !eraseAreaMode ? 'active' : ''} onClick={() => {
                   setClearMenuOpen(false);
                   setEraseAreaMode(false);
+                  setImageMoveMode(false);
                   setTool('select');
                   setRecolorMode(false);
                   setSelectionArmed(true);
@@ -4126,7 +4518,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                   setSelectionArmed(false);
                   setTool('pan');
                   setRecolorMode(false);
-                }}><Hand size={17} /> Mover</button>
+                }}><Hand size={17} /> {imageMoveMode && selectionCustomized ? 'Mover imagem' : 'Mover'}</button>
               </div>
 
               <div className="pixel-editor-actions">
@@ -4194,6 +4586,121 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
             </div>
 
     
+
+        {imageSizePickerOpen && (
+          <div
+            className="pixel-customizer image-size-picker"
+            role="dialog"
+            aria-label="Escolher tamanho da imagem"
+          >
+            <div className="pixel-customizer-head">
+              <strong>TAMANHO DA IMAGEM</strong>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setImageSizePickerOpen(false);
+                  setImageSizeError(null);
+                }}
+                aria-label="Fechar"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="pixel-customizer-body image-size-picker-body">
+              <div className="image-size-intro">
+                <strong>Tamanho mínimo: 10 × 10 pixels</strong>
+
+                <span>
+                  Escolha um tamanho pronto ou informe um tamanho personalizado.
+                </span>
+              </div>
+
+              <div className="image-size-presets">
+                {[10, 20, 50, 100, 200].map((size) => {
+                  const total = size * size;
+
+                  return (
+                    <button
+                      key={size}
+                      type="button"
+                      className="image-size-preset"
+                      onClick={() =>
+                        selectAutomaticImageSquare(size)
+                      }
+                    >
+                      <strong>
+                        {size} × {size}
+                      </strong>
+
+                      <span>
+                        {total.toLocaleString('pt-BR')} pixels ·{' '}
+                        {total.toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="image-custom-size">
+                <div className="image-custom-size-head">
+                  <strong>TAMANHO PERSONALIZADO</strong>
+
+                  <span>
+                    Ex.: 52 cria uma área 52 × 52
+                  </span>
+                </div>
+
+                <div className="image-custom-size-controls">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={10}
+                    max={200}
+                    step={1}
+                    value={customImageSize}
+                    onChange={(event) => {
+                      setCustomImageSize(event.target.value);
+                      setImageSizeError(null);
+                    }}
+                    aria-label="Tamanho personalizado da imagem"
+                  />
+
+                  <span className="image-custom-size-times">
+                    ×
+                  </span>
+
+                  <strong>
+                    {customImageSize || "—"}
+                  </strong>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectAutomaticImageSquare(
+                        Number(customImageSize),
+                      )
+                    }
+                  >
+                    USAR TAMANHO
+                  </button>
+                </div>
+              </div>
+
+              {imageSizeError && (
+                <div className="image-size-error">
+                  {imageSizeError}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {imageEditorOpen && (
           <div
             className="pixel-customizer image-customizer"
@@ -4351,7 +4858,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                       type="button"
                       onClick={() => {
                         setCustomizeOpen(false);
-                        openImageEditor();
+                        setImageSizeError(null);
+                        setImageSizePickerOpen(true);
                       }}
                       disabled={!selectedCount || !!lastReservation}
                     >

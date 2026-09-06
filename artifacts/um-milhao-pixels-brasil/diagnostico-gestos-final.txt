@@ -1,0 +1,175 @@
+===== POINTER UP =====
+          nextX < 0 ||
+          nextX >= 1000 ||
+          nextY < 0 ||
+          nextY >= 1000
+        ) {
+          valid = false;
+          break;
+        }
+
+        if (
+          claimedAt(nextX, nextY) ||
+          occupiedAt(nextX + 0.5, nextY + 0.5)
+        ) {
+          valid = false;
+          break;
+        }
+      }
+
+      if (valid) {
+        const next = new Map<string, SelectedPixel>();
+
+        for (const pixel of imageMove.base.values()) {
+          const movedPixel = {
+            ...pixel,
+            x: pixel.x + moveX,
+            y: pixel.y + moveY,
+          };
+
+          next.set(
+            `${movedPixel.x}:${movedPixel.y}`,
+            movedPixel,
+          );
+        }
+
+        imageMove.lastDx = moveX;
+        imageMove.lastDy = moveY;
+
+        setSelectedPixels(next);
+        setAvailablePixelPrompt(null);
+        setSelectedBlock(null);
+      }
+
+      setIsDragging(true);
+      return;
+    }
+
+    if (tool === 'pan') {
+      const nextCamera = { ...cameraRef.current, x: dragRef.current.originX + dx, y: dragRef.current.originY + dy };
+      cameraRef.current = nextCamera;
+      setCamera(nextCamera);
+      setIsDragging(true);
+      return;
+    }
+
+    const rectangleSelection =
+      rectangleSelectRef.current;
+
+    if (
+      rectangleSelection &&
+      rectangleSelection.pointerId === event.pointerId
+    ) {
+      const world = screenToWorld(
+        event.clientX,
+        event.clientY,
+      );
+
+      const endX = Math.max(
+        0,
+        Math.min(999, Math.floor(world.x)),
+      );
+
+      const endY = Math.max(
+        0,
+        Math.min(999, Math.floor(world.y)),
+      );
+
+      if (eraseAreaMode) {
+        applyRectangleErase(
+          rectangleSelection.startX,
+          rectangleSelection.startY,
+          endX,
+          endY,
+          rectangleSelection.base,
+        );
+      } else {
+        applyRectangleSelection(
+          rectangleSelection.startX,
+          rectangleSelection.startY,
+          endX,
+          endY,
+          rectangleSelection.base,
+        );
+      }
+
+      setIsDragging(true);
+      return;
+    }
+
+    const pending = pendingTouchRef.current;
+    if (pending && pending.pointerId === event.pointerId) {
+      const movedDistance = Math.hypot(
+
+===== POINTER CANCEL =====
+3169-      paintRef.current = null;
+3170-    }
+3171-
+3172-    if (pointersRef.current.size < 2) {
+3173-      gestureRef.current.multiTouch = false;
+3174-    }
+3175-
+3176-    setIsDragging(false);
+3177-  };
+3178-
+3179:  const onPointerCancel = (event: PointerEvent<HTMLCanvasElement>) => {
+3180-    pointersRef.current.delete(event.pointerId);
+3181-
+3182-    if (
+3183-      rectangleSelectRef.current?.pointerId === event.pointerId
+3184-    ) {
+3185-      setSelectedPixels(
+3186-        new Map(rectangleSelectRef.current.base),
+3187-      );
+3188-      rectangleSelectRef.current = null;
+3189-    }
+3190-
+3191-    if (pendingTouchRef.current?.pointerId === event.pointerId) pendingTouchRef.current = null;
+3192-    paintRef.current = null;
+3193-    pinchRef.current = null;
+3194-
+3195-    if (pointersRef.current.size < 2) {
+3196-      gestureRef.current.multiTouch = false;
+3197-    }
+3198-
+3199-    setIsDragging(false);
+3200-  };
+3201-
+3202-  const clearSelection = () => {
+3203-    setSelectedPixels(new Map());
+3204-    setSelectedBlock(null);
+3205-    setAvailablePixelPrompt(null);
+3206-    setSelectionArmed(false);
+3207-    setSelectionCustomized(false);
+3208-    setSelectionNudgeOpen(false);
+3209-    setClearMenuOpen(false);
+3210-    setEraseAreaMode(false);
+3211-    rectangleSelectRef.current = null;
+3212-    setCustomizeOpen(false);
+3213-    setRecolorMode(false);
+3214-    setLastReservation(null);
+3215-  };
+3216-
+3217-  const fillAll = (color: string) => {
+3218-    if (lastReservation) return;
+3219-    setActiveColor(color);
+3220-    setSelectionCustomized(true);
+3221-    setSelectedPixels((current) => {
+3222-      const next = new Map<string, SelectedPixel>();
+3223-      current.forEach((pixel, key) => next.set(key, { ...pixel, color }));
+3224-      return next;
+3225-    });
+3226-  };
+3227-
+3228-  const getSelectedRectangle = () => {
+3229-    const pixels = Array.from(selectedPixels.values());
+3230-
+3231-    if (!pixels.length) {
+3232-      return null;
+3233-    }
+3234-
+3235-    const xs = pixels.map((pixel) => pixel.x);
+3236-    const ys = pixels.map((pixel) => pixel.y);
+3237-
+3238-    const minX = Math.min(...xs);
+3239-    const maxX = Math.max(...xs);
