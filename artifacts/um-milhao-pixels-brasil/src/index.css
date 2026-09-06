@@ -5841,3 +5841,54 @@ body::before {
     padding: 0 3px !important;
   }
 }
+
+
+/* MOBILE_WALL_HEIGHT_V4 */
+
+@media (max-width: 620px) {
+
+  /*
+   * A parede estava alta demais no celular.
+   * Agora fica próxima do retângulo marcado no print:
+   * ainda grande o suficiente para editar, mas deixando
+   * ferramentas e resumo mais próximos da mesma tela.
+   */
+  .canvas-stage {
+    height: 80vw !important;
+    min-height: 320px !important;
+    max-height: 430px !important;
+  }
+
+  /*
+   * Reduzimos o espaço reservado em volta da parede.
+   */
+  .pixel-editor-card {
+    padding-bottom: 76px !important;
+  }
+
+  /*
+   * Ferramentas encostam um pouco mais na parede.
+   */
+  .pixel-editor-bar {
+    bottom: 3px !important;
+  }
+
+  /*
+   * Menos espaço entre parede e resumo.
+   */
+  .wall-layout {
+    gap: 4px !important;
+  }
+
+  .selection-panel {
+    margin-top: 4px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .canvas-stage {
+    height: 82vw !important;
+    min-height: 305px !important;
+    max-height: 400px !important;
+  }
+}

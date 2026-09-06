@@ -732,11 +732,6 @@ function StatStrip() {
       'completo',
     ],
     [
-      stats ? formatMoney(stats.total_amount_cents) : '—',
-      '',
-      'arrecadados',
-    ],
-    [
       stats ? stats.buyer_count.toLocaleString('pt-BR') : '—',
       '',
       'compradores',
