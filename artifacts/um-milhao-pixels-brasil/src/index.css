@@ -5914,3 +5914,25 @@ body::before {
     line-height: 1.45 !important;
   }
 }
+
+/* MOBILE_TOOLBAR_READABILITY_V2 */
+@media (max-width: 620px) {
+
+  /* VERDE — ferramentas: reduzir um pouco */
+  .pixel-editor-bar button {
+    font-size: 13px !important;
+  }
+
+  /* VERMELHO — Seleção livre / Voltar ao início */
+  .wall-status-bar,
+  .wall-status-bar * {
+    font-size: 14px !important;
+  }
+
+  /* VERMELHO — instrução abaixo da barra */
+  .wall-selection-hint,
+  .wall-selection-hint * {
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+  }
+}
