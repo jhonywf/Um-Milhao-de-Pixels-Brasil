@@ -157,7 +157,9 @@ function AuthDialog({
           <Check size={18} />
           <div>
             <strong>Confira seu e-mail.</strong>
-            <span>{resetNotice ? 'Enviamos um link para redefinir sua senha.' : 'Enviamos um link de confirmação para você continuar.'}</span>
+            <span style={{ color: '#ffffff', display: 'block', marginTop: '5px', lineHeight: 1.45 }}>
+              {resetNotice ? 'Enviamos um link para redefinir sua senha.' : 'Enviamos um link de confirmação para você continuar.'}
+            </span>
           </div>
         </div>
       ) : (

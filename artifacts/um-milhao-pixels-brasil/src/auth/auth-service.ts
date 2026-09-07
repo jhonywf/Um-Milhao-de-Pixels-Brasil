@@ -269,11 +269,12 @@ export async function requestPasswordReset(email: string) {
   const recoveryRedirectUrl = new URL(appRedirectUrl());
   recoveryRedirectUrl.searchParams.set('recovery', '1');
 
-  await supabaseRequest('/auth/v1/recover', {
+  const redirectTo = encodeURIComponent(recoveryRedirectUrl.toString());
+
+  await supabaseRequest(`/auth/v1/recover?redirect_to=${redirectTo}`, {
     method: 'POST',
     body: {
       email,
-      redirect_to: recoveryRedirectUrl.toString(),
       code_challenge: challenge,
       code_challenge_method: 's256',
     },
