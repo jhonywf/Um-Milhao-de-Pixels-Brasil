@@ -7595,3 +7595,14 @@ body::before {
   }
 }
 
+
+
+/* FIX RECUPERACAO DE SENHA - MENSAGEM */
+.account-success span {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  display: block;
+  margin-top: 2px;
+  line-height: 1.5;
+}
+

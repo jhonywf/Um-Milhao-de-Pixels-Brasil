@@ -263,8 +263,9 @@ export async function startGoogleSignIn() {
 }
 
 export async function requestPasswordReset(email: string) {
-  const { verifier, challenge } = await createPkcePair();
-  storePkceFlow({ verifier, kind: 'recovery', createdAt: Date.now() });
+  // Recuperação usa o fluxo implícito para permitir que o link
+  // seja aberto também em outro navegador ou dispositivo.
+  storePkceFlow(null);
 
   const recoveryRedirectUrl = new URL(appRedirectUrl());
   recoveryRedirectUrl.searchParams.set('recovery', '1');
@@ -275,8 +276,6 @@ export async function requestPasswordReset(email: string) {
     method: 'POST',
     body: {
       email,
-      code_challenge: challenge,
-      code_challenge_method: 's256',
     },
   });
 }
