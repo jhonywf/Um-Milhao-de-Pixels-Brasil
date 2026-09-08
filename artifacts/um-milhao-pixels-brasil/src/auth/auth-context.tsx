@@ -85,15 +85,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const redirectResult = await readOAuthSessionFromUrl();
         let nextSession = redirectResult?.session ?? null;
         if (nextSession) {
-          // Persist the PKCE exchange immediately. If the follow-up /user request
-          // is temporarily unavailable, a valid OAuth login must not be lost.
+          // Salva imediatamente a sessão recebida pelo Supabase.
           storeSession(nextSession);
-          try {
-            const user = await getCurrentUser(nextSession.access_token);
-            nextSession = { ...nextSession, user };
-            storeSession(nextSession);
-          } catch {
-            if (!nextSession.user?.id) throw new Error('Login concluído, mas não foi possível carregar sua conta. Atualize a página e tente novamente.');
+
+          // Na recuperação de senha, o access token já é suficiente para
+          // permitir a criação da nova senha. Não dependemos da chamada /user,
+          // pois uma falha temporária nela não pode interromper a recuperação.
+          if (redirectResult?.kind !== 'recovery') {
+            try {
+              const user = await getCurrentUser(nextSession.access_token);
+              nextSession = { ...nextSession, user };
+              storeSession(nextSession);
+            } catch {
+              if (!nextSession.user?.id) {
+                throw new Error(
+                  'Login concluído, mas não foi possível carregar sua conta. Atualize a página e tente novamente.',
+                );
+              }
+            }
           }
         } else {
           nextSession = await restoreSession();
