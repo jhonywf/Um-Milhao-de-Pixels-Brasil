@@ -281,11 +281,50 @@ export async function requestPasswordReset(email: string) {
 }
 
 export async function updatePassword(accessToken: string, password: string) {
-  await supabaseRequest('/auth/v1/user', {
+  if (!supabasePublishableKey) {
+    throw new Error('A configuração de autenticação do site está incompleta.');
+  }
+
+  const response = await fetch(`${supabasePublicUrl}/auth/v1/user`, {
     method: 'PUT',
-    accessToken,
-    body: { password },
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+      apikey: supabasePublishableKey,
+    },
+    body: JSON.stringify({ password }),
   });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as {
+      message?: string;
+      msg?: string;
+      error?: string;
+    } | null;
+
+    const rawMessage =
+      payload?.message ||
+      payload?.msg ||
+      payload?.error ||
+      '';
+
+    const normalized = rawMessage.toLowerCase();
+
+    if (
+      normalized.includes('bearer') ||
+      normalized.includes('jwt') ||
+      normalized.includes('token')
+    ) {
+      throw new Error(
+        'Sua sessão de recuperação expirou ou não é mais válida. Solicite um novo link para redefinir sua senha.',
+      );
+    }
+
+    throw new Error(
+      rawMessage || 'Não foi possível salvar sua nova senha. Tente novamente.',
+    );
+  }
 }
 
 export function supabasePublicStorageUrl(path: string) {
