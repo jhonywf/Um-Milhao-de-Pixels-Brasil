@@ -1,0 +1,173 @@
+
+===== src/index.css =====
+7633: 
+7634:   .hero-actions {
+7635:     margin-top: 24px !important;
+7636:     gap: 10px !important;
+7637:   }
+7638: 
+7639:   .hero-actions .button {
+7640:     min-height: 48px !important;
+7641:     padding-top: 0 !important;
+7642:     padding-bottom: 0 !important;
+7643:   }
+7644: 
+7645:   .hero .hero-more,
+7646:   .hero .hero-understand {
+7647:     margin-top: 22px !important;
+7648:   }
+7649: 
+7650:   .stat-strip {
+7651:     margin-top: 0 !important;
+7652:   }
+7653: 
+7654:   .wall-main {
+7655:     padding-top: 28px !important;
+7656:   }
+7657: }
+7658: 
+7659: /* HOME MOBILE - HERO MAIS COMPACTO */
+7660: @media (max-width: 620px) {
+7661:   .hero {
+7662:     padding-top: 34px !important;
+7663:     padding-bottom: 42px !important;
+7682: 
+7683:   .hero-actions {
+7684:     margin-top: 24px !important;
+7685:     gap: 10px !important;
+7686:   }
+7687: 
+7688:   .hero-actions .button {
+7689:     min-height: 48px !important;
+7690:     padding-top: 0 !important;
+7691:     padding-bottom: 0 !important;
+7692:   }
+7693: 
+7694:   .hero .hero-more,
+7695:   .hero .hero-understand {
+7696:     margin-top: 22px !important;
+7697:   }
+7698: 
+7699:   .stat-strip {
+7700:     margin-top: 0 !important;
+7701:   }
+7702: 
+7703:   .wall-main {
+7704:     padding-top: 28px !important;
+7705:   }
+7706: }
+7707: 
+7708: /* HOME MOBILE - COMPACTAÇÃO FINAL DA PRIMEIRA DOBRA */
+7709: @media (max-width: 620px) {
+7710:   .hero {
+7711:     padding-top: 24px !important;
+7712:     padding-bottom: 24px !important;
+7730:     line-height: 1.4 !important;
+7731:   }
+7732: 
+7733:   .hero-actions {
+7734:     margin-top: 18px !important;
+7735:     gap: 8px !important;
+7736:   }
+7737: 
+7738:   .hero-actions .button {
+7739:     min-height: 44px !important;
+7740:   }
+7741: 
+7742:   .hero .hero-more,
+7743:   .hero .hero-understand {
+7744:     margin-top: 14px !important;
+7745:     margin-bottom: 0 !important;
+7746:     padding-bottom: 0 !important;
+7747:   }
+7748: 
+7749:   /* Remove o espaço vazio quando "Entenda a ideia" está fechado */
+7750:   .hero-understand,
+7751:   .hero-more {
+7752:     min-height: 0 !important;
+7753:   }
+7754: 
+7755:   .hero-understand + *,
+7756:   .hero-more + * {
+7757:     margin-top: 0 !important;
+7758:   }
+7759: 
+7760:   .wall-main,
+7761:   .wall-section,
+7762:   .wall-preview-section {
+7763:     padding-top: 14px !important;
+7764:     margin-top: 0 !important;
+7765:   }
+7766: 
+7767:   .stat-strip {
+7768:     margin-top: 0 !important;
+7769:     padding-top: 10px !important;
+7770:   }
+7771: }
+
+===== src/App.tsx =====
+651: }
+652: 
+653: function LiveWallTicker() {
+654:   const stats = usePublicWallStats();
+655: 
+656:   if (!stats || stats.purchase_count === 0) {
+657:     return (
+658:       <div
+659:         className="live-wall-ticker"
+660:         data-testid="live-wall-ticker"
+661:       >
+662:         <div className="live-wall-ticker-static">
+663:           A PAREDE ESTÁ AO VIVO
+664:           <span>•</span>
+665:           O PRÓXIMO PIXEL PODE SER O SEU
+666:         </div>
+667:       </div>
+668:     );
+669:   }
+670: 
+671:   const messages: string[] = [];
+672: 
+673:   const leader = stats.ranking[0];
+674: 
+675:   if (leader) {
+676:     messages.push(
+677:       `RANKING: ${leader.name} LIDERA COM ${leader.pixels.toLocaleString('pt-BR')} ${leader.pixels === 1 ? 'PIXEL' : 'PIXELS'}`
+678:     );
+679:   }
+680: 
+790:   return (
+791:     <div className="app-shell">
+792:       <Header />
+793:       <main>
+794:         <section className="hero" data-testid="section-hero">
+795:           <div className="hero-copy reveal">
+796:             <div className="eyebrow"><span className="eyebrow-dot" /> a maior parede digital do brasil</div>
+797:             <h1>COMPRE UM<br /><em>PIXEL.</em><br />DEIXE SUA<br /><em>MARCA.</em></h1>
+798:             <p className="hero-deck">Um milhão de pequenos espaços para criar uma memória coletiva na internet.</p>
+799:             <div className="hero-actions">
+800:               <Link href="/parede" className="button button-yellow" data-testid="button-buy-hero">Comprar pixels <ArrowRight size={18} /></Link>
+801:               <Link href="/parede" className="button button-outline" data-testid="button-explore-hero">Explorar a parede</Link>
+802:               <a className="text-link" href="#como-funciona" data-testid="link-scroll-how">Entenda a ideia <ChevronDown size={16} /></a>
+803:             </div>
+804:           </div>
+805:           <div className="hero-visual reveal reveal-delay">
+806:             <div className="visual-caption">
+807:               <span>A PAREDE ESTÁ AO VIVO</span>
+808:               <span>
+809:                 {stats
+810:                   ? `${stats.total_pixels.toLocaleString('pt-BR')} / 1.000.000`
+811:                   : 'CARREGANDO...'}
+812:               </span>
+813:             </div>
+814: 
+815:             <RealWallMiniMap />
+816: 
+817:             <div className="hero-sticker">
+818:               <Sparkles size={15} /> feito por todo mundo
+819:             </div>
+820:           </div>
+821:           <div className="hero-bottom-note">rolar para descobrir <ArrowDownRight size={17} /></div>
+822:         </section>
+823: 
+824:         <StatStrip />
