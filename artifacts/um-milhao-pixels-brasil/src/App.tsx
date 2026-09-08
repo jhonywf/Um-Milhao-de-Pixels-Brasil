@@ -911,7 +911,7 @@ function Home() {
             <div className="section-label">05 — um convite</div>
             <h2>SUA MARCA<br /><em>PODE ESTAR AQUI.</em></h2>
             <p>Um lugar minúsculo na parede. Uma presença enorme na memória de quem visitar.</p>
-            <button className="button button-ink" onClick={() => window.alert('Em breve: o espaço para marcas será aberto.')} data-testid="button-company-interest">Quero saber quando abrir <ArrowRight size={18} /></button>
+            <Link href="/parede" className="button button-ink" data-testid="button-company-interest">COLOCAR MINHA MARCA <ArrowRight size={18} /></Link>
           </div>
           <div className="company-pattern" aria-hidden="true">{Array.from({ length: 36 }, (_, i) => <i key={i} style={{ backgroundColor: i % 5 === 0 ? '#ffcf33' : i % 3 === 0 ? '#5ac8b0' : '#ef6b50' }} />)}</div>
         </section>
