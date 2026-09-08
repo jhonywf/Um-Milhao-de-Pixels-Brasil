@@ -7844,3 +7844,70 @@ body::before {
     bottom: -14px !important;
   }
 }
+
+/* HOME MOBILE - COMPACTAÇÃO DAS SEÇÕES */
+@media (max-width: 620px) {
+
+  /* Ranking e recordes */
+  .activity-section {
+    padding-top: 30px !important;
+    padding-bottom: 30px !important;
+  }
+
+  .activity-grid {
+    margin-top: 24px !important;
+  }
+
+  /* O começo */
+  .manifesto-section {
+    padding-top: 30px !important;
+    padding-bottom: 30px !important;
+  }
+
+  .manifesto-grid {
+    margin-top: 26px !important;
+    gap: 28px !important;
+  }
+
+  /* Como funciona */
+  .how-section {
+    padding-top: 30px !important;
+    padding-bottom: 30px !important;
+  }
+
+  .how-heading {
+    margin-top: 26px !important;
+    margin-bottom: 26px !important;
+  }
+
+  /* A parede */
+  .preview-section {
+    padding-top: 34px !important;
+    padding-bottom: 34px !important;
+  }
+
+  /* Convite para empresas */
+  .company-section {
+    min-height: 0 !important;
+    padding-top: 34px !important;
+    padding-bottom: 34px !important;
+  }
+
+  .company-stamp {
+    margin-bottom: 30px !important;
+  }
+
+  .company-copy h2 {
+    margin-top: 24px !important;
+  }
+
+  .company-copy p {
+    margin-bottom: 20px !important;
+  }
+
+  /* Rodapé */
+  .site-footer {
+    padding-top: 30px !important;
+  }
+}
+
