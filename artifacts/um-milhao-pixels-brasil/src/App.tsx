@@ -5156,6 +5156,21 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
               <div className="recolor-banner"><span><Paintbrush size={14} /> Pintando pixels individualmente</span><button onClick={() => setRecolorMode(false)}>Concluir</button></div>
             )}
           </section>
+          {editingReservation && (
+            <div
+              style={{
+                background: '#ff681d',
+                color: '#000',
+                padding: '8px 12px',
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                fontSize: '12px',
+              }}
+            >
+              DEBUG EDIÇÃO — selectedCount: {selectedCount} | ownKeys: {ownReservationPixelKeys.size} | armed: {String(selectionArmed)} | tool: {tool}
+            </div>
+          )}
+
           <SelectionPanel
             selectedPixels={selectedList}
             selectedBlock={selectedBlock}
