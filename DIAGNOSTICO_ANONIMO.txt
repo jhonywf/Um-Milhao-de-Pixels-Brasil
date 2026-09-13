@@ -1,0 +1,144 @@
+===== 1. TODAS AS OCORRENCIAS DE JHONY =====
+artifacts/api-server/src/routes/mercado-pago.ts:12:const appPublicUrl = (process.env.APP_PUBLIC_URL || "https://um-milhao-de-pixels-brasil--jhonymec2.replit.app").replace(/\/$/, "");
+artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:99:    'https://um-milhao-de-pixels-brasil--jhonymec2.replit.app';
+
+===== 2. TODAS AS OCORRENCIAS DE COMPRADOR ANONIMO =====
+artifacts/api-server/src/routes/mercado-pago.ts:1258:            : "Comprador anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts:1355:          name: "Comprador anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts:1362:          name: "Comprador Anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts:1376:          : "Comprador anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts:1429:              name: "Comprador Anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts:1448:              : "Comprador anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts:1648:        name: "Comprador anônimo",
+
+===== 3. ADMIN COURTESY =====
+artifacts/api-server/src/routes/mercado-pago.ts-1348-    }
+artifacts/api-server/src/routes/mercado-pago.ts-1349-
+artifacts/api-server/src/routes/mercado-pago.ts-1350-    const publicIdentityForOrder = (
+artifacts/api-server/src/routes/mercado-pago.ts-1351-      order: (typeof orders)[number] | null,
+artifacts/api-server/src/routes/mercado-pago.ts-1352-    ) => {
+artifacts/api-server/src/routes/mercado-pago.ts-1353-      if (!order) {
+artifacts/api-server/src/routes/mercado-pago.ts-1354-        return {
+artifacts/api-server/src/routes/mercado-pago.ts-1355-          name: "Comprador anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts-1356-          username: null as string | null,
+artifacts/api-server/src/routes/mercado-pago.ts-1357-        };
+artifacts/api-server/src/routes/mercado-pago.ts-1358-      }
+artifacts/api-server/src/routes/mercado-pago.ts-1359-
+artifacts/api-server/src/routes/mercado-pago.ts:1360:      if (order.provider === "admin_courtesy") {
+artifacts/api-server/src/routes/mercado-pago.ts-1361-        return {
+artifacts/api-server/src/routes/mercado-pago.ts-1362-          name: "Comprador Anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts-1363-          username: null as string | null,
+artifacts/api-server/src/routes/mercado-pago.ts-1364-        };
+artifacts/api-server/src/routes/mercado-pago.ts-1365-      }
+artifacts/api-server/src/routes/mercado-pago.ts-1366-
+artifacts/api-server/src/routes/mercado-pago.ts-1367-      const profile = profileById.get(order.user_id);
+artifacts/api-server/src/routes/mercado-pago.ts-1368-      const canShowProfile = profile?.consent_public_profile === true;
+artifacts/api-server/src/routes/mercado-pago.ts-1369-
+artifacts/api-server/src/routes/mercado-pago.ts-1370-      return {
+artifacts/api-server/src/routes/mercado-pago.ts-1371-        name: canShowProfile
+artifacts/api-server/src/routes/mercado-pago.ts-1372-          ? profile?.display_name ||
+--
+artifacts/api-server/src/routes/mercado-pago.ts-1398-      sourceOrders: typeof orders,
+artifacts/api-server/src/routes/mercado-pago.ts-1399-    ) => {
+artifacts/api-server/src/routes/mercado-pago.ts-1400-      const totals = new Map<
+artifacts/api-server/src/routes/mercado-pago.ts-1401-        string,
+artifacts/api-server/src/routes/mercado-pago.ts-1402-        {
+artifacts/api-server/src/routes/mercado-pago.ts-1403-          pixels: number;
+artifacts/api-server/src/routes/mercado-pago.ts-1404-          purchases: number;
+artifacts/api-server/src/routes/mercado-pago.ts-1405-        }
+artifacts/api-server/src/routes/mercado-pago.ts-1406-      >();
+artifacts/api-server/src/routes/mercado-pago.ts-1407-
+artifacts/api-server/src/routes/mercado-pago.ts-1408-      for (const order of sourceOrders) {
+artifacts/api-server/src/routes/mercado-pago.ts-1409-        const rankingKey =
+artifacts/api-server/src/routes/mercado-pago.ts:1410:          order.provider === "admin_courtesy"
+artifacts/api-server/src/routes/mercado-pago.ts:1411:            ? "__admin_courtesy__"
+artifacts/api-server/src/routes/mercado-pago.ts-1412-            : order.user_id;
+artifacts/api-server/src/routes/mercado-pago.ts-1413-
+artifacts/api-server/src/routes/mercado-pago.ts-1414-        const current = totals.get(rankingKey) ?? {
+artifacts/api-server/src/routes/mercado-pago.ts-1415-          pixels: 0,
+artifacts/api-server/src/routes/mercado-pago.ts-1416-          purchases: 0,
+artifacts/api-server/src/routes/mercado-pago.ts-1417-        };
+artifacts/api-server/src/routes/mercado-pago.ts-1418-
+artifacts/api-server/src/routes/mercado-pago.ts-1419-        current.pixels += Number(order.pixel_count || 0);
+artifacts/api-server/src/routes/mercado-pago.ts-1420-        current.purchases += 1;
+artifacts/api-server/src/routes/mercado-pago.ts-1421-
+artifacts/api-server/src/routes/mercado-pago.ts-1422-        totals.set(rankingKey, current);
+artifacts/api-server/src/routes/mercado-pago.ts-1423-      }
+artifacts/api-server/src/routes/mercado-pago.ts-1424-
+artifacts/api-server/src/routes/mercado-pago.ts-1425-      return [...totals.entries()]
+artifacts/api-server/src/routes/mercado-pago.ts-1426-        .map(([userId, values]) => {
+artifacts/api-server/src/routes/mercado-pago.ts:1427:          if (userId === "__admin_courtesy__") {
+artifacts/api-server/src/routes/mercado-pago.ts-1428-            return {
+artifacts/api-server/src/routes/mercado-pago.ts-1429-              name: "Comprador Anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts-1430-              username: null,
+artifacts/api-server/src/routes/mercado-pago.ts-1431-              avatar_emoji: null,
+artifacts/api-server/src/routes/mercado-pago.ts-1432-              avatar_path: null,
+artifacts/api-server/src/routes/mercado-pago.ts-1433-              pixels: values.pixels,
+artifacts/api-server/src/routes/mercado-pago.ts-1434-              purchases: values.purchases,
+artifacts/api-server/src/routes/mercado-pago.ts-1435-            };
+artifacts/api-server/src/routes/mercado-pago.ts-1436-          }
+artifacts/api-server/src/routes/mercado-pago.ts-1437-
+artifacts/api-server/src/routes/mercado-pago.ts-1438-          const profile = profileById.get(userId);
+artifacts/api-server/src/routes/mercado-pago.ts-1439-          const canShowProfile =
+
+===== 4. ADMIN COURTESY ESPECIAL =====
+artifacts/api-server/src/routes/mercado-pago.ts-1399-    ) => {
+artifacts/api-server/src/routes/mercado-pago.ts-1400-      const totals = new Map<
+artifacts/api-server/src/routes/mercado-pago.ts-1401-        string,
+artifacts/api-server/src/routes/mercado-pago.ts-1402-        {
+artifacts/api-server/src/routes/mercado-pago.ts-1403-          pixels: number;
+artifacts/api-server/src/routes/mercado-pago.ts-1404-          purchases: number;
+artifacts/api-server/src/routes/mercado-pago.ts-1405-        }
+artifacts/api-server/src/routes/mercado-pago.ts-1406-      >();
+artifacts/api-server/src/routes/mercado-pago.ts-1407-
+artifacts/api-server/src/routes/mercado-pago.ts-1408-      for (const order of sourceOrders) {
+artifacts/api-server/src/routes/mercado-pago.ts-1409-        const rankingKey =
+artifacts/api-server/src/routes/mercado-pago.ts-1410-          order.provider === "admin_courtesy"
+artifacts/api-server/src/routes/mercado-pago.ts:1411:            ? "__admin_courtesy__"
+artifacts/api-server/src/routes/mercado-pago.ts-1412-            : order.user_id;
+artifacts/api-server/src/routes/mercado-pago.ts-1413-
+artifacts/api-server/src/routes/mercado-pago.ts-1414-        const current = totals.get(rankingKey) ?? {
+artifacts/api-server/src/routes/mercado-pago.ts-1415-          pixels: 0,
+artifacts/api-server/src/routes/mercado-pago.ts-1416-          purchases: 0,
+artifacts/api-server/src/routes/mercado-pago.ts-1417-        };
+artifacts/api-server/src/routes/mercado-pago.ts-1418-
+artifacts/api-server/src/routes/mercado-pago.ts-1419-        current.pixels += Number(order.pixel_count || 0);
+artifacts/api-server/src/routes/mercado-pago.ts-1420-        current.purchases += 1;
+artifacts/api-server/src/routes/mercado-pago.ts-1421-
+artifacts/api-server/src/routes/mercado-pago.ts-1422-        totals.set(rankingKey, current);
+artifacts/api-server/src/routes/mercado-pago.ts-1423-      }
+artifacts/api-server/src/routes/mercado-pago.ts-1424-
+artifacts/api-server/src/routes/mercado-pago.ts-1425-      return [...totals.entries()]
+artifacts/api-server/src/routes/mercado-pago.ts-1426-        .map(([userId, values]) => {
+artifacts/api-server/src/routes/mercado-pago.ts:1427:          if (userId === "__admin_courtesy__") {
+artifacts/api-server/src/routes/mercado-pago.ts-1428-            return {
+artifacts/api-server/src/routes/mercado-pago.ts-1429-              name: "Comprador Anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts-1430-              username: null,
+artifacts/api-server/src/routes/mercado-pago.ts-1431-              avatar_emoji: null,
+artifacts/api-server/src/routes/mercado-pago.ts-1432-              avatar_path: null,
+artifacts/api-server/src/routes/mercado-pago.ts-1433-              pixels: values.pixels,
+artifacts/api-server/src/routes/mercado-pago.ts-1434-              purchases: values.purchases,
+artifacts/api-server/src/routes/mercado-pago.ts-1435-            };
+artifacts/api-server/src/routes/mercado-pago.ts-1436-          }
+artifacts/api-server/src/routes/mercado-pago.ts-1437-
+artifacts/api-server/src/routes/mercado-pago.ts-1438-          const profile = profileById.get(userId);
+artifacts/api-server/src/routes/mercado-pago.ts-1439-          const canShowProfile =
+
+===== 5. GIT DIFF ATUAL =====
+diff --git a/artifacts/api-server/src/routes/mercado-pago.ts b/artifacts/api-server/src/routes/mercado-pago.ts
+index 40670ef..f81d0b7 100644
+--- a/artifacts/api-server/src/routes/mercado-pago.ts
++++ b/artifacts/api-server/src/routes/mercado-pago.ts
+@@ -1170,10 +1170,11 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) =>
+       user_id: string;
+       pixel_count: number;
+       amount_cents: number;
++      provider: string | null;
+       paid_at: string | null;
+       created_at: string;
+     }>>(
+-      "wall_orders?select=id,user_id,pixel_count,amount_cents,paid_at,created_at&status=eq.paid&order=paid_at.asc.nullslast,created_at.asc",
++      "wall_orders?select=id,user_id,pixel_count,amount_cents,provider,paid_at,created_at&status=eq.paid&order=paid_at.asc.nullslast,created_at.asc",
+     );
+ 
+     const totalPixels = orders.reduce(

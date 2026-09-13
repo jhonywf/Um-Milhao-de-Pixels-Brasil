@@ -1,0 +1,313 @@
+===== ONDE ORDERS E CARREGADO =====
+885-        }
+886-      }
+887-
+888-      /*
+889-       * Carrinho abandonado:
+890-       *
+891-       * - reserva expirada/cancelada;
+892-       * - OU reserva ainda marcada active,
+893-       *   mas cujo expires_at já passou;
+894-       * - sem pedido pago correspondente.
+895-       */
+896-      const reservations =
+897-        await serviceRoleGet<
+898-          Array<{
+899-            id: string;
+900-            user_id: string;
+901-            status: string;
+902-            pixel_count: number;
+903-            amount_cents: number;
+904-            expires_at: string;
+905-          }>
+906-        >(
+907-          "wall_reservations?select=id,user_id,status,pixel_count,amount_cents,expires_at&order=expires_at.desc",
+908-        );
+909-
+910:      const orders =
+911-        await serviceRoleGet<
+912-          Array<{
+913-            reservation_id: string;
+914-            status: string;
+915-          }>
+916-        >(
+917-          "wall_orders?select=reservation_id,status",
+918-        );
+919-
+920-      const paidReservationIds =
+921-        new Set(
+922-          orders
+923-            .filter(
+924-              (order) =>
+925-                order.status === "paid",
+--
+1019-          items:
+1020-            abandoned.slice(0, 100),
+1021-        },
+1022-      });
+1023-    } catch (error) {
+1024-      req.log?.error(
+1025-        { err: error },
+1026-        "Could not load admin insights",
+1027-      );
+1028-
+1029-      res.status(500).json({
+1030-        message:
+1031-          "Não foi possível carregar as métricas administrativas agora.",
+1032-      });
+1033-    }
+1034-  },
+1035-);
+1036-
+1037-
+1038-router.get("/mercado-pago/admin/overview", async (req: Request, res: Response) => {
+1039-  try {
+1040-    const admin = await requireAdmin(req, res);
+1041-
+1042-    if (!admin) return;
+1043-
+1044:    const orders = await serviceRoleGet<Array<{
+1045-      id: string;
+1046-      user_id: string;
+1047-      status: string;
+1048-      reservation_id: string;
+1049-      pixel_count: number;
+1050-      amount_cents: number;
+1051-      currency: string;
+1052-      provider: string | null;
+1053-      provider_reference: string | null;
+1054-      paid_at: string | null;
+1055-      created_at: string;
+1056-    }>>(
+1057-      "wall_orders?select=id,user_id,status,reservation_id,pixel_count,amount_cents,currency,provider,provider_reference,paid_at,created_at&order=created_at.desc",
+1058-    );
+1059-
+--
+1143-        status: order.status,
+1144-        pixel_count: Number(order.pixel_count || 0),
+1145-        amount_cents: Number(order.amount_cents || 0),
+1146-        currency: order.currency,
+1147-        provider: order.provider,
+1148-        provider_reference: order.provider_reference,
+1149-        paid_at: order.paid_at,
+1150-        created_at: order.created_at,
+1151-      })),
+1152-    });
+1153-  } catch (error) {
+1154-    req.log?.error(
+1155-      { err: error },
+1156-      "Could not load admin overview",
+1157-    );
+1158-
+1159-    res.status(500).json({
+1160-      message:
+1161-        "Não foi possível carregar o painel administrativo agora.",
+1162-    });
+1163-  }
+1164-});
+1165-
+1166-router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => {
+1167-  try {
+1168:    const orders = await serviceRoleGet<Array<{
+1169-      id: string;
+1170-      user_id: string;
+1171-      pixel_count: number;
+1172-      amount_cents: number;
+1173-      paid_at: string | null;
+1174-      created_at: string;
+1175-    }>>(
+1176-      "wall_orders?select=id,user_id,pixel_count,amount_cents,paid_at,created_at&status=eq.paid&order=paid_at.asc.nullslast,created_at.asc",
+1177-    );
+1178-
+1179-    const totalPixels = orders.reduce(
+1180-      (sum, order) => sum + Number(order.pixel_count || 0),
+1181-      0,
+1182-    );
+1183-
+--
+1569-    const orderId =
+1570-      typeof req.params.orderId === "string"
+1571-        ? req.params.orderId.trim()
+1572-        : "";
+1573-
+1574-    if (
+1575-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+1576-        orderId,
+1577-      )
+1578-    ) {
+1579-      res.status(400).json({
+1580-        message: "Obra inválida.",
+1581-      });
+1582-      return;
+1583-    }
+1584-
+1585-    try {
+1586-      const orderQuery = new URLSearchParams({
+1587-        select:
+1588-          "id,user_id,status,pixel_count,paid_at,created_at",
+1589-        id: `eq.${orderId}`,
+1590-        status: "eq.paid",
+1591-        limit: "1",
+1592-      });
+1593-
+1594:      const orders = await serviceRoleGet<Array<{
+1595-        id: string;
+1596-        user_id: string;
+1597-        status: string;
+1598-        pixel_count: number;
+1599-        paid_at: string | null;
+1600-        created_at: string;
+1601-      }>>(
+1602-        `wall_orders?${orderQuery.toString()}`,
+1603-      );
+1604-
+1605-      const order = orders[0];
+1606-
+1607-      if (!order) {
+1608-        res.status(404).json({
+1609-          message: "Essa obra não foi encontrada.",
+--
+1713-);
+1714-
+1715-router.get("/mercado-pago/my-purchases", async (req: Request, res: Response) => {
+1716-  const accessToken = getBearerToken(req);
+1717-
+1718-  if (!accessToken) {
+1719-    res.status(401).json({ message: "Entre na sua conta para ver seus pixels." });
+1720-    return;
+1721-  }
+1722-
+1723-  try {
+1724-    const user = await loadAuthenticatedUser(accessToken);
+1725-
+1726-    if (!user) {
+1727-      res.status(401).json({ message: "Sua sessão expirou. Entre novamente." });
+1728-      return;
+1729-    }
+1730-
+1731-    const orderQuery = new URLSearchParams({
+1732-      select: "id,status,reservation_id,pixel_count,amount_cents,currency,provider,provider_reference,paid_at,created_at",
+1733-      user_id: `eq.${user.id}`,
+1734-      status: "eq.paid",
+1735-      order: "paid_at.desc.nullslast,created_at.desc",
+1736-    });
+1737-
+1738:    const orders = await serviceRoleGet<MyPurchaseOrderRow[]>(
+1739-      `wall_orders?${orderQuery.toString()}`,
+1740-    );
+1741-
+1742-    if (orders.length === 0) {
+1743-      res.status(200).json({
+1744-        total_pixels: 0,
+1745-        total_amount_cents: 0,
+1746-        purchase_count: 0,
+1747-        purchases: [],
+1748-      });
+1749-      return;
+1750-    }
+1751-
+1752-    const orderIds = orders
+1753-      .map((order) => order.id)
+
+===== DEFINICAO/CAMPOS DE PROVIDER =====
+artifacts/api-server/src/routes/mercado-pago.ts-54-  status: string;
+artifacts/api-server/src/routes/mercado-pago.ts-55-  reservation_id: string;
+artifacts/api-server/src/routes/mercado-pago.ts-56-  pixel_count: number;
+artifacts/api-server/src/routes/mercado-pago.ts-57-  amount_cents: number;
+artifacts/api-server/src/routes/mercado-pago.ts-58-  currency: string;
+artifacts/api-server/src/routes/mercado-pago.ts:59:  provider: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-60-  provider_reference: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-61-  paid_at: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-62-  created_at: string;
+artifacts/api-server/src/routes/mercado-pago.ts-63-};
+artifacts/api-server/src/routes/mercado-pago.ts-64-
+artifacts/api-server/src/routes/mercado-pago.ts-65-type MyPurchasePixelRow = {
+artifacts/api-server/src/routes/mercado-pago.ts-66-  x: number;
+artifacts/api-server/src/routes/mercado-pago.ts-67-  y: number;
+artifacts/api-server/src/routes/mercado-pago.ts-68-  color: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-69-  order_id: string | null;
+--
+artifacts/api-server/src/routes/mercado-pago.ts-312-}
+artifacts/api-server/src/routes/mercado-pago.ts-313-
+artifacts/api-server/src/routes/mercado-pago.ts-314-async function findExistingPaidOrder(paymentId: string) {
+artifacts/api-server/src/routes/mercado-pago.ts-315-  const query = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-316-    select: "id,status,reservation_id,provider_reference",
+artifacts/api-server/src/routes/mercado-pago.ts:317:    provider: "eq.mercado_pago",
+artifacts/api-server/src/routes/mercado-pago.ts-318-    provider_reference: `eq.${paymentId}`,
+artifacts/api-server/src/routes/mercado-pago.ts-319-    limit: "1",
+artifacts/api-server/src/routes/mercado-pago.ts-320-  });
+artifacts/api-server/src/routes/mercado-pago.ts-321-
+artifacts/api-server/src/routes/mercado-pago.ts-322-  const rows = await serviceRoleGet<WallOrderRow[]>(`wall_orders?${query.toString()}`);
+artifacts/api-server/src/routes/mercado-pago.ts-323-  return rows[0] ?? null;
+artifacts/api-server/src/routes/mercado-pago.ts-324-}
+artifacts/api-server/src/routes/mercado-pago.ts-325-
+artifacts/api-server/src/routes/mercado-pago.ts-326-async function findOrderByReservation(reservationId: string) {
+artifacts/api-server/src/routes/mercado-pago.ts-327-  const query = new URLSearchParams({
+--
+artifacts/api-server/src/routes/mercado-pago.ts-412-        ? {}
+artifacts/api-server/src/routes/mercado-pago.ts-413-        : { Authorization: `Bearer ${supabaseServiceRoleKey}` }),
+artifacts/api-server/src/routes/mercado-pago.ts-414-    },
+artifacts/api-server/src/routes/mercado-pago.ts-415-    body: JSON.stringify({
+artifacts/api-server/src/routes/mercado-pago.ts-416-      p_reservation_id: reservationId,
+artifacts/api-server/src/routes/mercado-pago.ts:417:      p_provider: "mercado_pago",
+artifacts/api-server/src/routes/mercado-pago.ts-418-      p_provider_reference: paymentId,
+artifacts/api-server/src/routes/mercado-pago.ts-419-      p_amount_cents: amountCents,
+artifacts/api-server/src/routes/mercado-pago.ts-420-      p_approved_at: approvedAt,
+artifacts/api-server/src/routes/mercado-pago.ts-421-    }),
+artifacts/api-server/src/routes/mercado-pago.ts-422-  });
+artifacts/api-server/src/routes/mercado-pago.ts-423-
+artifacts/api-server/src/routes/mercado-pago.ts-424-  const payload = await response.text();
+artifacts/api-server/src/routes/mercado-pago.ts-425-
+artifacts/api-server/src/routes/mercado-pago.ts-426-  if (!response.ok) {
+artifacts/api-server/src/routes/mercado-pago.ts-427-    throw new Error(`FINALIZE_WALL_RESERVATION_FAILED:${response.status}:${payload.slice(0, 300)}`);
+--
+artifacts/api-server/src/routes/mercado-pago.ts-1047-      status: string;
+artifacts/api-server/src/routes/mercado-pago.ts-1048-      reservation_id: string;
+artifacts/api-server/src/routes/mercado-pago.ts-1049-      pixel_count: number;
+artifacts/api-server/src/routes/mercado-pago.ts-1050-      amount_cents: number;
+artifacts/api-server/src/routes/mercado-pago.ts-1051-      currency: string;
+artifacts/api-server/src/routes/mercado-pago.ts:1052:      provider: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-1053-      provider_reference: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-1054-      paid_at: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-1055-      created_at: string;
+artifacts/api-server/src/routes/mercado-pago.ts-1056-    }>>(
+artifacts/api-server/src/routes/mercado-pago.ts-1057-      "wall_orders?select=id,user_id,status,reservation_id,pixel_count,amount_cents,currency,provider,provider_reference,paid_at,created_at&order=created_at.desc",
+artifacts/api-server/src/routes/mercado-pago.ts-1058-    );
+artifacts/api-server/src/routes/mercado-pago.ts-1059-
+artifacts/api-server/src/routes/mercado-pago.ts-1060-    const paidOrders = orders.filter(
+artifacts/api-server/src/routes/mercado-pago.ts-1061-      (order) => order.status === "paid",
+artifacts/api-server/src/routes/mercado-pago.ts-1062-    );
+--
+artifacts/api-server/src/routes/mercado-pago.ts-1142-        reservation_id: order.reservation_id,
+artifacts/api-server/src/routes/mercado-pago.ts-1143-        status: order.status,
+artifacts/api-server/src/routes/mercado-pago.ts-1144-        pixel_count: Number(order.pixel_count || 0),
+artifacts/api-server/src/routes/mercado-pago.ts-1145-        amount_cents: Number(order.amount_cents || 0),
+artifacts/api-server/src/routes/mercado-pago.ts-1146-        currency: order.currency,
+artifacts/api-server/src/routes/mercado-pago.ts:1147:        provider: order.provider,
+artifacts/api-server/src/routes/mercado-pago.ts-1148-        provider_reference: order.provider_reference,
+artifacts/api-server/src/routes/mercado-pago.ts-1149-        paid_at: order.paid_at,
+artifacts/api-server/src/routes/mercado-pago.ts-1150-        created_at: order.created_at,
+artifacts/api-server/src/routes/mercado-pago.ts-1151-      })),
+artifacts/api-server/src/routes/mercado-pago.ts-1152-    });
+artifacts/api-server/src/routes/mercado-pago.ts-1153-  } catch (error) {
+artifacts/api-server/src/routes/mercado-pago.ts-1154-    req.log?.error(
+artifacts/api-server/src/routes/mercado-pago.ts-1155-      { err: error },
+artifacts/api-server/src/routes/mercado-pago.ts-1156-      "Could not load admin overview",
+artifacts/api-server/src/routes/mercado-pago.ts-1157-    );
+--
+artifacts/api-server/src/routes/mercado-pago.ts-1793-        order_id: order.id,
+artifacts/api-server/src/routes/mercado-pago.ts-1794-        reservation_id: order.reservation_id,
+artifacts/api-server/src/routes/mercado-pago.ts-1795-        pixel_count: order.pixel_count,
+artifacts/api-server/src/routes/mercado-pago.ts-1796-        amount_cents: order.amount_cents,
+artifacts/api-server/src/routes/mercado-pago.ts-1797-        currency: order.currency,
+artifacts/api-server/src/routes/mercado-pago.ts:1798:        provider: order.provider,
+artifacts/api-server/src/routes/mercado-pago.ts-1799-        paid_at: order.paid_at,
+artifacts/api-server/src/routes/mercado-pago.ts-1800-        created_at: order.created_at,
+artifacts/api-server/src/routes/mercado-pago.ts-1801-        bounds,
+artifacts/api-server/src/routes/mercado-pago.ts-1802-      };
+artifacts/api-server/src/routes/mercado-pago.ts-1803-    });
+artifacts/api-server/src/routes/mercado-pago.ts-1804-
+artifacts/api-server/src/routes/mercado-pago.ts-1805-    res.status(200).json({
+artifacts/api-server/src/routes/mercado-pago.ts-1806-      total_pixels: orders.reduce((total, order) => total + order.pixel_count, 0),
+artifacts/api-server/src/routes/mercado-pago.ts-1807-      total_amount_cents: orders.reduce((total, order) => total + order.amount_cents, 0),
+artifacts/api-server/src/routes/mercado-pago.ts-1808-      purchase_count: orders.length,

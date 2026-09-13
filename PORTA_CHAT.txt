@@ -1,0 +1,41 @@
+===== REPLIT =====
+modules = ["nodejs-24"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+===== PORTAS / API =====
+artifacts/um-milhao-pixels-brasil/vite.config.ts:1:import path from 'path';
+artifacts/um-milhao-pixels-brasil/vite.config.ts:2:import react from '@vitejs/plugin-react';
+artifacts/um-milhao-pixels-brasil/vite.config.ts:3:import tailwindcss from '@tailwindcss/vite';
+artifacts/um-milhao-pixels-brasil/vite.config.ts:4:import { defineConfig } from 'vite';
+artifacts/um-milhao-pixels-brasil/vite.config.ts:6:const rawPort = process.env.PORT;
+artifacts/um-milhao-pixels-brasil/vite.config.ts:10:    'PORT environment variable is required but was not provided.',
+artifacts/um-milhao-pixels-brasil/vite.config.ts:14:const port = Number(rawPort);
+artifacts/um-milhao-pixels-brasil/vite.config.ts:16:if (Number.isNaN(port) || port <= 0) {
+artifacts/um-milhao-pixels-brasil/vite.config.ts:17:  throw new Error(`Invalid PORT value: "${rawPort}"`);
+artifacts/um-milhao-pixels-brasil/vite.config.ts:28:export default defineConfig({
+artifacts/api-server/src/index.ts:1:import app from "./app";
+artifacts/api-server/src/index.ts:2:import { logger } from "./lib/logger";
+artifacts/api-server/src/index.ts:4:const rawPort = process.env["PORT"];
+artifacts/api-server/src/index.ts:8:    "PORT environment variable is required but was not provided.",
+artifacts/api-server/src/index.ts:12:const port = Number(rawPort);
+artifacts/api-server/src/index.ts:14:if (Number.isNaN(port) || port <= 0) {
+artifacts/api-server/src/index.ts:15:  throw new Error(`Invalid PORT value: "${rawPort}"`);
+artifacts/api-server/src/index.ts:24:  logger.info({ port }, "Server listening");

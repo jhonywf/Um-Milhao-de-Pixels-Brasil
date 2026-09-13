@@ -1,0 +1,29 @@
+===== ARVORE DE PROCESSOS =====
+    PID    PPID CMD
+     13       0 /nix/store/6hs42z6cjb85qz6xpdnfkx2crlfakcvh-pid1-0.0.1/bin/pid1 -vsock-port=2000 -pid2-vsock-port=2001 -host-services-vsock-port=2002 -portauthority-vsock-port=2003 -setup-cgroups=true -manage-pseudo-fs=true -metrics-to-conman=false -pid2-pooling
+     27      13  \_ pid2 --no-deprecation --disable-warning=ExperimentalWarning --use-openssl-ca /mnt/pid2/bootstrap.cjs --start-timestamp=1789301906601 --socket-listener-fd=3 --pinger-socket-path=/run/replit/socks/pid2ping.0.sock --pooled-fd=4
+    124      27  |   \_ /nix/store/cikdc61gfwvdma6y0p9b5d5d448aqcv6-nodejs-24.12.0/bin/node /nix/store/61lr9izijvg30pcribjdxgjxvh3bysp4-pnpm-10.26.1/bin/pnpm --filter @workspace/um-milhao-pixels-brasil run dev
+    184     124  |   |   \_ sh -c vite --config vite.config.ts --host 0.0.0.0
+    186     184  |   |       \_ /nix/store/9cyx2v23dip6p9q98384k9v06c96qskb-nodejs-24.13.0/bin/node /home/runner/workspace/artifacts/um-milhao-pixels-brasil/node_modules/.bin/../vite/bin/vite.js --config vite.config.ts --host 0.0.0.0
+    243     186  |   |           \_ /home/runner/workspace/node_modules/.pnpm/@esbuild+linux-x64@0.27.3/node_modules/@esbuild/linux-x64/bin/esbuild --service=0.27.3 --ping
+    135      27  |   \_ /nix/store/cikdc61gfwvdma6y0p9b5d5d448aqcv6-nodejs-24.12.0/bin/node /nix/store/61lr9izijvg30pcribjdxgjxvh3bysp4-pnpm-10.26.1/bin/pnpm --filter @workspace/mockup-sandbox run dev
+    178     135  |   |   \_ sh -c vite dev
+    179     178  |   |       \_ /nix/store/9cyx2v23dip6p9q98384k9v06c96qskb-nodejs-24.13.0/bin/node /home/runner/workspace/artifacts/mockup-sandbox/node_modules/.bin/../vite/bin/vite.js dev
+    244     179  |   |           \_ /home/runner/workspace/node_modules/.pnpm/@esbuild+linux-x64@0.27.3/node_modules/@esbuild/linux-x64/bin/esbuild --service=0.27.3 --ping
+   1353      27  |   \_ /nix/store/smkzrg2vvp3lng3hq7v9svfni5mnqjh2-bash-interactive-5.2p37/bin/bash -rcfile /nix/store/lqsn6gf2nv6vw3m3ynwd2p5xk158l4y2-replit-bashrc/bashrc --rcfile /nix/store/lqsn6gf2nv6vw3m3ynwd2p5xk158l4y2-replit-bashrc/bashrc
+   1572    1353  |       \_ ps -eo pid,ppid,cmd --forest
+   1573    1353  |       \_ head -120
+     56      13  \_ nix-editor --return-output
+      1       0 /nix/store/6hs42z6cjb85qz6xpdnfkx2crlfakcvh-pid1-0.0.1/bin/pid0
+
+===== PROCESSOS RELEVANTES =====
+     27      13 pid2 --no-deprecation --disable-warning=ExperimentalWarning --use-openssl-ca /mnt/pid2/bootstrap.cjs --start-timestamp=1789301906601 --socket-listener-fd=3 --pinger-socket-path=/run/replit/socks/pid2ping.0.sock --pooled-fd=4
+    124      27 /nix/store/cikdc61gfwvdma6y0p9b5d5d448aqcv6-nodejs-24.12.0/bin/node /nix/store/61lr9izijvg30pcribjdxgjxvh3bysp4-pnpm-10.26.1/bin/pnpm --filter @workspace/um-milhao-pixels-brasil run dev
+    135      27 /nix/store/cikdc61gfwvdma6y0p9b5d5d448aqcv6-nodejs-24.12.0/bin/node /nix/store/61lr9izijvg30pcribjdxgjxvh3bysp4-pnpm-10.26.1/bin/pnpm --filter @workspace/mockup-sandbox run dev
+    178     135 sh -c vite dev
+    179     178 /nix/store/9cyx2v23dip6p9q98384k9v06c96qskb-nodejs-24.13.0/bin/node /home/runner/workspace/artifacts/mockup-sandbox/node_modules/.bin/../vite/bin/vite.js dev
+    184     124 sh -c vite --config vite.config.ts --host 0.0.0.0
+    186     184 /nix/store/9cyx2v23dip6p9q98384k9v06c96qskb-nodejs-24.13.0/bin/node /home/runner/workspace/artifacts/um-milhao-pixels-brasil/node_modules/.bin/../vite/bin/vite.js --config vite.config.ts --host 0.0.0.0
+    243     186 /home/runner/workspace/node_modules/.pnpm/@esbuild+linux-x64@0.27.3/node_modules/@esbuild/linux-x64/bin/esbuild --service=0.27.3 --ping
+    244     179 /home/runner/workspace/node_modules/.pnpm/@esbuild+linux-x64@0.27.3/node_modules/@esbuild/linux-x64/bin/esbuild --service=0.27.3 --ping
+   1353      27 /nix/store/smkzrg2vvp3lng3hq7v9svfni5mnqjh2-bash-interactive-5.2p37/bin/bash -rcfile /nix/store/lqsn6gf2nv6vw3m3ynwd2p5xk158l4y2-replit-bashrc/bashrc --rcfile /nix/store/lqsn6gf2nv6vw3m3ynwd2p5xk158l4y2-replit-bashrc/bashrc

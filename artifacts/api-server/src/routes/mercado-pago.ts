@@ -1170,10 +1170,11 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       user_id: string;
       pixel_count: number;
       amount_cents: number;
+      provider: string | null;
       paid_at: string | null;
       created_at: string;
     }>>(
-      "wall_orders?select=id,user_id,pixel_count,amount_cents,paid_at,created_at&status=eq.paid&order=paid_at.asc.nullslast,created_at.asc",
+      "wall_orders?select=id,user_id,pixel_count,amount_cents,provider,paid_at,created_at&status=eq.paid&order=paid_at.asc.nullslast,created_at.asc",
     );
 
     const totalPixels = orders.reduce(
@@ -1489,8 +1490,10 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       );
     });
 
+    const correctedRanking = buildRankingForOrders(orders);
+
     const rankings = {
-      general: ranking,
+      general: correctedRanking,
       weekly: buildRankingForOrders(weeklyOrders),
       daily: buildRankingForOrders(dailyOrders),
     };
@@ -1504,7 +1507,7 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       total_amount_cents: totalAmountCents,
       buyer_count: buyerTotals.size,
       purchase_count: orders.length,
-      ranking,
+      ranking: correctedRanking,
       rankings,
       recent_purchases: recentPurchases,
       records: {
@@ -1539,12 +1542,12 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
             }
           : null,
 
-        largest_buyer: ranking[0]
+        largest_buyer: correctedRanking[0]
           ? {
-              name: ranking[0].name,
-              username: ranking[0].username,
-              pixels: ranking[0].pixels,
-              purchases: ranking[0].purchases,
+              name: correctedRanking[0].name,
+              username: correctedRanking[0].username,
+              pixels: correctedRanking[0].pixels,
+              purchases: correctedRanking[0].purchases,
             }
           : null,
       },
