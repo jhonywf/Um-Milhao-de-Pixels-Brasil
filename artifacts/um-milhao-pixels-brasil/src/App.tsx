@@ -1837,6 +1837,9 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [customColorActive, setCustomColorActive] = useState(false);
   const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
   const [editingReservation, setEditingReservation] = useState(false);
+  const [ownReservationPixelKeys, setOwnReservationPixelKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [reservationEditError, setReservationEditError] = useState<string | null>(null);
   const [loadingReservationEdit, setLoadingReservationEdit] = useState(false);
   const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
@@ -2275,13 +2278,20 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                 camera.scale,
               );
 
+            const isOwnEditableReservation =
+              editingReservation &&
+              pixel.status === 'reserved' &&
+              ownReservationPixelKeys.has(`${pixel.x}:${pixel.y}`);
+
             ctx.fillStyle =
-              pixel.status === 'purchased'
-                ? (
-                    pixel.color ??
-                    '#111111'
-                  )
-                : '#b9b4aa';
+              isOwnEditableReservation
+                ? 'rgba(255, 104, 29, 0.42)'
+                : pixel.status === 'purchased'
+                  ? (
+                      pixel.color ??
+                      '#111111'
+                    )
+                  : '#b9b4aa';
 
             ctx.fillRect(
               x,
@@ -2291,8 +2301,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
             );
 
             if (
-              pixel.status ===
-                'reserved' &&
+              pixel.status === 'reserved' &&
+              !isOwnEditableReservation &&
               camera.scale >= 6
             ) {
               ctx.strokeStyle =
@@ -2573,12 +2583,29 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     block.status !== 'available' && x >= block.x && x < block.x + block.width && y >= block.y && y < block.y + block.height
   ));
 
-  const claimedAt = (x: number, y: number) => publicPixels.get(`${Math.floor(x)}:${Math.floor(y)}`) ?? null;
+  const claimedAt = (x: number, y: number) =>
+    publicPixels.get(`${Math.floor(x)}:${Math.floor(y)}`) ?? null;
+
+  const blockingClaimAt = (x: number, y: number) => {
+    const key = `${Math.floor(x)}:${Math.floor(y)}`;
+    const claim = publicPixels.get(key) ?? null;
+
+    if (
+      claim &&
+      editingReservation &&
+      claim.status === 'reserved' &&
+      ownReservationPixelKeys.has(key)
+    ) {
+      return null;
+    }
+
+    return claim;
+  };
 
   const updatePixel = (x: number, y: number, action: 'add' | 'erase' | 'recolor') => {
-    if (lastReservation) return;
+    if (lastReservation && !editingReservation) return;
     if (x < 0 || y < 0 || x >= 1000 || y >= 1000) return;
-    if (occupiedAt(x + 0.5, y + 0.5) || claimedAt(x, y)) return;
+    if (occupiedAt(x + 0.5, y + 0.5) || blockingClaimAt(x, y)) return;
     const key = `${x}:${y}`;
     setSelectedBlock(null);
     setSelectedPixels((current) => {
@@ -2628,7 +2655,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     endY: number,
     base: Map<string, SelectedPixel>,
   ) => {
-    if (lastReservation) return;
+    if (lastReservation && !editingReservation) return;
 
     const minX = Math.max(0, Math.min(startX, endX));
     const maxX = Math.min(999, Math.max(startX, endX));
@@ -2645,7 +2672,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
         if (
           occupiedAt(x + 0.5, y + 0.5) ||
-          claimedAt(x, y)
+          blockingClaimAt(x, y)
         ) {
           continue;
         }
@@ -2673,7 +2700,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     endY: number,
     base: Map<string, SelectedPixel>,
   ) => {
-    if (lastReservation) return;
+    if (lastReservation && !editingReservation) return;
 
     const minX = Math.max(0, Math.min(startX, endX));
     const maxX = Math.min(999, Math.max(startX, endX));
@@ -2936,7 +2963,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     if (!occupied && (world.x < 0 || world.x >= 1000 || world.y < 0 || world.y >= 1000)) return;
 
     const action: 'add' | 'erase' | 'recolor' = recolorMode ? 'recolor' : tool === 'erase' ? 'erase' : 'add';
-    if (action === 'add' && claimedAt(x, y)) return;
+    if (action === 'add' && blockingClaimAt(x, y)) return;
 
     const selectedKey = `${x}:${y}`;
     const isAlreadySelected =
@@ -3136,7 +3163,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
         }
 
         if (
-          claimedAt(nextX, nextY) ||
+          blockingClaimAt(nextX, nextY) ||
           occupiedAt(nextX + 0.5, nextY + 0.5)
         ) {
           valid = false;
@@ -3378,6 +3405,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setRecolorMode(false);
     setLastReservation(null);
     setEditingReservation(false);
+    setOwnReservationPixelKeys(new Set());
     setReservationEditError(null);
     setLoadingReservationEdit(false);
   };
@@ -3435,7 +3463,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
 
   const selectAutomaticImageSquare = (requestedSize: number) => {
-    if (lastReservation) return;
+    if (lastReservation && !editingReservation) return;
 
     const size = Math.floor(requestedSize);
 
@@ -3500,7 +3528,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     for (let y = startY; y < startY + size; y += 1) {
       for (let x = startX; x < startX + size; x += 1) {
         if (
-          claimedAt(x, y) ||
+          blockingClaimAt(x, y) ||
           occupiedAt(x + 0.5, y + 0.5)
         ) {
           setImageSizeError(
@@ -3850,15 +3878,21 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       }
 
       const next = new Map<string, SelectedPixel>();
+      const ownKeys = new Set<string>();
 
       for (const pixel of pixels) {
-        next.set(`${pixel.x}:${pixel.y}`, {
+        const key = `${pixel.x}:${pixel.y}`;
+
+        ownKeys.add(key);
+
+        next.set(key, {
           x: pixel.x,
           y: pixel.y,
           color: pixel.color,
         });
       }
 
+      setOwnReservationPixelKeys(ownKeys);
       setSelectedPixels(next);
       setSelectedBlock(null);
       setSelectionCustomized(true);
@@ -3917,6 +3951,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
       setLastReservation(updated);
       setEditingReservation(false);
+      setOwnReservationPixelKeys(new Set());
       setSelectionArmed(false);
       setCustomizeOpen(false);
       setRecolorMode(false);
@@ -4696,7 +4731,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                   setRecolorMode(false);
                   setSelectionArmed(true);
                   setAvailablePixelPrompt(null);
-                }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
+                }} disabled={!!lastReservation && !editingReservation}><Paintbrush size={17} /> Selecionar</button>
 
                 <button className={tool === 'pan' && !clearMenuOpen && !eraseAreaMode ? 'active' : ''} onClick={() => {
                   setClearMenuOpen(false);
@@ -4720,7 +4755,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                       setImageEditorOpen(false);
                       setAvailablePixelPrompt(null);
                     }}
-                    disabled={!selectedCount || !!lastReservation}
+                    disabled={!selectedCount || (!!lastReservation && !editingReservation)}
                   >
                     Limpar
                   </button>
@@ -4766,7 +4801,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                   setSelectionArmed(false);
                   setSelectionNudgeOpen(false);
                   setCustomizeOpen(true);
-                }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
+                }} disabled={!selectedCount || (!!lastReservation && !editingReservation)}><Paintbrush size={16} /> Personalizar</button>
 
               </div>
             </div>
@@ -5047,7 +5082,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
                         setImageSizeError(null);
                         setImageSizePickerOpen(true);
                       }}
-                      disabled={!selectedCount || !!lastReservation}
+                      disabled={!selectedCount || (!!lastReservation && !editingReservation)}
                     >
                       <strong className="customizer-image-option-title">
                         USAR UMA IMAGEM
