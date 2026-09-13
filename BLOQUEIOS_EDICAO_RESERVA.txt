@@ -1,0 +1,768 @@
+1826-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+1827-  const [imagePixelPreview, setImagePixelPreview] = useState<string | null>(null);
+1828-  const [imagePixelColors, setImagePixelColors] = useState<string[]>([]);
+1829-
+1830-  const [selectionCustomized, setSelectionCustomized] = useState(false);
+1831-  const [imageMoveMode, setImageMoveMode] = useState(false);
+1832-  const [selectionNudgeOpen, setSelectionNudgeOpen] = useState(false);
+1833-  const [clearMenuOpen, setClearMenuOpen] = useState(false);
+1834-  const [eraseAreaMode, setEraseAreaMode] = useState(false);
+1835-  const [activeColor, setActiveColor] = useState('#ef4444');
+1836-  const [customColor, setCustomColor] = useState('#ff681d');
+1837-  const [customColorActive, setCustomColorActive] = useState(false);
+1838:  const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
+1839:  const [editingReservation, setEditingReservation] = useState(false);
+1840-  const [reservationEditError, setReservationEditError] = useState<string | null>(null);
+1841-  const [loadingReservationEdit, setLoadingReservationEdit] = useState(false);
+1842-  const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
+1843-  const publicPixelBucketsRef = useRef(
+1844-    new Map<string, PublicWallPixel[]>(),
+1845-  );
+1846-  const publicPixelBucketSize = 50;
+1847-  const [wallSyncError, setWallSyncError] = useState<string | null>(null);
+1848-
+1849-  const wallSyncInFlightRef = useRef(false);
+1850-  const wallLastSyncAtRef = useRef(0);
+1851-
+1852-  const cameraRef = useRef(camera);
+1853-  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+1854-  const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
+1855-  const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
+1856-  const rectangleSelectRef = useRef<{
+1857-    pointerId: number;
+--
+1928-        nextBuckets.set(
+1929-          bucketKey,
+1930-          bucket,
+1931-        );
+1932-      });
+1933-
+1934-      publicPixelBucketsRef.current =
+1935-        nextBuckets;
+1936-
+1937-      setPublicPixels(next);
+1938-      setWallSyncError(null);
+1939-
+1940:      if (!lastReservation) {
+1941-        setSelectedPixels((current) => {
+1942-          let changed = false;
+1943-          const filtered = new Map(current);
+1944-          current.forEach((_pixel, key) => {
+1945-            if (next.has(key)) {
+1946-              filtered.delete(key);
+1947-              changed = true;
+1948-            }
+1949-          });
+1950-          return changed ? filtered : current;
+1951-        });
+1952-      }
+1953-    } catch (caught) {
+1954-      setWallSyncError(
+1955-        caught instanceof Error
+1956-          ? caught.message
+1957-          : 'Não foi possível atualizar a parede.',
+1958-      );
+1959-    } finally {
+1960-      wallLastSyncAtRef.current = Date.now();
+1961-      wallSyncInFlightRef.current = false;
+1962-    }
+1963:  }, [lastReservation]);
+1964-
+1965-  useEffect(() => {
+1966-    void refreshPublicPixels();
+1967-
+1968-    const interval = window.setInterval(
+1969-      () => {
+1970-        void refreshPublicPixels();
+1971-      },
+1972-      60000,
+1973-    );
+1974-
+1975-    const refreshIfStale = () => {
+1976-      const staleFor =
+1977-        Date.now() -
+1978-        wallLastSyncAtRef.current;
+1979-
+1980-      if (
+1981-        document.visibilityState === 'visible' &&
+--
+2567-      x: (clientX - rect.left - rect.width / 2 - current.x) / current.scale + 500,
+2568-      y: (clientY - rect.top - rect.height / 2 - current.y) / current.scale + 500,
+2569-    };
+2570-  };
+2571-
+2572-  const occupiedAt = (x: number, y: number) => blocks.find((block) => (
+2573-    block.status !== 'available' && x >= block.x && x < block.x + block.width && y >= block.y && y < block.y + block.height
+2574-  ));
+2575-
+2576-  const claimedAt = (x: number, y: number) => publicPixels.get(`${Math.floor(x)}:${Math.floor(y)}`) ?? null;
+2577-
+2578-  const updatePixel = (x: number, y: number, action: 'add' | 'erase' | 'recolor') => {
+2579:    if (lastReservation) return;
+2580-    if (x < 0 || y < 0 || x >= 1000 || y >= 1000) return;
+2581-    if (occupiedAt(x + 0.5, y + 0.5) || claimedAt(x, y)) return;
+2582-    const key = `${x}:${y}`;
+2583-    setSelectedBlock(null);
+2584-    setSelectedPixels((current) => {
+2585-      const next = new Map(current);
+2586-      if (action === 'erase') next.delete(key);
+2587-      else if (action === 'recolor') {
+2588-        const pixel = next.get(key);
+2589-
+2590-        if (pixel) {
+2591-          next.set(
+2592-            key,
+2593-            {
+2594-              ...pixel,
+2595-              color: activeColor,
+2596-            },
+2597-          );
+--
+2619-    for (let i = 0; i <= steps; i += 1) {
+2620-      updatePixel(Math.round(fromX + dx * i / steps), Math.round(fromY + dy * i / steps), action);
+2621-    }
+2622-  };
+2623-
+2624-  const applyRectangleSelection = (
+2625-    startX: number,
+2626-    startY: number,
+2627-    endX: number,
+2628-    endY: number,
+2629-    base: Map<string, SelectedPixel>,
+2630-  ) => {
+2631:    if (lastReservation) return;
+2632-
+2633-    const minX = Math.max(0, Math.min(startX, endX));
+2634-    const maxX = Math.min(999, Math.max(startX, endX));
+2635-    const minY = Math.max(0, Math.min(startY, endY));
+2636-    const maxY = Math.min(999, Math.max(startY, endY));
+2637-
+2638-    const next = new Map(base);
+2639-    const maxSelection = 100000;
+2640-
+2641-    outer:
+2642-    for (let y = minY; y <= maxY; y += 1) {
+2643-      for (let x = minX; x <= maxX; x += 1) {
+2644-        if (next.size >= maxSelection) break outer;
+2645-
+2646-        if (
+2647-          occupiedAt(x + 0.5, y + 0.5) ||
+2648-          claimedAt(x, y)
+2649-        ) {
+--
+2664-
+2665-    setSelectedBlock(null);
+2666-    setSelectedPixels(next);
+2667-  };
+2668-
+2669-  const applyRectangleErase = (
+2670-    startX: number,
+2671-    startY: number,
+2672-    endX: number,
+2673-    endY: number,
+2674-    base: Map<string, SelectedPixel>,
+2675-  ) => {
+2676:    if (lastReservation) return;
+2677-
+2678-    const minX = Math.max(0, Math.min(startX, endX));
+2679-    const maxX = Math.min(999, Math.max(startX, endX));
+2680-    const minY = Math.max(0, Math.min(startY, endY));
+2681-    const maxY = Math.min(999, Math.max(startY, endY));
+2682-
+2683-    const next = new Map(base);
+2684-
+2685-    for (let y = minY; y <= maxY; y += 1) {
+2686-      for (let x = minX; x <= maxX; x += 1) {
+2687-        next.delete(`${x}:${y}`);
+2688-      }
+2689-    }
+2690-
+2691-    setSelectedBlock(null);
+2692-    setSelectedPixels(next);
+2693-
+2694-    if (next.size === 0) {
+--
+3374-    setClearMenuOpen(false);
+3375-    setEraseAreaMode(false);
+3376-    rectangleSelectRef.current = null;
+3377-    setCustomizeOpen(false);
+3378-    setRecolorMode(false);
+3379-    setLastReservation(null);
+3380-    setEditingReservation(false);
+3381-    setReservationEditError(null);
+3382-    setLoadingReservationEdit(false);
+3383-  };
+3384-
+3385-  const fillAll = (color: string) => {
+3386:    if (lastReservation && !editingReservation) return;
+3387-    setActiveColor(color);
+3388-    setSelectionCustomized(true);
+3389-    setSelectedPixels((current) => {
+3390-      const next = new Map<string, SelectedPixel>();
+3391-      current.forEach((pixel, key) => next.set(key, { ...pixel, color }));
+3392-      return next;
+3393-    });
+3394-  };
+3395-
+3396-  const getSelectedRectangle = () => {
+3397-    const pixels = Array.from(selectedPixels.values());
+3398-
+3399-    if (!pixels.length) {
+3400-      return null;
+3401-    }
+3402-
+3403-    const xs = pixels.map((pixel) => pixel.x);
+3404-    const ys = pixels.map((pixel) => pixel.y);
+--
+3426-    return {
+3427-      minX,
+3428-      minY,
+3429-      maxX,
+3430-      maxY,
+3431-      width,
+3432-      height,
+3433-    };
+3434-  };
+3435-
+3436-
+3437-  const selectAutomaticImageSquare = (requestedSize: number) => {
+3438:    if (lastReservation) return;
+3439-
+3440-    const size = Math.floor(requestedSize);
+3441-
+3442-    if (!Number.isFinite(size) || size < 10 || size > 200) {
+3443-      setImageSizeError(
+3444-        "Informe um tamanho entre 10 e 200 pixels.",
+3445-      );
+3446-      return;
+3447-    }
+3448-
+3449-    /*
+3450-     * Usa a seleção atual como referência.
+3451-     * Se não houver seleção, usa o centro da área visível da parede.
+3452-     */
+3453-    let centerX = 500;
+3454-    let centerY = 500;
+3455-
+3456-    const currentPixels = Array.from(selectedPixels.values());
+--
+3823-
+3824-
+3825-  const handleReserved = (reservation: WallReservationSuccess) => {
+3826-    clearPendingPixelSelection();
+3827-    setLastReservation(reservation);
+3828-    setCustomizeOpen(false);
+3829-    setRecolorMode(false);
+3830-    setAvailablePixelPrompt(null);
+3831-  };
+3832-
+3833-
+3834-  const handleEditReservation = async () => {
+3835:    if (!lastReservation || !session) return;
+3836-
+3837-    setReservationEditError(null);
+3838-    setLoadingReservationEdit(true);
+3839-
+3840-    try {
+3841-      const pixels = await loadOwnReservedPixels(
+3842:        lastReservation.reservation_id,
+3843-        session.access_token,
+3844-      );
+3845-
+3846-      if (!pixels.length) {
+3847-        throw new Error(
+3848-          'Não encontramos pixels ativos nessa reserva. Ela pode ter expirado.',
+3849-        );
+3850-      }
+3851-
+3852-      const next = new Map<string, SelectedPixel>();
+3853-
+3854-      for (const pixel of pixels) {
+3855-        next.set(`${pixel.x}:${pixel.y}`, {
+3856-          x: pixel.x,
+3857-          y: pixel.y,
+3858-          color: pixel.color,
+3859-        });
+3860-      }
+--
+3880-      setReservationEditError(
+3881-        caught instanceof Error
+3882-          ? caught.message
+3883-          : 'Não foi possível abrir sua reserva para edição.',
+3884-      );
+3885-    } finally {
+3886-      setLoadingReservationEdit(false);
+3887-    }
+3888-  };
+3889-
+3890-
+3891-  const handleSaveReservationEdit = async () => {
+3892:    if (!lastReservation || !session || !editingReservation) return;
+3893-
+3894-    setReservationEditError(null);
+3895-    setLoadingReservationEdit(true);
+3896-
+3897-    try {
+3898-      const pixels = Array.from(selectedPixels.values());
+3899-
+3900-      if (pixels.length < 1) {
+3901-        throw new Error(
+3902-          'Mantenha pelo menos 1 pixel na reserva ou volte sem salvar.',
+3903-        );
+3904-      }
+3905-
+3906-      const updated = await updateWallReservation(
+3907:        lastReservation.reservation_id,
+3908-        pixels,
+3909-        session.access_token,
+3910-      );
+3911-
+3912-      if (!updated.ok) {
+3913-        throw new Error(
+3914-          'Um ou mais pixels ficaram indisponíveis. Atualize sua seleção e tente novamente.',
+3915-        );
+3916-      }
+3917-
+3918-      setLastReservation(updated);
+3919-      setEditingReservation(false);
+3920-      setSelectionArmed(false);
+3921-      setCustomizeOpen(false);
+3922-      setRecolorMode(false);
+3923-      setImageMoveMode(false);
+3924-
+3925-      window.sessionStorage.removeItem('pixel-wall-checkout-url');
+--
+4687-            </div>
+4688-
+4689-            <div className="pixel-editor-bar" data-testid="pixel-editor-bar">
+4690-              <div className="pixel-editor-tools">
+4691-                <button className={tool === 'select' && !recolorMode && !clearMenuOpen && !eraseAreaMode ? 'active' : ''} onClick={() => {
+4692-                  setClearMenuOpen(false);
+4693-                  setEraseAreaMode(false);
+4694-                  setImageMoveMode(false);
+4695-                  setTool('select');
+4696-                  setRecolorMode(false);
+4697-                  setSelectionArmed(true);
+4698-                  setAvailablePixelPrompt(null);
+4699:                }} disabled={!!lastReservation}><Paintbrush size={17} /> Selecionar</button>
+4700-
+4701-                <button className={tool === 'pan' && !clearMenuOpen && !eraseAreaMode ? 'active' : ''} onClick={() => {
+4702-                  setClearMenuOpen(false);
+4703-                  setEraseAreaMode(false);
+4704-                  setSelectionArmed(false);
+4705-                  setTool('pan');
+4706-                  setRecolorMode(false);
+4707-                }}><Hand size={17} /> {imageMoveMode && selectionCustomized ? 'Mover imagem' : 'Mover'}</button>
+4708-              </div>
+4709-
+4710-              <div className="pixel-editor-actions">
+4711-                <div className="editor-clear-wrap">
+4712-                  <button
+4713-                    className={`editor-clear ${clearMenuOpen ? 'active' : ''}`}
+4714-                    type="button"
+4715-                    onClick={() => {
+4716-                      setClearMenuOpen((current) => !current);
+4717-                      setSelectionArmed(false);
+4718-                      setEraseAreaMode(false);
+4719-                      setCustomizeOpen(false);
+4720-                      setImageEditorOpen(false);
+4721-                      setAvailablePixelPrompt(null);
+4722-                    }}
+4723:                    disabled={!selectedCount || !!lastReservation}
+4724-                  >
+4725-                    Limpar
+4726-                  </button>
+4727-                </div>
+4728-
+4729-                {clearMenuOpen && (
+4730-                  <div
+4731-                    className="clear-floating-dialog"
+4732-                    role="dialog"
+4733-                    aria-label="Opções de limpeza"
+4734-                  >
+4735-                    <p>
+4736-                      Escolha como deseja remover os pixels selecionados.
+4737-                    </p>
+4738-
+4739-                    <div className="clear-floating-actions">
+4740-                      <button
+4741-                        type="button"
+--
+4757-                      >
+4758-                        SELECIONAR ÁREA PARA LIMPAR
+4759-                      </button>
+4760-                    </div>
+4761-                  </div>
+4762-                )}
+4763-                <button className="editor-customize" onClick={() => {
+4764-                  setClearMenuOpen(false);
+4765-                  setEraseAreaMode(false);
+4766-                  setSelectionArmed(false);
+4767-                  setSelectionNudgeOpen(false);
+4768-                  setCustomizeOpen(true);
+4769:                }} disabled={!selectedCount || !!lastReservation}><Paintbrush size={16} /> Personalizar</button>
+4770-
+4771-              </div>
+4772-            </div>
+4773-
+4774-    
+4775-
+4776-        {imageSizePickerOpen && (
+4777-          <div
+4778-            className="pixel-customizer image-size-picker"
+4779-            role="dialog"
+4780-            aria-label="Escolher tamanho da imagem"
+4781-          >
+4782-            <div className="pixel-customizer-head">
+4783-              <strong>TAMANHO DA IMAGEM</strong>
+4784-
+4785-              <button
+4786-                type="button"
+4787-                onClick={() => {
+--
+5038-                    <span className="customizer-method-label">
+5039-                      IMAGEM
+5040-                    </span>
+5041-
+5042-                    <button
+5043-                      className="customizer-image-option"
+5044-                      type="button"
+5045-                      onClick={() => {
+5046-                        setCustomizeOpen(false);
+5047-                        setImageSizeError(null);
+5048-                        setImageSizePickerOpen(true);
+5049-                      }}
+5050:                      disabled={!selectedCount || !!lastReservation}
+5051-                    >
+5052-                      <strong className="customizer-image-option-title">
+5053-                        USAR UMA IMAGEM
+5054-                      </strong>
+5055-
+5056-                      <span className="customizer-image-option-description">
+5057-                        Envie uma foto, logo ou arte para preencher os pixels selecionados
+5058-                      </span>
+5059-                    </button>
+5060-
+5061-                    <div className="customizer-method-divider">
+5062-                      <span>OU PERSONALIZE COM UMA COR</span>
+5063-                    </div>
+5064-                  </div>
+5065-                  <p>Escolha uma cor. Você pode aplicar em todos ou pintar somente os pixels que quiser.</p>
+5066-                  <div className="pixel-palette">
+5067-                    {PIXEL_PALETTE.map((color) => (
+5068-                    <button
+--
+5116-                  </div>
+5117-                </div>
+5118-              </div>
+5119-            )}
+5120-            {recolorMode && (
+5121-              <div className="recolor-banner"><span><Paintbrush size={14} /> Pintando pixels individualmente</span><button onClick={() => setRecolorMode(false)}>Concluir</button></div>
+5122-            )}
+5123-          </section>
+5124-          <SelectionPanel
+5125-            selectedPixels={selectedList}
+5126-            selectedBlock={selectedBlock}
+5127-            coordinateText={coordinateText}
+5128:            lastReservation={lastReservation}
+5129:            editingReservation={editingReservation}
+5130-            loadingReservationEdit={loadingReservationEdit}
+5131-            reservationEditError={reservationEditError}
+5132-            onEditReservation={handleEditReservation}
+5133-            onSaveReservationEdit={handleSaveReservationEdit}
+5134-            onReserved={handleReserved}
+5135-            onAvailabilityConflict={refreshPublicPixels}
+5136-            onResetExpired={clearSelection}
+5137-          />
+5138-        </div>
+5139-        {wallSyncError && <div className="demo-notice" role="status">{wallSyncError} A proteção do banco continua ativa; tente atualizar a página.</div>}
+5140-        <div className="wall-bottom-note">
+5141-        <Grid2X2 size={17} />
+5142-        Toque e arraste para selecionar vários pixels. Para remover um pixel selecionado, toque nele novamente. Ao continuar, sua seleção fica reservada por 15 minutos.
+5143-      </div>
+5144-      </main>
+5145-    </div>
+5146-  );
+5147-}
+5148-
+5149-function SelectionPanel({
+5150-  selectedPixels,
+5151-  selectedBlock,
+5152-  coordinateText,
+5153:  lastReservation,
+5154:  editingReservation,
+5155-  loadingReservationEdit,
+5156-  reservationEditError,
+5157-  onEditReservation,
+5158-  onSaveReservationEdit,
+5159-  onReserved,
+5160-  onAvailabilityConflict,
+5161-  onResetExpired,
+5162-}: {
+5163-  selectedPixels: SelectedPixel[];
+5164-  selectedBlock: PixelBlock | null;
+5165-  coordinateText: string;
+5166:  lastReservation: WallReservationSuccess | null;
+5167:  editingReservation: boolean;
+5168-  loadingReservationEdit: boolean;
+5169-  reservationEditError: string | null;
+5170-  onEditReservation: () => Promise<void>;
+5171-  onSaveReservationEdit: () => Promise<void>;
+5172-  onReserved: (reservation: WallReservationSuccess) => void;
+5173-  onAvailabilityConflict: () => Promise<void>;
+5174-  onResetExpired: () => void;
+5175-}) {
+5176-  const [reservationError, setReservationError] = useState<string | null>(null);
+5177-  const [reserving, setReserving] = useState(false);
+5178-  const [openingCheckout, setOpeningCheckout] = useState(false);
+5179-  const [paymentError, setPaymentError] = useState<string | null>(null);
+5180-  const [reservationSecondsLeft, setReservationSecondsLeft] = useState<number | null>(null);
+5181-  const { user, session, openAuth } = useAuth();
+5182-  const selectedCount = selectedPixels.length;
+5183-  const autoCheckoutStartedRef = useRef(false);
+5184-
+5185-  useEffect(() => {
+5186:    if (!lastReservation) {
+5187-      setReservationSecondsLeft(null);
+5188-      return;
+5189-    }
+5190-
+5191-    const updateReservationClock = () => {
+5192:      const expiresAt = new Date(lastReservation.expires_at).getTime();
+5193-      const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+5194-      setReservationSecondsLeft(remaining);
+5195-    };
+5196-
+5197-    updateReservationClock();
+5198-
+5199-    const interval = window.setInterval(updateReservationClock, 1000);
+5200-
+5201-    return () => {
+5202-      window.clearInterval(interval);
+5203-    };
+5204:  }, [lastReservation]);
+5205-
+5206-  const reservationExpired =
+5207:    lastReservation !== null &&
+5208-    reservationSecondsLeft !== null &&
+5209-    reservationSecondsLeft <= 0;
+5210-
+5211-  const reservationClock =
+5212-    reservationSecondsLeft === null
+5213-      ? null
+5214-      : `${String(Math.floor(reservationSecondsLeft / 60)).padStart(2, '0')}:${String(
+5215-          reservationSecondsLeft % 60,
+5216-        ).padStart(2, '0')}`;
+5217-
+5218-  const openMercadoPagoCheckout = async (
+5219-    reservation: WallReservationSuccess,
+5220-    accessToken: string,
+5221-  ) => {
+5222-    setPaymentError(null);
+5223-    setOpeningCheckout(true);
+5224-
+5225-    try {
+--
+5313-    if (!user || !session) {
+5314-      if (selectedCount < 1) {
+5315-        setReservationError('Selecione pelo menos 1 pixel para continuar.');
+5316-        return;
+5317-      }
+5318-
+5319-      savePendingPixelSelection(selectedPixels);
+5320-      markPendingCheckoutIntent();
+5321-      openAuth();
+5322-      return;
+5323-    }
+5324-
+5325:    if (reserving || openingCheckout || lastReservation) return;
+5326-
+5327-    autoCheckoutStartedRef.current = true;
+5328-    await reserveAndOpenCheckout();
+5329-  };
+5330-
+5331-  useEffect(() => {
+5332-    const restoreCheckoutState = () => {
+5333-      setOpeningCheckout(false);
+5334-    };
+5335-
+5336-    window.addEventListener('pageshow', restoreCheckoutState);
+5337-
+5338-    const handleVisibilityChange = () => {
+5339-      if (document.visibilityState === 'visible') {
+5340-        setOpeningCheckout(false);
+5341-      }
+5342-    };
+5343-
+--
+5367-    setPaymentError(null);
+5368-    setReservationError(null);
+5369-    setReservationSecondsLeft(null);
+5370-
+5371-    autoCheckoutStartedRef.current = false;
+5372-
+5373-    onResetExpired();
+5374-
+5375-    await onAvailabilityConflict();
+5376-  };
+5377-
+5378-  const handlePayment = async () => {
+5379:    if (!session || !lastReservation || openingCheckout) return;
+5380-
+5381-    if (reservationExpired) {
+5382-      setPaymentError('Sua reserva expirou. Selecione novamente os pixels para continuar.');
+5383-      return;
+5384-    }
+5385-
+5386-    const savedReservationId = window.localStorage.getItem(
+5387-      'pixel-wall-checkout-reservation',
+5388-    );
+5389-
+5390-    const savedCheckoutUrl = window.sessionStorage.getItem(
+5391-      'pixel-wall-checkout-url',
+5392-    );
+5393-
+5394-    if (
+5395:      savedReservationId === lastReservation.reservation_id &&
+5396-      savedCheckoutUrl
+5397-    ) {
+5398-      setOpeningCheckout(true);
+5399-      window.location.assign(savedCheckoutUrl);
+5400-      return;
+5401-    }
+5402-
+5403-    await openMercadoPagoCheckout(
+5404:      lastReservation,
+5405-      session.access_token,
+5406-    );
+5407-  };
+5408-
+5409-  useEffect(() => {
+5410-    if (
+5411-      !user ||
+5412-      !session ||
+5413:      lastReservation ||
+5414-      selectedCount < 1 ||
+5415-      !hasPendingCheckoutIntent() ||
+5416-      autoCheckoutStartedRef.current
+5417-    ) {
+5418-      return;
+5419-    }
+5420-
+5421-    autoCheckoutStartedRef.current = true;
+5422-    void reserveAndOpenCheckout();
+5423:  }, [user, session, lastReservation, selectedCount]);
+5424-
+5425-  return (
+5426-    <aside className={`selection-panel ${(selectedCount || selectedBlock) ? 'has-selection' : ''}`}>
+5427-      {selectedBlock ? (
+5428-        <div className="selection-content compact-selection">
+5429-          <span className="selection-type">área ocupada</span><h2>{selectedBlock.name}</h2><p>{selectedBlock.detail}</p>
+5430-          <div className="selection-detail"><span>coordenada</span><b>{coordinateText}</b></div>
+5431-        </div>
+5432-      ) : selectedCount > 0 ? (
+5433-        <div className="selection-content selection-summary">
+5434-          <div className="selection-summary-title"><span>Resumo da seleção</span><strong>{selectedCount} pixels</strong></div>
+5435-          <div className="selection-summary-grid">
+5436-            <div><span>valor atual</span><b>R$ {selectedCount.toFixed(2).replace('.', ',')}</b></div>
+5437-
+5438-          </div>
+5439-          <button
+5440-            className="selection-button"
+5441-            onClick={
+5442:              editingReservation
+5443-                ? onSaveReservationEdit
+5444-                : handleReserve
+5445-            }
+5446-            disabled={
+5447-              reserving ||
+5448-              loadingReservationEdit ||
+5449:              (!!lastReservation && !editingReservation)
+5450-            }
+5451-          >
+5452-            {loadingReservationEdit
+5453-              ? 'Salvando...'
+5454-              : reserving
+5455-                ? 'Reservando...'
+5456:                : editingReservation
+5457-                  ? 'Salvar alterações'
+5458:                  : lastReservation
+5459-                    ? 'Seleção reservada'
+5460-                    : 'Continuar com esta seleção'}
+5461:            {!reserving && !lastReservation && !editingReservation && (
+5462-              <ArrowRight size={17} />
+5463-            )}
+5464:            {editingReservation && <Check size={17} />}
+5465:            {lastReservation && !editingReservation && <Check size={17} />}
+5466-          </button>
+5467:          {selectedCount < 1 && !lastReservation && (
+5468-            <div className="demo-notice" role="status">Selecione mais {5 - selectedCount} {5 - selectedCount === 1 ? 'pixel' : 'pixels'} para atingir o mínimo de R$ 5,00.</div>
+5469-          )}
+5470:          {lastReservation && !editingReservation && !reservationExpired && (
+5471-            <button
+5472-              className="selection-button"
+5473-              type="button"
+5474-              onClick={() => void onEditReservation()}
+5475-              disabled={loadingReservationEdit}
+5476-            >
+5477-              {loadingReservationEdit ? 'Abrindo edição...' : 'Editar pixels'}
+5478-            </button>
+5479-          )}
+5480-
+5481:          {editingReservation && (
+5482-            <div className="demo-notice" role="status">
+5483-              Você está editando sua reserva atual. Faça as alterações e toque em Salvar alterações.
+5484-            </div>
+5485-          )}
+5486-
+5487-          {reservationEditError && (
+5488-            <div className="demo-notice" role="alert">
+5489-              {reservationEditError}
+5490-            </div>
+5491-          )}
+5492-
+5493-          {reservationError && <div className="demo-notice" role="alert">{reservationError}</div>}
+5494:          {lastReservation && (
+5495-            <>
+5496-              <div
+5497-                className={`demo-notice reservation-countdown ${
+5498-                  reservationExpired
+5499-                    ? 'reservation-expired'
+5500-                    : reservationSecondsLeft !== null && reservationSecondsLeft <= 180
+5501-                      ? 'reservation-warning'
+5502-                      : ''
+5503-                }`}
+5504-                role="status"
+5505-              >
+5506-                {reservationExpired ? (
+5507-                  <>
+5508-                    <span>Reserva expirada.</span>
+5509-                    <strong>Selecione novamente os pixels para continuar.</strong>
+5510-                  </>
+5511-                ) : (
+5512-                  <>
+5513-                    <Check size={15} />
+5514:                    <span>{lastReservation.pixel_count} pixels reservados</span>
+5515-                    {reservationClock && (
+5516-                      <strong className="reservation-clock">{reservationClock}</strong>
+5517-                    )}
+5518-                    <span>
+5519:                      Valor: R$ {(lastReservation.amount_cents / 100).toFixed(2).replace('.', ',')}
+5520-                    </span>
+5521-                  </>
+5522-                )}
+5523-              </div>
+5524-              <button
+5525-                className="selection-button"
+5526-                type="button"
+5527-                onClick={
+5528-                  reservationExpired
+5529-                    ? handleExpiredReservationReset
+5530-                    : handlePayment
+5531-                }
+5532-                disabled={openingCheckout}
+5533-              >
+5534-                {reservationExpired
+5535-                  ? 'Selecionar novamente'
+5536-                  : openingCheckout
+5537-                    ? 'Abrindo Mercado Pago...'

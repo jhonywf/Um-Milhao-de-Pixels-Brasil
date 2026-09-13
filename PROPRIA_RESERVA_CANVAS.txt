@@ -1,0 +1,287 @@
+===== claimedAt =====
+2165-        ctx.fillStyle = '#24203b';
+2166-        ctx.font = `600 ${Math.max(10, 13 * camera.scale)}px "DM Mono", monospace`;
+2167-        ctx.fillText(block.initials, x + 8 * camera.scale, y + 20 * camera.scale);
+2168-      }
+2169-    });
+2170-
+2171-    /*
+2172-     * PERFORMANCE:
+2173-     * só percorremos os buckets que cruzam
+2174-     * a área visível do Canvas.
+2175-     *
+2176-     * O Map completo continua disponível para
+2177:     * claimedAt(), portanto a segurança da seleção
+2178-     * não muda.
+2179-     */
+2180-
+2181-    const visibleMinX = Math.max(
+2182-      0,
+2183-      Math.floor(
+2184-        (-originX) / camera.scale,
+2185-      ),
+2186-    );
+2187-
+2188-    const visibleMinY = Math.max(
+2189-      0,
+2190-      Math.floor(
+2191-        (-originY) / camera.scale,
+2192-      ),
+2193-    );
+2194-
+2195-    const visibleMaxX = Math.min(
+2196-      999,
+2197-      Math.ceil(
+2198-        (rect.width - originX) /
+2199-          camera.scale,
+2200-      ),
+2201-    );
+2202-
+--
+2564-    const rect = stage.getBoundingClientRect();
+2565-    const current = cameraRef.current;
+2566-    return {
+2567-      x: (clientX - rect.left - rect.width / 2 - current.x) / current.scale + 500,
+2568-      y: (clientY - rect.top - rect.height / 2 - current.y) / current.scale + 500,
+2569-    };
+2570-  };
+2571-
+2572-  const occupiedAt = (x: number, y: number) => blocks.find((block) => (
+2573-    block.status !== 'available' && x >= block.x && x < block.x + block.width && y >= block.y && y < block.y + block.height
+2574-  ));
+2575-
+2576:  const claimedAt = (x: number, y: number) => publicPixels.get(`${Math.floor(x)}:${Math.floor(y)}`) ?? null;
+2577-
+2578-  const updatePixel = (x: number, y: number, action: 'add' | 'erase' | 'recolor') => {
+2579-    if (lastReservation && !editingReservation) return;
+2580-    if (x < 0 || y < 0 || x >= 1000 || y >= 1000) return;
+2581:    if (occupiedAt(x + 0.5, y + 0.5) || claimedAt(x, y)) return;
+2582-    const key = `${x}:${y}`;
+2583-    setSelectedBlock(null);
+2584-    setSelectedPixels((current) => {
+2585-      const next = new Map(current);
+2586-      if (action === 'erase') next.delete(key);
+2587-      else if (action === 'recolor') {
+2588-        const pixel = next.get(key);
+2589-
+2590-        if (pixel) {
+2591-          next.set(
+2592-            key,
+2593-            {
+2594-              ...pixel,
+2595-              color: activeColor,
+2596-            },
+2597-          );
+2598-
+2599-          setSelectionCustomized(true);
+2600-        }
+2601-      } else if (!next.has(key)) {
+2602-        next.set(
+2603-          key,
+2604-          {
+2605-            x,
+2606-            y,
+--
+2636-    const maxY = Math.min(999, Math.max(startY, endY));
+2637-
+2638-    const next = new Map(base);
+2639-    const maxSelection = 100000;
+2640-
+2641-    outer:
+2642-    for (let y = minY; y <= maxY; y += 1) {
+2643-      for (let x = minX; x <= maxX; x += 1) {
+2644-        if (next.size >= maxSelection) break outer;
+2645-
+2646-        if (
+2647-          occupiedAt(x + 0.5, y + 0.5) ||
+2648:          claimedAt(x, y)
+2649-        ) {
+2650-          continue;
+2651-        }
+2652-
+2653-        const key = `${x}:${y}`;
+2654-
+2655-        if (!next.has(key)) {
+2656-          next.set(key, {
+2657-            x,
+2658-            y,
+2659-            color: activeColor,
+2660-          });
+2661-        }
+2662-      }
+2663-    }
+2664-
+2665-    setSelectedBlock(null);
+2666-    setSelectedPixels(next);
+2667-  };
+2668-
+2669-  const applyRectangleErase = (
+2670-    startX: number,
+2671-    startY: number,
+2672-    endX: number,
+2673-    endY: number,
+--
+2927-      }
+2928-    }
+2929-
+2930-    if (tool === 'pan') return;
+2931-
+2932-    const world = screenToWorld(event.clientX, event.clientY);
+2933-    const x = Math.floor(world.x);
+2934-    const y = Math.floor(world.y);
+2935-    const occupied = occupiedAt(world.x, world.y) ?? null;
+2936-    if (!occupied && (world.x < 0 || world.x >= 1000 || world.y < 0 || world.y >= 1000)) return;
+2937-
+2938-    const action: 'add' | 'erase' | 'recolor' = recolorMode ? 'recolor' : tool === 'erase' ? 'erase' : 'add';
+2939:    if (action === 'add' && claimedAt(x, y)) return;
+2940-
+2941-    const selectedKey = `${x}:${y}`;
+2942-    const isAlreadySelected =
+2943-      selectedPixels.has(selectedKey);
+2944-
+2945-    if (eraseAreaMode && !occupied) {
+2946-      const base = new Map(selectedPixels);
+2947-
+2948-      rectangleSelectRef.current = {
+2949-        pointerId: event.pointerId,
+2950-        startX: x,
+2951-        startY: y,
+2952-        base,
+2953-      };
+2954-
+2955-      applyRectangleErase(
+2956-        x,
+2957-        y,
+2958-        x,
+2959-        y,
+2960-        base,
+2961-      );
+2962-
+2963-      setAvailablePixelPrompt(null);
+2964-      return;
+--
+3127-
+3128-        if (
+3129-          nextX < 0 ||
+3130-          nextX >= 1000 ||
+3131-          nextY < 0 ||
+3132-          nextY >= 1000
+3133-        ) {
+3134-          valid = false;
+3135-          break;
+3136-        }
+3137-
+3138-        if (
+3139:          claimedAt(nextX, nextY) ||
+3140-          occupiedAt(nextX + 0.5, nextY + 0.5)
+3141-        ) {
+3142-          valid = false;
+3143-          break;
+3144-        }
+3145-      }
+3146-
+3147-      if (valid) {
+3148-        const next = new Map<string, SelectedPixel>();
+3149-
+3150-        for (const pixel of imageMove.base.values()) {
+3151-          const movedPixel = {
+3152-            ...pixel,
+3153-            x: pixel.x + moveX,
+3154-            y: pixel.y + moveY,
+3155-          };
+3156-
+3157-          next.set(
+3158-            `${movedPixel.x}:${movedPixel.y}`,
+3159-            movedPixel,
+3160-          );
+3161-        }
+3162-
+3163-        imageMove.lastDx = moveX;
+3164-        imageMove.lastDy = moveY;
+--
+3491-    startY = Math.max(
+3492-      0,
+3493-      Math.min(1000 - size, startY),
+3494-    );
+3495-
+3496-    /*
+3497-     * Antes de criar a seleção, verifica se existe algum pixel
+3498-     * já comprado/reservado dentro da área.
+3499-     */
+3500-    for (let y = startY; y < startY + size; y += 1) {
+3501-      for (let x = startX; x < startX + size; x += 1) {
+3502-        if (
+3503:          claimedAt(x, y) ||
+3504-          occupiedAt(x + 0.5, y + 0.5)
+3505-        ) {
+3506-          setImageSizeError(
+3507-            "Essa área encontrou pixels já ocupados. Em seguida vamos adicionar a opção de mover a imagem para escolher outra posição.",
+3508-          );
+3509-          return;
+3510-        }
+3511-      }
+3512-    }
+3513-
+3514-    const next = new Map<string, SelectedPixel>();
+3515-
+3516-    for (let y = startY; y < startY + size; y += 1) {
+3517-      for (let x = startX; x < startX + size; x += 1) {
+3518-        const key = `${x}:${y}`;
+3519-
+3520-        next.set(key, {
+3521-          x,
+3522-          y,
+3523-          color: activeColor,
+3524-        });
+3525-      }
+3526-    }
+3527-
+3528-    setSelectedPixels(next);
+
+===== STATUS RESERVED / CLAIMED NO RENDER =====
+2280-                ? (
+2281-                    pixel.color ??
+2282-                    '#111111'
+2283-                  )
+2284-                : '#b9b4aa';
+2285-
+2286-            ctx.fillRect(
+2287-              x,
+2288-              y,
+2289-              size,
+2290-              size,
+2291-            );
+2292-
+2293-            if (
+2294-              pixel.status ===
+2295:                'reserved' &&
+2296-              camera.scale >= 6
+2297-            ) {
+2298-              ctx.strokeStyle =
+2299-                'rgba(70, 66, 58, 0.72)';
+2300-
+2301-              ctx.lineWidth =
+2302-                Math.max(
+2303-                  1,
+2304-                  camera.scale *
+2305-                    0.10,
+2306-                );
+2307-
+2308-              ctx.beginPath();
+2309-
+2310-              ctx.moveTo(
+2311-                x + size * 0.18,
+2312-                y + size * 0.18,
+2313-              );
+2314-
+2315-              ctx.lineTo(
+2316-                x + size * 0.82,
+2317-                y + size * 0.82,
+2318-              );
+2319-
+2320-              ctx.moveTo(
+2321-                x + size * 0.82,
+2322-                y + size * 0.18,
+2323-              );
+2324-
+2325-              ctx.lineTo(
