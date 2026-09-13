@@ -111,3 +111,121 @@ export async function reserveWallPixels(
 
   return payload as WallReservationResult;
 }
+
+
+export async function updateWallReservation(
+  reservationId: string,
+  pixels: WallPixelInput[],
+  accessToken: string,
+): Promise<WallReservationResult> {
+  if (!supabasePublishableKey) {
+    throw new Error('A chave pública do Supabase não está configurada.');
+  }
+
+  const response = await fetch(
+    `${supabasePublicUrl}/rest/v1/rpc/update_wall_reservation`,
+    {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        apikey: supabasePublishableKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        p_reservation_id: reservationId,
+        p_pixels: pixels,
+      }),
+    },
+  );
+
+  const contentType = response.headers.get('content-type') ?? '';
+  const payload = contentType.includes('application/json')
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'object' && payload && 'message' in payload
+        ? String(payload.message)
+        : '';
+
+    if (message.includes('RESERVATION_NOT_FOUND')) {
+      throw new Error('Não encontramos essa reserva.');
+    }
+
+    if (message.includes('RESERVATION_NOT_ACTIVE')) {
+      throw new Error('Essa reserva não está mais ativa.');
+    }
+
+    if (message.includes('RESERVATION_EXPIRED')) {
+      throw new Error('Sua reserva expirou. Selecione novamente os pixels.');
+    }
+
+    if (message.includes('PIXELS_UNAVAILABLE')) {
+      throw new Error(
+        'Um ou mais pixels foram reservados por outra pessoa. Ajuste sua seleção e tente novamente.',
+      );
+    }
+
+    throw new Error(readableReservationError(payload));
+  }
+
+  return payload as WallReservationResult;
+}
+
+export async function loadOwnReservedPixels(
+  reservationId: string,
+  accessToken: string,
+): Promise<WallPixelInput[]> {
+  if (!supabasePublishableKey) {
+    throw new Error('A chave pública do Supabase não está configurada.');
+  }
+
+  const params = new URLSearchParams({
+    select: 'x,y,color',
+    reservation_id: `eq.${reservationId}`,
+    status: 'eq.reserved',
+    order: 'y.asc,x.asc',
+  });
+
+  const response = await fetch(
+    `${supabasePublicUrl}/rest/v1/wall_pixel_claims?${params.toString()}`,
+    {
+      headers: {
+        Accept: 'application/json',
+        apikey: supabasePublishableKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: 'no-store',
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      'Não foi possível carregar os pixels da sua reserva.',
+    );
+  }
+
+  const payload = await response.json();
+
+  if (!Array.isArray(payload)) {
+    throw new Error(
+      'Não foi possível carregar os pixels da sua reserva.',
+    );
+  }
+
+  return payload
+    .filter(
+      (pixel): pixel is WallPixelInput =>
+        pixel &&
+        Number.isInteger(pixel.x) &&
+        Number.isInteger(pixel.y) &&
+        typeof pixel.color === 'string',
+    )
+    .map((pixel) => ({
+      x: pixel.x,
+      y: pixel.y,
+      color: pixel.color,
+    }));
+}

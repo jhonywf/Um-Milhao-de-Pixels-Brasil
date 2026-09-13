@@ -33,7 +33,14 @@ import type { PixelBlock } from '@/data/pixel-blocks';
 import { AuthProvider, useAuth } from '@/auth/auth-context';
 import { AuthDialogs } from '@/auth/auth-dialogs';
 import { supabasePublicStorageUrl } from '@/auth/auth-service';
-import { loadPublicWallPixels, reserveWallPixels, type PublicWallPixel, type WallReservationSuccess } from '@/data/wall-reservation-service';
+import {
+  loadPublicWallPixels,
+  loadOwnReservedPixels,
+  reserveWallPixels,
+  updateWallReservation,
+  type PublicWallPixel,
+  type WallReservationSuccess,
+} from '@/data/wall-reservation-service';
 import { createMercadoPagoCheckout, getMercadoPagoPaymentStatus } from '@/data/payment-service';
 import { getMyPurchases, type MyPurchasesResponse } from '@/data/my-purchases-service';
 
@@ -1798,6 +1805,7 @@ const PIXEL_PALETTE = [
 ];
 
 function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
+  const { session } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
@@ -1828,6 +1836,9 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   const [customColor, setCustomColor] = useState('#ff681d');
   const [customColorActive, setCustomColorActive] = useState(false);
   const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
+  const [editingReservation, setEditingReservation] = useState(false);
+  const [reservationEditError, setReservationEditError] = useState<string | null>(null);
+  const [loadingReservationEdit, setLoadingReservationEdit] = useState(false);
   const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
   const publicPixelBucketsRef = useRef(
     new Map<string, PublicWallPixel[]>(),
@@ -3366,10 +3377,13 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setCustomizeOpen(false);
     setRecolorMode(false);
     setLastReservation(null);
+    setEditingReservation(false);
+    setReservationEditError(null);
+    setLoadingReservationEdit(false);
   };
 
   const fillAll = (color: string) => {
-    if (lastReservation) return;
+    if (lastReservation && !editingReservation) return;
     setActiveColor(color);
     setSelectionCustomized(true);
     setSelectedPixels((current) => {
@@ -3814,6 +3828,112 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     setCustomizeOpen(false);
     setRecolorMode(false);
     setAvailablePixelPrompt(null);
+  };
+
+
+  const handleEditReservation = async () => {
+    if (!lastReservation || !session) return;
+
+    setReservationEditError(null);
+    setLoadingReservationEdit(true);
+
+    try {
+      const pixels = await loadOwnReservedPixels(
+        lastReservation.reservation_id,
+        session.access_token,
+      );
+
+      if (!pixels.length) {
+        throw new Error(
+          'Não encontramos pixels ativos nessa reserva. Ela pode ter expirado.',
+        );
+      }
+
+      const next = new Map<string, SelectedPixel>();
+
+      for (const pixel of pixels) {
+        next.set(`${pixel.x}:${pixel.y}`, {
+          x: pixel.x,
+          y: pixel.y,
+          color: pixel.color,
+        });
+      }
+
+      setSelectedPixels(next);
+      setSelectedBlock(null);
+      setSelectionCustomized(true);
+      setEditingReservation(true);
+      setTool('select');
+      setSelectionArmed(true);
+      setCustomizeOpen(false);
+      setRecolorMode(false);
+      setImageMoveMode(false);
+      setAvailablePixelPrompt(null);
+
+      /*
+       * A preferência anterior do Mercado Pago pode conter
+       * quantidade/valor antigos. Ela nunca deve ser reutilizada
+       * depois que o usuário começa a editar a reserva.
+       */
+      window.sessionStorage.removeItem('pixel-wall-checkout-url');
+    } catch (caught) {
+      setReservationEditError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível abrir sua reserva para edição.',
+      );
+    } finally {
+      setLoadingReservationEdit(false);
+    }
+  };
+
+
+  const handleSaveReservationEdit = async () => {
+    if (!lastReservation || !session || !editingReservation) return;
+
+    setReservationEditError(null);
+    setLoadingReservationEdit(true);
+
+    try {
+      const pixels = Array.from(selectedPixels.values());
+
+      if (pixels.length < 1) {
+        throw new Error(
+          'Mantenha pelo menos 1 pixel na reserva ou volte sem salvar.',
+        );
+      }
+
+      const updated = await updateWallReservation(
+        lastReservation.reservation_id,
+        pixels,
+        session.access_token,
+      );
+
+      if (!updated.ok) {
+        throw new Error(
+          'Um ou mais pixels ficaram indisponíveis. Atualize sua seleção e tente novamente.',
+        );
+      }
+
+      setLastReservation(updated);
+      setEditingReservation(false);
+      setSelectionArmed(false);
+      setCustomizeOpen(false);
+      setRecolorMode(false);
+      setImageMoveMode(false);
+
+      window.sessionStorage.removeItem('pixel-wall-checkout-url');
+
+      await refreshPublicPixels();
+    } catch (caught) {
+      setReservationEditError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível salvar as alterações da reserva.',
+      );
+    } finally {
+      setLoadingReservationEdit(false);
+    }
   };
 
 
@@ -5006,6 +5126,11 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
             selectedBlock={selectedBlock}
             coordinateText={coordinateText}
             lastReservation={lastReservation}
+            editingReservation={editingReservation}
+            loadingReservationEdit={loadingReservationEdit}
+            reservationEditError={reservationEditError}
+            onEditReservation={handleEditReservation}
+            onSaveReservationEdit={handleSaveReservationEdit}
             onReserved={handleReserved}
             onAvailabilityConflict={refreshPublicPixels}
             onResetExpired={clearSelection}
@@ -5026,6 +5151,11 @@ function SelectionPanel({
   selectedBlock,
   coordinateText,
   lastReservation,
+  editingReservation,
+  loadingReservationEdit,
+  reservationEditError,
+  onEditReservation,
+  onSaveReservationEdit,
   onReserved,
   onAvailabilityConflict,
   onResetExpired,
@@ -5034,6 +5164,11 @@ function SelectionPanel({
   selectedBlock: PixelBlock | null;
   coordinateText: string;
   lastReservation: WallReservationSuccess | null;
+  editingReservation: boolean;
+  loadingReservationEdit: boolean;
+  reservationEditError: string | null;
+  onEditReservation: () => Promise<void>;
+  onSaveReservationEdit: () => Promise<void>;
   onReserved: (reservation: WallReservationSuccess) => void;
   onAvailabilityConflict: () => Promise<void>;
   onResetExpired: () => void;
@@ -5301,14 +5436,60 @@ function SelectionPanel({
             <div><span>valor atual</span><b>R$ {selectedCount.toFixed(2).replace('.', ',')}</b></div>
 
           </div>
-          <button className="selection-button" onClick={handleReserve} disabled={reserving || !!lastReservation}>
-            {reserving ? 'Reservando...' : lastReservation ? 'Seleção reservada' : 'Continuar com esta seleção'}
-            {!reserving && !lastReservation && <ArrowRight size={17} />}
-            {lastReservation && <Check size={17} />}
+          <button
+            className="selection-button"
+            onClick={
+              editingReservation
+                ? onSaveReservationEdit
+                : handleReserve
+            }
+            disabled={
+              reserving ||
+              loadingReservationEdit ||
+              (!!lastReservation && !editingReservation)
+            }
+          >
+            {loadingReservationEdit
+              ? 'Salvando...'
+              : reserving
+                ? 'Reservando...'
+                : editingReservation
+                  ? 'Salvar alterações'
+                  : lastReservation
+                    ? 'Seleção reservada'
+                    : 'Continuar com esta seleção'}
+            {!reserving && !lastReservation && !editingReservation && (
+              <ArrowRight size={17} />
+            )}
+            {editingReservation && <Check size={17} />}
+            {lastReservation && !editingReservation && <Check size={17} />}
           </button>
           {selectedCount < 1 && !lastReservation && (
             <div className="demo-notice" role="status">Selecione mais {5 - selectedCount} {5 - selectedCount === 1 ? 'pixel' : 'pixels'} para atingir o mínimo de R$ 5,00.</div>
           )}
+          {lastReservation && !editingReservation && !reservationExpired && (
+            <button
+              className="selection-button"
+              type="button"
+              onClick={() => void onEditReservation()}
+              disabled={loadingReservationEdit}
+            >
+              {loadingReservationEdit ? 'Abrindo edição...' : 'Editar pixels'}
+            </button>
+          )}
+
+          {editingReservation && (
+            <div className="demo-notice" role="status">
+              Você está editando sua reserva atual. Faça as alterações e toque em Salvar alterações.
+            </div>
+          )}
+
+          {reservationEditError && (
+            <div className="demo-notice" role="alert">
+              {reservationEditError}
+            </div>
+          )}
+
           {reservationError && <div className="demo-notice" role="alert">{reservationError}</div>}
           {lastReservation && (
             <>
