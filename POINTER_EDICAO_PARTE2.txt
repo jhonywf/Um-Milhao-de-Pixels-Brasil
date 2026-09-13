@@ -1,0 +1,231 @@
+          y,
+          base,
+        );
+
+        setAvailablePixelPrompt(null);
+        return;
+      }
+
+      pendingTouchRef.current = {
+        pointerId: event.pointerId,
+        startedAt: performance.now(),
+        startX: event.clientX,
+        startY: event.clientY,
+        x,
+        y,
+        action,
+        occupied,
+        moved: false,
+      };
+      return;
+    }
+
+    if (occupied) {
+      setSelectedBlock(occupied);
+      setAvailablePixelPrompt(null);
+      return;
+    }
+
+    if (
+      action === 'add' &&
+      isAlreadySelected
+    ) {
+      updatePixel(x, y, 'erase');
+      setSelectionNudgeOpen(false);
+      return;
+    }
+
+    if (
+      action === 'add' &&
+      !selectionArmed
+    ) {
+      focusPixelForEditing(x, y);
+      setAvailablePixelPrompt({ x, y });
+      return;
+    }
+
+    updatePixel(x, y, action);
+    paintRef.current = { pointerId: event.pointerId, lastX: x, lastY: y, action };
+  };
+
+  const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (!pointersRef.current.has(event.pointerId)) return;
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (pointersRef.current.size >= 2) {
+      gestureRef.current.multiTouch = true;
+
+      if (rectangleSelectRef.current) {
+        setSelectedPixels(
+          new Map(rectangleSelectRef.current.base),
+        );
+        rectangleSelectRef.current = null;
+      }
+
+      pendingTouchRef.current = null;
+      paintRef.current = null;
+      setIsDragging(true);
+      applyPinch();
+      return;
+    }
+
+    /*
+     * Se este gesto já virou multitouch/pinch e agora restou
+     * apenas um dedo na tela, não transforme esse dedo
+     * automaticamente em PAN nem em movimento da imagem.
+     *
+     * Esperamos todos os dedos saírem e o próximo gesto começar
+     * do zero. Isso evita saltos gigantes de câmera no Safari/iPad.
+     */
+    if (gestureRef.current.multiTouch) {
+      setIsDragging(false);
+      return;
+    }
+
+    const dx = event.clientX - dragRef.current.startX;
+    const dy = event.clientY - dragRef.current.startY;
+    if (Math.hypot(dx, dy) > 3) dragRef.current.moved = true;
+
+    const imageMove = imageMoveRef.current;
+
+    if (
+      imageMove &&
+      imageMove.pointerId === event.pointerId
+    ) {
+      const world = screenToWorld(
+        event.clientX,
+        event.clientY,
+      );
+
+      const moveX = Math.round(
+        world.x - imageMove.startWorldX,
+      );
+
+      const moveY = Math.round(
+        world.y - imageMove.startWorldY,
+      );
+
+      if (
+        moveX === imageMove.lastDx &&
+        moveY === imageMove.lastDy
+      ) {
+        return;
+      }
+
+      let valid = true;
+
+      for (const pixel of imageMove.base.values()) {
+        const nextX = pixel.x + moveX;
+        const nextY = pixel.y + moveY;
+
+        if (
+          nextX < 0 ||
+          nextX >= 1000 ||
+          nextY < 0 ||
+          nextY >= 1000
+        ) {
+          valid = false;
+          break;
+        }
+
+        if (
+          blockingClaimAt(nextX, nextY) ||
+          occupiedAt(nextX + 0.5, nextY + 0.5)
+        ) {
+          valid = false;
+          break;
+        }
+      }
+
+      if (valid) {
+        const next = new Map<string, SelectedPixel>();
+
+        for (const pixel of imageMove.base.values()) {
+          const movedPixel = {
+            ...pixel,
+            x: pixel.x + moveX,
+            y: pixel.y + moveY,
+          };
+
+          next.set(
+            `${movedPixel.x}:${movedPixel.y}`,
+            movedPixel,
+          );
+        }
+
+        imageMove.lastDx = moveX;
+        imageMove.lastDy = moveY;
+
+        setSelectedPixels(next);
+        setAvailablePixelPrompt(null);
+        setSelectedBlock(null);
+      }
+
+      setIsDragging(true);
+      return;
+    }
+
+    if (tool === 'pan') {
+      const nextCamera = clampCamera({
+        ...cameraRef.current,
+        x: dragRef.current.originX + dx,
+        y: dragRef.current.originY + dy,
+      });
+
+      cameraRef.current = nextCamera;
+      setCamera(nextCamera);
+      setIsDragging(true);
+      return;
+    }
+
+    const rectangleSelection =
+      rectangleSelectRef.current;
+
+    if (
+      rectangleSelection &&
+      rectangleSelection.pointerId === event.pointerId
+    ) {
+      const world = screenToWorld(
+        event.clientX,
+        event.clientY,
+      );
+
+      const endX = Math.max(
+        0,
+        Math.min(999, Math.floor(world.x)),
+      );
+
+      const endY = Math.max(
+        0,
+        Math.min(999, Math.floor(world.y)),
+      );
+
+      if (eraseAreaMode) {
+        applyRectangleErase(
+          rectangleSelection.startX,
+          rectangleSelection.startY,
+          endX,
+          endY,
+          rectangleSelection.base,
+        );
+      } else {
+        applyRectangleSelection(
+          rectangleSelection.startX,
+          rectangleSelection.startY,
+          endX,
+          endY,
+          rectangleSelection.base,
+        );
+      }
+
+      setIsDragging(true);
+      return;
+    }
+
+    const pending = pendingTouchRef.current;
+    if (pending && pending.pointerId === event.pointerId) {
+      const movedDistance = Math.hypot(
+        event.clientX - pending.startX,
+        event.clientY - pending.startY,
+      );
+

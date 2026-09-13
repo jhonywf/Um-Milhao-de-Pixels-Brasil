@@ -1,0 +1,1028 @@
+1727-
+1728-      const pixel = value as SelectedPixel;
+1729-      result.set(`${pixel.x}:${pixel.y}`, pixel);
+1730-    }
+1731-
+1732-    return result;
+1733-  } catch {
+1734-    window.localStorage.removeItem(pendingPixelSelectionKey);
+1735-    return result;
+1736-  }
+1737-}
+1738-
+1739:function clearPendingPixelSelection() {
+1740-  if (typeof window === 'undefined') return;
+1741-  window.localStorage.removeItem(pendingPixelSelectionKey);
+1742-}
+1743-
+1744-const pendingCheckoutIntentKey = 'um-milhao-pixels.pending-checkout';
+1745-
+1746-function markPendingCheckoutIntent() {
+1747-  if (typeof window === 'undefined') return;
+1748-  window.localStorage.setItem(pendingCheckoutIntentKey, '1');
+1749-}
+1750-
+1751-function hasPendingCheckoutIntent() {
+1752-  if (typeof window === 'undefined') return false;
+1753-  return window.localStorage.getItem(pendingCheckoutIntentKey) === '1';
+1754-}
+1755-
+1756-function clearPendingCheckoutIntent() {
+1757-  if (typeof window === 'undefined') return;
+--
+1801-const PIXEL_PALETTE = [
+1802-  '#ef4444', '#f97316', '#f59e0b', '#facc15', '#a3e635', '#22c55e', '#15803d',
+1803-  '#14b8a6', '#06b6d4', '#38bdf8', '#3b82f6', '#1d4ed8', '#9333ea', '#db2777',
+1804-  '#7c5c4f', '#ffffff', '#8b8b8b', '#3f3f46', '#111111',
+1805-];
+1806-
+1807-function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
+1808-  const { session } = useAuth();
+1809-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+1810-  const stageRef = useRef<HTMLDivElement | null>(null);
+1811-  const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
+1812-  const [tool, setTool] = useState<PixelTool>('select');
+1813:  const [selectedPixels, setSelectedPixels] = useState<Map<string, SelectedPixel>>(() => loadPendingPixelSelection());
+1814-  const [selectedBlock, setSelectedBlock] = useState<PixelBlock | null>(null);
+1815-  const [availablePixelPrompt, setAvailablePixelPrompt] = useState<{ x: number; y: number } | null>(null);
+1816-  const [selectionArmed, setSelectionArmed] = useState(false);
+1817-  const [isDragging, setIsDragging] = useState(false);
+1818-  const [customizeOpen, setCustomizeOpen] = useState(false);
+1819-
+1820-  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+1821-  const [imageSizePickerOpen, setImageSizePickerOpen] = useState(false);
+1822-  const [customImageSize, setCustomImageSize] = useState("50");
+1823-  const [imageSizeError, setImageSizeError] = useState<string | null>(null);
+1824-  const [imageEditorError, setImageEditorError] = useState<string | null>(null);
+1825-  const [imageFileName, setImageFileName] = useState("");
+1826-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+1827-  const [imagePixelPreview, setImagePixelPreview] = useState<string | null>(null);
+1828-  const [imagePixelColors, setImagePixelColors] = useState<string[]>([]);
+1829-
+1830-  const [selectionCustomized, setSelectionCustomized] = useState(false);
+1831-  const [imageMoveMode, setImageMoveMode] = useState(false);
+--
+1932-          bucketKey,
+1933-          bucket,
+1934-        );
+1935-      });
+1936-
+1937-      publicPixelBucketsRef.current =
+1938-        nextBuckets;
+1939-
+1940-      setPublicPixels(next);
+1941-      setWallSyncError(null);
+1942-
+1943-      if (!lastReservation) {
+1944:        setSelectedPixels((current) => {
+1945-          let changed = false;
+1946-          const filtered = new Map(current);
+1947-          current.forEach((_pixel, key) => {
+1948-            if (next.has(key)) {
+1949-              filtered.delete(key);
+1950-              changed = true;
+1951-            }
+1952-          });
+1953-          return changed ? filtered : current;
+1954-        });
+1955-      }
+1956-    } catch (caught) {
+1957-      setWallSyncError(
+1958-        caught instanceof Error
+1959-          ? caught.message
+1960-          : 'Não foi possível atualizar a parede.',
+1961-      );
+1962-    } finally {
+--
+2022-      window.removeEventListener(
+2023-        'pageshow',
+2024-        handlePageShow,
+2025-      );
+2026-
+2027-      window.removeEventListener(
+2028-        'focus',
+2029-        handleFocus,
+2030-      );
+2031-    };
+2032-  }, [refreshPublicPixels]);
+2033-
+2034:  const selectedList = Array.from(selectedPixels.values());
+2035:  const selectedCount = selectedPixels.size;
+2036-  const firstSelected = selectedList[0] ?? null;
+2037-  const coordinateText = firstSelected ? `${String(firstSelected.x).padStart(3, '0')}, ${String(firstSelected.y).padStart(3, '0')}` : selectedBlock ? `${String(selectedBlock.x).padStart(3, '0')}, ${String(selectedBlock.y).padStart(3, '0')}` : '—';
+2038-
+2039-  const draw = useCallback(() => {
+2040-    const canvas = canvasRef.current;
+2041-    const stage = stageRef.current;
+2042-    if (!canvas || !stage) return;
+2043-    const rect = stage.getBoundingClientRect();
+2044-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+2045-    canvas.width = rect.width * dpr;
+2046-    canvas.height = rect.height * dpr;
+2047-    canvas.style.width = `${rect.width}px`;
+2048-    canvas.style.height = `${rect.height}px`;
+2049-    const ctx = canvas.getContext('2d');
+2050-    if (!ctx) return;
+2051-    ctx.scale(dpr, dpr);
+2052-    ctx.fillStyle = '#090909';
+2053-    ctx.fillRect(0, 0, rect.width, rect.height);
+--
+2335-              ctx.lineTo(
+2336-                x + size * 0.18,
+2337-                y + size * 0.82,
+2338-              );
+2339-
+2340-              ctx.stroke();
+2341-            }
+2342-          }
+2343-        }
+2344-      }
+2345-    }
+2346-
+2347:    selectedPixels.forEach((pixel) => {
+2348-      const x = originX + pixel.x * camera.scale;
+2349-      const y = originY + pixel.y * camera.scale;
+2350-      const size = Math.max(1, camera.scale);
+2351-
+2352-      ctx.fillStyle = selectionCustomized
+2353-        ? pixel.color
+2354-        : 'rgba(90, 160, 255, 0.22)';
+2355-
+2356-      ctx.fillRect(x, y, size, size);
+2357-
+2358-      /*
+2359-       * Antes da personalização, mantemos apenas uma indicação
+2360-       * discreta de que cada célula faz parte da seleção.
+2361-       */
+2362-      if (!selectionCustomized && camera.scale >= 3) {
+2363-        ctx.strokeStyle = 'rgba(22, 135, 255, 0.42)';
+2364-
+2365-        ctx.lineWidth = Math.max(
+--
+2373-          Math.max(1, size - 1),
+2374-          Math.max(1, size - 1),
+2375-        );
+2376-      }
+2377-    });
+2378-
+2379-    /*
+2380-     * Depois que o usuário aplica uma cor, desenhamos SOMENTE
+2381-     * o contorno externo da seleção.
+2382-     *
+2383-     * As linhas entre pixels vizinhos não são desenhadas.
+2384-     */
+2385:    if (selectionCustomized && selectedPixels.size > 0) {
+2386:      const selectedKeys = new Set(selectedPixels.keys());
+2387-
+2388-      ctx.save();
+2389-      ctx.beginPath();
+2390-      ctx.strokeStyle = 'rgba(22, 135, 255, 0.92)';
+2391-      ctx.lineWidth = Math.max(
+2392-        1,
+2393-        Math.min(2.2, camera.scale * 0.09),
+2394-      );
+2395-      ctx.lineJoin = 'round';
+2396-      ctx.lineCap = 'round';
+2397-
+2398:      selectedPixels.forEach((pixel) => {
+2399-        const x =
+2400-          originX + pixel.x * camera.scale;
+2401-
+2402-        const y =
+2403-          originY + pixel.y * camera.scale;
+2404-
+2405-        const size = camera.scale;
+2406-
+2407-        const top =
+2408-          `${pixel.x}:${pixel.y - 1}`;
+2409-
+2410-        const right =
+2411-          `${pixel.x + 1}:${pixel.y}`;
+2412-
+2413-        const bottom =
+2414-          `${pixel.x}:${pixel.y + 1}`;
+2415-
+2416-        const left =
+--
+2480-      ctx.save();
+2481-      ctx.strokeStyle = '#fff4c9';
+2482-      ctx.lineWidth = 3;
+2483-      ctx.setLineDash([8, 6]);
+2484-      ctx.strokeRect(x - 3, y - 3, selectedBlock.width * camera.scale + 6, selectedBlock.height * camera.scale + 6);
+2485-      ctx.restore();
+2486-    }
+2487-  }, [
+2488-    blocks,
+2489-    camera,
+2490-    publicPixels,
+2491-    selectedBlock,
+2492:    selectedPixels,
+2493-    availablePixelPrompt,
+2494-    selectionCustomized,
+2495-  ]);
+2496-
+2497-  const fitInitialView = useCallback(() => {
+2498-    const stage = stageRef.current;
+2499-    if (!stage || hasFittedInitialViewRef.current) return;
+2500-
+2501-    const rect = stage.getBoundingClientRect();
+2502-    if (!rect.width || !rect.height) return;
+2503-
+2504-    const focus = readWallFocusBounds();
+2505-
+2506-    if (focus) {
+2507-      const width = focus.maxX - focus.minX + 1;
+2508-      const height = focus.maxY - focus.minY + 1;
+2509-
+2510-      const paddingPixels = Math.max(
+--
+2599-      return null;
+2600-    }
+2601-
+2602-    return claim;
+2603-  };
+2604-
+2605-  const updatePixel = (x: number, y: number, action: 'add' | 'erase' | 'recolor') => {
+2606-    if (lastReservation && !editingReservation) return;
+2607-    if (x < 0 || y < 0 || x >= 1000 || y >= 1000) return;
+2608-    if (occupiedAt(x + 0.5, y + 0.5) || blockingClaimAt(x, y)) return;
+2609-    const key = `${x}:${y}`;
+2610-    setSelectedBlock(null);
+2611:    setSelectedPixels((current) => {
+2612-      const next = new Map(current);
+2613-      if (action === 'erase') next.delete(key);
+2614-      else if (action === 'recolor') {
+2615-        const pixel = next.get(key);
+2616-
+2617-        if (pixel) {
+2618-          next.set(
+2619-            key,
+2620-            {
+2621-              ...pixel,
+2622-              color: activeColor,
+2623-            },
+2624-          );
+2625-
+2626-          setSelectionCustomized(true);
+2627-        }
+2628-      } else if (!next.has(key)) {
+2629-        next.set(
+--
+2681-
+2682-        if (!next.has(key)) {
+2683-          next.set(key, {
+2684-            x,
+2685-            y,
+2686-            color: activeColor,
+2687-          });
+2688-        }
+2689-      }
+2690-    }
+2691-
+2692-    setSelectedBlock(null);
+2693:    setSelectedPixels(next);
+2694-  };
+2695-
+2696-  const applyRectangleErase = (
+2697-    startX: number,
+2698-    startY: number,
+2699-    endX: number,
+2700-    endY: number,
+2701-    base: Map<string, SelectedPixel>,
+2702-  ) => {
+2703-    if (lastReservation && !editingReservation) return;
+2704-
+2705-    const minX = Math.max(0, Math.min(startX, endX));
+2706-    const maxX = Math.min(999, Math.max(startX, endX));
+2707-    const minY = Math.max(0, Math.min(startY, endY));
+2708-    const maxY = Math.min(999, Math.max(startY, endY));
+2709-
+2710-    const next = new Map(base);
+2711-
+2712-    for (let y = minY; y <= maxY; y += 1) {
+2713-      for (let x = minX; x <= maxX; x += 1) {
+2714-        next.delete(`${x}:${y}`);
+2715-      }
+2716-    }
+2717-
+2718-    setSelectedBlock(null);
+2719:    setSelectedPixels(next);
+2720-
+2721-    if (next.size === 0) {
+2722-      setSelectionCustomized(false);
+2723-    }
+2724-  };
+2725-
+2726-  const focusPixelForEditing = (
+2727-    pixelX: number,
+2728-    pixelY: number,
+2729-  ) => {
+2730-    const stage = stageRef.current;
+2731-    if (!stage) return;
+2732-
+2733-    const rect = stage.getBoundingClientRect();
+2734-    if (!rect.width || !rect.height) return;
+2735-
+2736-    const currentScale = cameraRef.current.scale;
+2737-
+--
+2900-    setCamera(nextCamera);
+2901-  };
+2902-
+2903-  const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
+2904-    event.preventDefault();
+2905-    event.currentTarget.setPointerCapture(event.pointerId);
+2906-    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+2907-
+2908-    if (pointersRef.current.size >= 2) {
+2909-      gestureRef.current.multiTouch = true;
+2910-
+2911-      if (rectangleSelectRef.current) {
+2912:        setSelectedPixels(
+2913-          new Map(rectangleSelectRef.current.base),
+2914-        );
+2915-        rectangleSelectRef.current = null;
+2916-      }
+2917-
+2918-      paintRef.current = null;
+2919-      pendingTouchRef.current = null;
+2920-      imageMoveRef.current = null;
+2921-      startPinch();
+2922-      return;
+2923-    }
+2924-
+2925-    const current = cameraRef.current;
+2926-    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: current.x, originY: current.y, moved: false };
+2927-
+2928-    if (
+2929-      tool === 'pan' &&
+2930-      imageMoveMode &&
+2931-      selectionCustomized &&
+2932:      selectedPixels.size > 0
+2933-    ) {
+2934-      const world = screenToWorld(
+2935-        event.clientX,
+2936-        event.clientY,
+2937-      );
+2938-
+2939-      const x = Math.floor(world.x);
+2940-      const y = Math.floor(world.y);
+2941-
+2942:      if (selectedPixels.has(`${x}:${y}`)) {
+2943-        imageMoveRef.current = {
+2944-          pointerId: event.pointerId,
+2945-          startWorldX: world.x,
+2946-          startWorldY: world.y,
+2947:          base: new Map(selectedPixels),
+2948-          lastDx: 0,
+2949-          lastDy: 0,
+2950-        };
+2951-
+2952-        setIsDragging(true);
+2953-        return;
+2954-      }
+2955-    }
+2956-
+2957-    if (tool === 'pan') return;
+2958-
+2959-    const world = screenToWorld(event.clientX, event.clientY);
+2960-    const x = Math.floor(world.x);
+2961-    const y = Math.floor(world.y);
+2962-    const occupied = occupiedAt(world.x, world.y) ?? null;
+2963-    if (!occupied && (world.x < 0 || world.x >= 1000 || world.y < 0 || world.y >= 1000)) return;
+2964-
+2965-    const action: 'add' | 'erase' | 'recolor' = recolorMode ? 'recolor' : tool === 'erase' ? 'erase' : 'add';
+2966-    if (action === 'add' && blockingClaimAt(x, y)) return;
+2967-
+2968-    const selectedKey = `${x}:${y}`;
+2969-    const isAlreadySelected =
+2970:      selectedPixels.has(selectedKey);
+2971-
+2972-    if (eraseAreaMode && !occupied) {
+2973:      const base = new Map(selectedPixels);
+2974-
+2975-      rectangleSelectRef.current = {
+2976-        pointerId: event.pointerId,
+2977-        startX: x,
+2978-        startY: y,
+2979-        base,
+2980-      };
+2981-
+2982-      applyRectangleErase(
+2983-        x,
+2984-        y,
+2985-        x,
+2986-        y,
+2987-        base,
+2988-      );
+2989-
+2990-      setAvailablePixelPrompt(null);
+2991-      return;
+--
+3008-          occupied: null,
+3009-          moved: false,
+3010-        };
+3011-
+3012-        return;
+3013-      }
+3014-
+3015-      if (
+3016-        action === 'add' &&
+3017-        !occupied &&
+3018-        selectionArmed
+3019-      ) {
+3020:        const base = new Map(selectedPixels);
+3021-
+3022-        setSelectionNudgeOpen(false);
+3023-
+3024-        rectangleSelectRef.current = {
+3025-          pointerId: event.pointerId,
+3026-          startX: x,
+3027-          startY: y,
+3028-          base,
+3029-        };
+3030-
+3031-        applyRectangleSelection(
+3032-          x,
+3033-          y,
+3034-          x,
+3035-          y,
+3036-          base,
+3037-        );
+3038-
+--
+3081-    updatePixel(x, y, action);
+3082-    paintRef.current = { pointerId: event.pointerId, lastX: x, lastY: y, action };
+3083-  };
+3084-
+3085-  const onPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
+3086-    if (!pointersRef.current.has(event.pointerId)) return;
+3087-    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+3088-
+3089-    if (pointersRef.current.size >= 2) {
+3090-      gestureRef.current.multiTouch = true;
+3091-
+3092-      if (rectangleSelectRef.current) {
+3093:        setSelectedPixels(
+3094-          new Map(rectangleSelectRef.current.base),
+3095-        );
+3096-        rectangleSelectRef.current = null;
+3097-      }
+3098-
+3099-      pendingTouchRef.current = null;
+3100-      paintRef.current = null;
+3101-      setIsDragging(true);
+3102-      applyPinch();
+3103-      return;
+3104-    }
+3105-
+3106-    /*
+3107-     * Se este gesto já virou multitouch/pinch e agora restou
+3108-     * apenas um dedo na tela, não transforme esse dedo
+3109-     * automaticamente em PAN nem em movimento da imagem.
+3110-     *
+3111-     * Esperamos todos os dedos saírem e o próximo gesto começar
+--
+3181-            y: pixel.y + moveY,
+3182-          };
+3183-
+3184-          next.set(
+3185-            `${movedPixel.x}:${movedPixel.y}`,
+3186-            movedPixel,
+3187-          );
+3188-        }
+3189-
+3190-        imageMove.lastDx = moveX;
+3191-        imageMove.lastDy = moveY;
+3192-
+3193:        setSelectedPixels(next);
+3194-        setAvailablePixelPrompt(null);
+3195-        setSelectedBlock(null);
+3196-      }
+3197-
+3198-      setIsDragging(true);
+3199-      return;
+3200-    }
+3201-
+3202-    if (tool === 'pan') {
+3203-      const nextCamera = clampCamera({
+3204-        ...cameraRef.current,
+3205-        x: dragRef.current.originX + dx,
+3206-        y: dragRef.current.originY + dy,
+3207-      });
+3208-
+3209-      cameraRef.current = nextCamera;
+3210-      setCamera(nextCamera);
+3211-      setIsDragging(true);
+--
+3364-      gestureRef.current.multiTouch = false;
+3365-    }
+3366-
+3367-    setIsDragging(false);
+3368-  };
+3369-
+3370-  const onPointerCancel = (event: PointerEvent<HTMLCanvasElement>) => {
+3371-    pointersRef.current.delete(event.pointerId);
+3372-
+3373-    if (
+3374-      rectangleSelectRef.current?.pointerId === event.pointerId
+3375-    ) {
+3376:      setSelectedPixels(
+3377-        new Map(rectangleSelectRef.current.base),
+3378-      );
+3379-      rectangleSelectRef.current = null;
+3380-    }
+3381-
+3382-    if (pendingTouchRef.current?.pointerId === event.pointerId) pendingTouchRef.current = null;
+3383-    paintRef.current = null;
+3384-    imageMoveRef.current = null;
+3385-    pinchRef.current = null;
+3386-
+3387-    if (pointersRef.current.size === 0) {
+3388-      gestureRef.current.multiTouch = false;
+3389-    }
+3390-
+3391-    setIsDragging(false);
+3392-  };
+3393-
+3394-  const clearSelection = () => {
+3395:    setSelectedPixels(new Map());
+3396-    setSelectedBlock(null);
+3397-    setAvailablePixelPrompt(null);
+3398-    setSelectionArmed(false);
+3399-    setSelectionCustomized(false);
+3400-    setSelectionNudgeOpen(false);
+3401-    setClearMenuOpen(false);
+3402-    setEraseAreaMode(false);
+3403-    rectangleSelectRef.current = null;
+3404-    setCustomizeOpen(false);
+3405-    setRecolorMode(false);
+3406-    setLastReservation(null);
+3407-    setEditingReservation(false);
+3408-    setOwnReservationPixelKeys(new Set());
+3409-    setReservationEditError(null);
+3410-    setLoadingReservationEdit(false);
+3411-  };
+3412-
+3413-  const fillAll = (color: string) => {
+3414-    if (lastReservation && !editingReservation) return;
+3415-    setActiveColor(color);
+3416-    setSelectionCustomized(true);
+3417:    setSelectedPixels((current) => {
+3418-      const next = new Map<string, SelectedPixel>();
+3419-      current.forEach((pixel, key) => next.set(key, { ...pixel, color }));
+3420-      return next;
+3421-    });
+3422-  };
+3423-
+3424-  const getSelectedRectangle = () => {
+3425:    const pixels = Array.from(selectedPixels.values());
+3426-
+3427-    if (!pixels.length) {
+3428-      return null;
+3429-    }
+3430-
+3431-    const xs = pixels.map((pixel) => pixel.x);
+3432-    const ys = pixels.map((pixel) => pixel.y);
+3433-
+3434-    const minX = Math.min(...xs);
+3435-    const maxX = Math.max(...xs);
+3436-    const minY = Math.min(...ys);
+3437-    const maxY = Math.max(...ys);
+3438-
+3439-    const width = maxX - minX + 1;
+3440-    const height = maxY - minY + 1;
+3441-
+3442-    if (pixels.length !== width * height) {
+3443-      return null;
+3444-    }
+3445-
+3446-    for (let y = minY; y <= maxY; y += 1) {
+3447-      for (let x = minX; x <= maxX; x += 1) {
+3448:        if (!selectedPixels.has(`${x}:${y}`)) {
+3449-          return null;
+3450-        }
+3451-      }
+3452-    }
+3453-
+3454-    return {
+3455-      minX,
+3456-      minY,
+3457-      maxX,
+3458-      maxY,
+3459-      width,
+3460-      height,
+3461-    };
+3462-  };
+3463-
+3464-
+3465-  const selectAutomaticImageSquare = (requestedSize: number) => {
+3466-    if (lastReservation && !editingReservation) return;
+--
+3472-        "Informe um tamanho entre 10 e 200 pixels.",
+3473-      );
+3474-      return;
+3475-    }
+3476-
+3477-    /*
+3478-     * Usa a seleção atual como referência.
+3479-     * Se não houver seleção, usa o centro da área visível da parede.
+3480-     */
+3481-    let centerX = 500;
+3482-    let centerY = 500;
+3483-
+3484:    const currentPixels = Array.from(selectedPixels.values());
+3485-
+3486-    if (currentPixels.length) {
+3487-      const xs = currentPixels.map((pixel) => pixel.x);
+3488-      const ys = currentPixels.map((pixel) => pixel.y);
+3489-
+3490-      centerX =
+3491-        (Math.min(...xs) + Math.max(...xs) + 1) / 2;
+3492-
+3493-      centerY =
+3494-        (Math.min(...ys) + Math.max(...ys) + 1) / 2;
+3495-    } else {
+3496-      const canvas = canvasRef.current;
+3497-
+3498-      if (canvas) {
+3499-        const rect = canvas.getBoundingClientRect();
+3500-
+3501-        const world = screenToWorld(
+3502-          rect.left + rect.width / 2,
+--
+3544-    for (let y = startY; y < startY + size; y += 1) {
+3545-      for (let x = startX; x < startX + size; x += 1) {
+3546-        const key = `${x}:${y}`;
+3547-
+3548-        next.set(key, {
+3549-          x,
+3550-          y,
+3551-          color: activeColor,
+3552-        });
+3553-      }
+3554-    }
+3555-
+3556:    setSelectedPixels(next);
+3557-    setSelectedBlock(null);
+3558-    setAvailablePixelPrompt(null);
+3559-
+3560-    /*
+3561-     * Depois da seleção automática, deixamos a parede em MOVER.
+3562-     * Isso evita que a pessoa arraste o dedo e selecione pixels
+3563-     * extras sem querer.
+3564-     */
+3565-    setSelectionArmed(false);
+3566-    setSelectionCustomized(false);
+3567-    setSelectionNudgeOpen(false);
+3568-    setEraseAreaMode(false);
+3569-    setClearMenuOpen(false);
+3570-    setTool('pan');
+3571-
+3572-    setImageSizeError(null);
+3573-    setImageSizePickerOpen(false);
+3574-    setCustomizeOpen(false);
+--
+3801-    if (
+3802-      imagePixelColors.length !==
+3803-      rectangle.width * rectangle.height
+3804-    ) {
+3805-      setImageEditorError(
+3806-        "Envie uma imagem antes de aplicar.",
+3807-      );
+3808-      return;
+3809-    }
+3810-
+3811-    setSelectionCustomized(true);
+3812-
+3813:    setSelectedPixels((current) => {
+3814-      const next =
+3815-        new Map<string, SelectedPixel>(current);
+3816-
+3817-      let colorIndex = 0;
+3818-
+3819-      for (
+3820-        let y = rectangle.minY;
+3821-        y <= rectangle.maxY;
+3822-        y += 1
+3823-      ) {
+3824-        for (
+3825-          let x = rectangle.minX;
+3826-          x <= rectangle.maxX;
+3827-          x += 1
+3828-        ) {
+3829-          const key = `${x}:${y}`;
+3830-          const pixel = next.get(key);
+3831-
+--
+3842-
+3843-      return next;
+3844-    });
+3845-
+3846-    setImageEditorOpen(false);
+3847-    setImageMoveMode(true);
+3848-    setTool('pan');
+3849-    setSelectionArmed(false);
+3850-  };
+3851-
+3852-
+3853-  const handleReserved = (reservation: WallReservationSuccess) => {
+3854:    clearPendingPixelSelection();
+3855-    setLastReservation(reservation);
+3856-    setCustomizeOpen(false);
+3857-    setRecolorMode(false);
+3858-    setAvailablePixelPrompt(null);
+3859-  };
+3860-
+3861-
+3862-  const handleEditReservation = async () => {
+3863-    if (!lastReservation || !session) return;
+3864-
+3865-    setReservationEditError(null);
+3866-    setLoadingReservationEdit(true);
+3867-
+3868-    try {
+3869-      const pixels = await loadOwnReservedPixels(
+3870-        lastReservation.reservation_id,
+3871-        session.access_token,
+3872-      );
+--
+3884-        const key = `${pixel.x}:${pixel.y}`;
+3885-
+3886-        ownKeys.add(key);
+3887-
+3888-        next.set(key, {
+3889-          x: pixel.x,
+3890-          y: pixel.y,
+3891-          color: pixel.color,
+3892-        });
+3893-      }
+3894-
+3895-      setOwnReservationPixelKeys(ownKeys);
+3896:      setSelectedPixels(next);
+3897-      setSelectedBlock(null);
+3898-      setSelectionCustomized(true);
+3899-      setEditingReservation(true);
+3900-      setTool('select');
+3901-      setSelectionArmed(true);
+3902-      setCustomizeOpen(false);
+3903-      setRecolorMode(false);
+3904-      setImageMoveMode(false);
+3905-      setAvailablePixelPrompt(null);
+3906-
+3907-      /*
+3908-       * A preferência anterior do Mercado Pago pode conter
+3909-       * quantidade/valor antigos. Ela nunca deve ser reutilizada
+3910-       * depois que o usuário começa a editar a reserva.
+3911-       */
+3912-      window.sessionStorage.removeItem('pixel-wall-checkout-url');
+3913-    } catch (caught) {
+3914-      setReservationEditError(
+--
+3920-      setLoadingReservationEdit(false);
+3921-    }
+3922-  };
+3923-
+3924-
+3925-  const handleSaveReservationEdit = async () => {
+3926-    if (!lastReservation || !session || !editingReservation) return;
+3927-
+3928-    setReservationEditError(null);
+3929-    setLoadingReservationEdit(true);
+3930-
+3931-    try {
+3932:      const pixels = Array.from(selectedPixels.values());
+3933-
+3934-      if (pixels.length < 1) {
+3935-        throw new Error(
+3936-          'Mantenha pelo menos 1 pixel na reserva ou volte sem salvar.',
+3937-        );
+3938-      }
+3939-
+3940-      const updated = await updateWallReservation(
+3941-        lastReservation.reservation_id,
+3942-        pixels,
+3943-        session.access_token,
+3944-      );
+3945-
+3946-      if (!updated.ok) {
+3947-        throw new Error(
+3948-          'Um ou mais pixels ficaram indisponíveis. Atualize sua seleção e tente novamente.',
+3949-        );
+3950-      }
+--
+5148-  Aplicar aos {selectedCount} pixels
+5149-</button>
+5150-                    <button className="customizer-secondary" onClick={() => { setRecolorMode(true); setTool('select'); setCustomizeOpen(false); }}>Pintar pixel por pixel</button>
+5151-                  </div>
+5152-                </div>
+5153-              </div>
+5154-            )}
+5155-            {recolorMode && (
+5156-              <div className="recolor-banner"><span><Paintbrush size={14} /> Pintando pixels individualmente</span><button onClick={() => setRecolorMode(false)}>Concluir</button></div>
+5157-            )}
+5158-          </section>
+5159-          <SelectionPanel
+5160:            selectedPixels={selectedList}
+5161-            selectedBlock={selectedBlock}
+5162-            coordinateText={coordinateText}
+5163-            lastReservation={lastReservation}
+5164-            editingReservation={editingReservation}
+5165-            loadingReservationEdit={loadingReservationEdit}
+5166-            reservationEditError={reservationEditError}
+5167-            onEditReservation={handleEditReservation}
+5168-            onSaveReservationEdit={handleSaveReservationEdit}
+5169-            onReserved={handleReserved}
+5170-            onAvailabilityConflict={refreshPublicPixels}
+5171-            onResetExpired={clearSelection}
+5172-          />
+5173-        </div>
+5174-        {wallSyncError && <div className="demo-notice" role="status">{wallSyncError} A proteção do banco continua ativa; tente atualizar a página.</div>}
+5175-        <div className="wall-bottom-note">
+5176-        <Grid2X2 size={17} />
+5177-        Toque e arraste para selecionar vários pixels. Para remover um pixel selecionado, toque nele novamente. Ao continuar, sua seleção fica reservada por 15 minutos.
+5178-      </div>
+5179-      </main>
+5180-    </div>
+5181-  );
+5182-}
+5183-
+5184-function SelectionPanel({
+5185:  selectedPixels,
+5186-  selectedBlock,
+5187-  coordinateText,
+5188-  lastReservation,
+5189-  editingReservation,
+5190-  loadingReservationEdit,
+5191-  reservationEditError,
+5192-  onEditReservation,
+5193-  onSaveReservationEdit,
+5194-  onReserved,
+5195-  onAvailabilityConflict,
+5196-  onResetExpired,
+5197-}: {
+5198:  selectedPixels: SelectedPixel[];
+5199-  selectedBlock: PixelBlock | null;
+5200-  coordinateText: string;
+5201-  lastReservation: WallReservationSuccess | null;
+5202-  editingReservation: boolean;
+5203-  loadingReservationEdit: boolean;
+5204-  reservationEditError: string | null;
+5205-  onEditReservation: () => Promise<void>;
+5206-  onSaveReservationEdit: () => Promise<void>;
+5207-  onReserved: (reservation: WallReservationSuccess) => void;
+5208-  onAvailabilityConflict: () => Promise<void>;
+5209-  onResetExpired: () => void;
+5210-}) {
+5211-  const [reservationError, setReservationError] = useState<string | null>(null);
+5212-  const [reserving, setReserving] = useState(false);
+5213-  const [openingCheckout, setOpeningCheckout] = useState(false);
+5214-  const [paymentError, setPaymentError] = useState<string | null>(null);
+5215-  const [reservationSecondsLeft, setReservationSecondsLeft] = useState<number | null>(null);
+5216-  const { user, session, openAuth } = useAuth();
+5217:  const selectedCount = selectedPixels.length;
+5218-  const autoCheckoutStartedRef = useRef(false);
+5219-
+5220-  useEffect(() => {
+5221-    if (!lastReservation) {
+5222-      setReservationSecondsLeft(null);
+5223-      return;
+5224-    }
+5225-
+5226-    const updateReservationClock = () => {
+5227-      const expiresAt = new Date(lastReservation.expires_at).getTime();
+5228-      const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+5229-      setReservationSecondsLeft(remaining);
+5230-    };
+5231-
+5232-    updateReservationClock();
+5233-
+5234-    const interval = window.setInterval(updateReservationClock, 1000);
+5235-
+--
+5265-
+5266-      window.localStorage.setItem(
+5267-        'pixel-wall-checkout-reservation',
+5268-        reservation.reservation_id,
+5269-      );
+5270-
+5271-      window.sessionStorage.setItem(
+5272-        'pixel-wall-checkout-url',
+5273-        checkout.checkout_url,
+5274-      );
+5275-
+5276-      clearPendingCheckoutIntent();
+5277:      clearPendingPixelSelection();
+5278-
+5279-      window.location.assign(checkout.checkout_url);
+5280-    } catch (caught) {
+5281-      clearPendingCheckoutIntent();
+5282-      setPaymentError(
+5283-        caught instanceof Error
+5284-          ? caught.message
+5285-          : 'Não foi possível iniciar o pagamento agora.',
+5286-      );
+5287-      setOpeningCheckout(false);
+5288-    }
+5289-  };
+5290-
+5291-  const reserveAndOpenCheckout = async () => {
+5292-    setReservationError(null);
+5293-    setPaymentError(null);
+5294-
+5295-    if (!session) return;
+5296-
+5297-    if (selectedCount < 1) {
+5298-      clearPendingCheckoutIntent();
+5299-      autoCheckoutStartedRef.current = false;
+5300-      setReservationError('Selecione pelo menos 1 pixel para continuar.');
+5301-      return;
+5302-    }
+5303-
+5304-    setReserving(true);
+5305-
+5306-    try {
+5307-      const result = await reserveWallPixels(
+5308:        selectedPixels,
+5309-        session.access_token,
+5310-      );
+5311-
+5312-      if (!result.ok) {
+5313-        clearPendingCheckoutIntent();
+5314-        autoCheckoutStartedRef.current = false;
+5315-
+5316-        setReservationError(
+5317-          'Um ou mais pixels foram reservados por outra pessoa enquanto você fazia login. A parede foi atualizada; ajuste sua seleção e tente novamente.',
+5318-        );
+5319-
+5320-        await onAvailabilityConflict();
+5321-        return;
+5322-      }
+5323-
+5324-      onReserved(result);
+5325-      setReserving(false);
+5326-
+--
+5342-    }
+5343-  };
+5344-
+5345-  const handleReserve = async () => {
+5346-    setReservationError(null);
+5347-
+5348-    if (!user || !session) {
+5349-      if (selectedCount < 1) {
+5350-        setReservationError('Selecione pelo menos 1 pixel para continuar.');
+5351-        return;
+5352-      }
+5353-
+5354:      savePendingPixelSelection(selectedPixels);
+5355-      markPendingCheckoutIntent();
+5356-      openAuth();
+5357-      return;
+5358-    }
+5359-
+5360-    if (reserving || openingCheckout || lastReservation) return;
+5361-
+5362-    autoCheckoutStartedRef.current = true;
+5363-    await reserveAndOpenCheckout();
+5364-  };
+5365-
+5366-  useEffect(() => {
+5367-    const restoreCheckoutState = () => {
+5368-      setOpeningCheckout(false);
+5369-    };
+5370-
+5371-    window.addEventListener('pageshow', restoreCheckoutState);
+5372-
+--
+5387-  const handleExpiredReservationReset = async () => {
+5388-    if (!reservationExpired) return;
+5389-
+5390-    window.localStorage.removeItem(
+5391-      'pixel-wall-checkout-reservation',
+5392-    );
+5393-
+5394-    window.sessionStorage.removeItem(
+5395-      'pixel-wall-checkout-url',
+5396-    );
+5397-
+5398-    clearPendingCheckoutIntent();
+5399:    clearPendingPixelSelection();
+5400-
+5401-    setOpeningCheckout(false);
+5402-    setPaymentError(null);
+5403-    setReservationError(null);
+5404-    setReservationSecondsLeft(null);
+5405-
+5406-    autoCheckoutStartedRef.current = false;
+5407-
+5408-    onResetExpired();
+5409-
+5410-    await onAvailabilityConflict();
+5411-  };
+5412-
+5413-  const handlePayment = async () => {
+5414-    if (!session || !lastReservation || openingCheckout) return;
+5415-
+5416-    if (reservationExpired) {
+5417-      setPaymentError('Sua reserva expirou. Selecione novamente os pixels para continuar.');

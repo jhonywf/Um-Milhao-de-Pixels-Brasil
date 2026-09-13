@@ -1,0 +1,216 @@
+    return {
+      x:
+        maxX === 0
+          ? 0
+          : Math.max(-maxX, Math.min(maxX, candidate.x)),
+
+      y:
+        maxY === 0
+          ? 0
+          : Math.max(-maxY, Math.min(maxY, candidate.y)),
+
+      scale,
+    };
+  };
+
+  const zoomAt = (nextScale: number, clientX?: number, clientY?: number) => {
+    const bounded = Math.min(maxZoom, Math.max(minZoom, nextScale));
+    if (clientX === undefined || clientY === undefined) {
+      const nextCamera = clampCamera({
+        ...cameraRef.current,
+        scale: bounded,
+      });
+
+      cameraRef.current = nextCamera;
+      setCamera(nextCamera);
+      return;
+    }
+    const before = screenToWorld(clientX, clientY);
+    setCamera((current) => {
+      const stage = stageRef.current;
+      if (!stage) return { ...current, scale: bounded };
+      const rect = stage.getBoundingClientRect();
+      const nextCamera = clampCamera({
+        x: clientX - rect.left - rect.width / 2 - (before.x - 500) * bounded,
+        y: clientY - rect.top - rect.height / 2 - (before.y - 500) * bounded,
+        scale: bounded,
+      });
+
+      cameraRef.current = nextCamera;
+      return nextCamera;
+    });
+  };
+
+  const getPinchGeometry = () => {
+    const points = Array.from(pointersRef.current.values()).slice(0, 2);
+    if (points.length < 2) return null;
+    const [first, second] = points;
+    return { distance: Math.max(1, Math.hypot(second.x - first.x, second.y - first.y)), midpoint: { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 } };
+  };
+
+  const startPinch = () => {
+    const geometry = getPinchGeometry();
+    const stage = stageRef.current;
+    if (!geometry || !stage) return;
+    const current = cameraRef.current;
+    const rect = stage.getBoundingClientRect();
+    pinchRef.current = {
+      ...geometry,
+      worldAtMidpoint: {
+        x: (geometry.midpoint.x - rect.left - rect.width / 2 - current.x) / current.scale + 500,
+        y: (geometry.midpoint.y - rect.top - rect.height / 2 - current.y) / current.scale + 500,
+      },
+      camera: current,
+    };
+  };
+
+  const applyPinch = () => {
+    const pinch = pinchRef.current;
+    const geometry = getPinchGeometry();
+    const stage = stageRef.current;
+    if (!pinch || !geometry || !stage) return;
+    const rect = stage.getBoundingClientRect();
+    const nextScale = Math.min(maxZoom, Math.max(minZoom, pinch.camera.scale * geometry.distance / pinch.distance));
+    const nextCamera = clampCamera({
+      x: geometry.midpoint.x - rect.left - rect.width / 2 - (pinch.worldAtMidpoint.x - 500) * nextScale,
+      y: geometry.midpoint.y - rect.top - rect.height / 2 - (pinch.worldAtMidpoint.y - 500) * nextScale,
+      scale: nextScale,
+    });
+
+    cameraRef.current = nextCamera;
+    setCamera(nextCamera);
+  };
+
+  const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (pointersRef.current.size >= 2) {
+      gestureRef.current.multiTouch = true;
+
+      if (rectangleSelectRef.current) {
+        setSelectedPixels(
+          new Map(rectangleSelectRef.current.base),
+        );
+        rectangleSelectRef.current = null;
+      }
+
+      paintRef.current = null;
+      pendingTouchRef.current = null;
+      imageMoveRef.current = null;
+      startPinch();
+      return;
+    }
+
+    const current = cameraRef.current;
+    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, originX: current.x, originY: current.y, moved: false };
+
+    if (
+      tool === 'pan' &&
+      imageMoveMode &&
+      selectionCustomized &&
+      selectedPixels.size > 0
+    ) {
+      const world = screenToWorld(
+        event.clientX,
+        event.clientY,
+      );
+
+      const x = Math.floor(world.x);
+      const y = Math.floor(world.y);
+
+      if (selectedPixels.has(`${x}:${y}`)) {
+        imageMoveRef.current = {
+          pointerId: event.pointerId,
+          startWorldX: world.x,
+          startWorldY: world.y,
+          base: new Map(selectedPixels),
+          lastDx: 0,
+          lastDy: 0,
+        };
+
+        setIsDragging(true);
+        return;
+      }
+    }
+
+    if (tool === 'pan') return;
+
+    const world = screenToWorld(event.clientX, event.clientY);
+    const x = Math.floor(world.x);
+    const y = Math.floor(world.y);
+    const occupied = occupiedAt(world.x, world.y) ?? null;
+    if (!occupied && (world.x < 0 || world.x >= 1000 || world.y < 0 || world.y >= 1000)) return;
+
+    const action: 'add' | 'erase' | 'recolor' = recolorMode ? 'recolor' : tool === 'erase' ? 'erase' : 'add';
+    if (action === 'add' && blockingClaimAt(x, y)) return;
+
+    const selectedKey = `${x}:${y}`;
+    const isAlreadySelected =
+      selectedPixels.has(selectedKey);
+
+    if (eraseAreaMode && !occupied) {
+      const base = new Map(selectedPixels);
+
+      rectangleSelectRef.current = {
+        pointerId: event.pointerId,
+        startX: x,
+        startY: y,
+        base,
+      };
+
+      applyRectangleErase(
+        x,
+        y,
+        x,
+        y,
+        base,
+      );
+
+      setAvailablePixelPrompt(null);
+      return;
+    }
+
+    if (event.pointerType === 'touch') {
+      if (
+        action === 'add' &&
+        !occupied &&
+        isAlreadySelected
+      ) {
+        pendingTouchRef.current = {
+          pointerId: event.pointerId,
+          startedAt: performance.now(),
+          startX: event.clientX,
+          startY: event.clientY,
+          x,
+          y,
+          action: 'erase',
+          occupied: null,
+          moved: false,
+        };
+
+        return;
+      }
+
+      if (
+        action === 'add' &&
+        !occupied &&
+        selectionArmed
+      ) {
+        const base = new Map(selectedPixels);
+
+        setSelectionNudgeOpen(false);
+
+        rectangleSelectRef.current = {
+          pointerId: event.pointerId,
+          startX: x,
+          startY: y,
+          base,
+        };
+
+        applyRectangleSelection(
+          x,
+          y,
+          x,
+          y,

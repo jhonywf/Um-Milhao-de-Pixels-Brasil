@@ -1,0 +1,121 @@
+
+      if (movedDistance > 4) {
+        pending.moved = true;
+
+        const nextCamera = clampCamera({
+          ...cameraRef.current,
+          x: dragRef.current.originX + dx,
+          y: dragRef.current.originY + dy,
+        });
+
+        cameraRef.current = nextCamera;
+        setCamera(nextCamera);
+        setIsDragging(true);
+      }
+
+      return;
+    }
+
+    const paint = paintRef.current;
+    if (!paint || paint.pointerId !== event.pointerId) return;
+    const world = screenToWorld(event.clientX, event.clientY);
+    const x = Math.floor(world.x);
+    const y = Math.floor(world.y);
+    if (x === paint.lastX && y === paint.lastY) return;
+    paintLine(paint.lastX, paint.lastY, x, y, paint.action);
+    paintRef.current = { ...paint, lastX: x, lastY: y };
+    setIsDragging(true);
+  };
+
+  const onPointerUp = (event: PointerEvent<HTMLCanvasElement>) => {
+    const wasMultiTouch = gestureRef.current.multiTouch;
+    const pending = pendingTouchRef.current?.pointerId === event.pointerId ? pendingTouchRef.current : null;
+
+    pointersRef.current.delete(event.pointerId);
+
+    if (
+      imageMoveRef.current?.pointerId === event.pointerId
+    ) {
+      imageMoveRef.current = null;
+      setIsDragging(false);
+    }
+
+    if (
+      rectangleSelectRef.current?.pointerId === event.pointerId
+    ) {
+      rectangleSelectRef.current = null;
+
+      if (eraseAreaMode) {
+        setEraseAreaMode(false);
+        setSelectionArmed(false);
+        setClearMenuOpen(false);
+      } else {
+        setSelectionArmed(true);
+      }
+
+      setAvailablePixelPrompt(null);
+    }
+
+    if (pending && !wasMultiTouch) {
+      pendingTouchRef.current = null;
+
+      // Se houve arraste, foi apenas navegação.
+      // Nunca selecionamos/pintamos pixels durante o movimento.
+      if (!pending.moved) {
+        if (pending.occupied) {
+          setSelectedBlock(pending.occupied);
+        } else if (
+          pending.action === 'add' &&
+          !selectionArmed
+        ) {
+          focusPixelForEditing(
+            pending.x,
+            pending.y,
+          );
+
+          setAvailablePixelPrompt({
+            x: pending.x,
+            y: pending.y,
+          });
+        } else {
+          updatePixel(
+            pending.x,
+            pending.y,
+            pending.action,
+          );
+        }
+      }
+    }
+
+    // Ao terminar um gesto de pinça, não reinicie o pinch com
+    // ponteiros remanescentes. Isso evita saltos de câmera/zoom
+    // no Safari/iPad e a parede aparentemente preta.
+    pinchRef.current = null;
+
+    if (paintRef.current?.pointerId === event.pointerId) {
+      paintRef.current = null;
+    }
+
+    if (pointersRef.current.size === 0) {
+      gestureRef.current.multiTouch = false;
+    }
+
+    setIsDragging(false);
+  };
+
+  const onPointerCancel = (event: PointerEvent<HTMLCanvasElement>) => {
+    pointersRef.current.delete(event.pointerId);
+
+    if (
+      rectangleSelectRef.current?.pointerId === event.pointerId
+    ) {
+      setSelectedPixels(
+        new Map(rectangleSelectRef.current.base),
+      );
+      rectangleSelectRef.current = null;
+    }
+
+    if (pendingTouchRef.current?.pointerId === event.pointerId) pendingTouchRef.current = null;
+    paintRef.current = null;
+    imageMoveRef.current = null;
+    pinchRef.current = null;
