@@ -1,0 +1,1089 @@
+artifacts/um-milhao-pixels-brasil/src/index.css-619-  border: 2px solid var(--ink);
+artifacts/um-milhao-pixels-brasil/src/index.css-620-  background-color: #f9edbe;
+artifacts/um-milhao-pixels-brasil/src/index.css-621-  background-image: linear-gradient(rgba(36,32,59,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(36,32,59,.12) 1px, transparent 1px);
+artifacts/um-milhao-pixels-brasil/src/index.css-622-  background-size: 28px 28px;
+artifacts/um-milhao-pixels-brasil/src/index.css-623-  box-shadow: 12px 12px 0 var(--ink);
+artifacts/um-milhao-pixels-brasil/src/index.css-624-}
+artifacts/um-milhao-pixels-brasil/src/index.css-625-.pixel-mosaic.compact { min-height: 400px; background-size: 35px 35px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-626-.mosaic-block { position: absolute; border: 1px solid rgba(36,32,59,.28); transition: transform .25s ease; }
+artifacts/um-milhao-pixels-brasil/src/index.css-627-.mosaic-block:hover { z-index: 2; transform: scale(1.035); }
+artifacts/um-milhao-pixels-brasil/src/index.css-628-.mosaic-block span {
+artifacts/um-milhao-pixels-brasil/src/index.css-629-  position: absolute;
+artifacts/um-milhao-pixels-brasil/src/index.css-630-  right: 9px;
+artifacts/um-milhao-pixels-brasil/src/index.css-631-  bottom: 8px;
+artifacts/um-milhao-pixels-brasil/src/index.css-632-  color: var(--ink);
+artifacts/um-milhao-pixels-brasil/src/index.css-633-  font: 700 10px/1.1 var(--app-font-mono);
+artifacts/um-milhao-pixels-brasil/src/index.css-634-  text-align: right;
+artifacts/um-milhao-pixels-brasil/src/index.css-635-}
+artifacts/um-milhao-pixels-brasil/src/index.css-636-.mosaic-coordinate { position: absolute; color: rgba(36,32,59,.55); font: 10px var(--app-font-mono); }
+artifacts/um-milhao-pixels-brasil/src/index.css-637-.coord-a { left: 10px; top: 10px; }.coord-b { right: 10px; bottom: 10px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-638-.mosaic-scanline { position: absolute; left: 0; right: 0; top: 57%; height: 1px; background: rgba(239,107,80,.55); }
+artifacts/um-milhao-pixels-brasil/src/index.css:639:.hero-sticker {
+artifacts/um-milhao-pixels-brasil/src/index.css-640-  position: absolute;
+artifacts/um-milhao-pixels-brasil/src/index.css-641-  right: -24px;
+artifacts/um-milhao-pixels-brasil/src/index.css-642-  bottom: -28px;
+artifacts/um-milhao-pixels-brasil/src/index.css-643-  display: flex;
+artifacts/um-milhao-pixels-brasil/src/index.css-644-  align-items: center;
+artifacts/um-milhao-pixels-brasil/src/index.css-645-  gap: 6px;
+artifacts/um-milhao-pixels-brasil/src/index.css-646-  padding: 11px 14px;
+artifacts/um-milhao-pixels-brasil/src/index.css-647-  color: var(--ink);
+artifacts/um-milhao-pixels-brasil/src/index.css-648-  background: var(--mint);
+artifacts/um-milhao-pixels-brasil/src/index.css-649-  border: 1px solid var(--ink);
+artifacts/um-milhao-pixels-brasil/src/index.css-650-  font: 700 10px var(--app-font-mono);
+artifacts/um-milhao-pixels-brasil/src/index.css-651-  text-transform: uppercase;
+artifacts/um-milhao-pixels-brasil/src/index.css-652-  transform: rotate(-6deg);
+artifacts/um-milhao-pixels-brasil/src/index.css-653-  box-shadow: 4px 4px 0 var(--ink);
+artifacts/um-milhao-pixels-brasil/src/index.css-654-}
+artifacts/um-milhao-pixels-brasil/src/index.css-655-.hero-bottom-note {
+artifacts/um-milhao-pixels-brasil/src/index.css-656-  position: absolute;
+artifacts/um-milhao-pixels-brasil/src/index.css-657-  left: clamp(20px, 8vw, 132px);
+artifacts/um-milhao-pixels-brasil/src/index.css-658-  bottom: 27px;
+artifacts/um-milhao-pixels-brasil/src/index.css-659-  display: flex;
+artifacts/um-milhao-pixels-brasil/src/index.css-660-  align-items: center;
+artifacts/um-milhao-pixels-brasil/src/index.css-661-  gap: 7px;
+artifacts/um-milhao-pixels-brasil/src/index.css-662-  color: rgba(36,32,59,.48);
+artifacts/um-milhao-pixels-brasil/src/index.css-663-  font: 10px var(--app-font-mono);
+artifacts/um-milhao-pixels-brasil/src/index.css-664-  text-transform: uppercase;
+artifacts/um-milhao-pixels-brasil/src/index.css-665-}
+artifacts/um-milhao-pixels-brasil/src/index.css-666-
+artifacts/um-milhao-pixels-brasil/src/index.css-667-.stat-strip {
+artifacts/um-milhao-pixels-brasil/src/index.css-668-  display: grid;
+artifacts/um-milhao-pixels-brasil/src/index.css-669-  grid-template-columns: repeat(4, 1fr);
+artifacts/um-milhao-pixels-brasil/src/index.css-670-  padding: 0 clamp(20px, 8vw, 132px);
+artifacts/um-milhao-pixels-brasil/src/index.css-671-  background: var(--ink);
+artifacts/um-milhao-pixels-brasil/src/index.css-672-  color: var(--paper);
+artifacts/um-milhao-pixels-brasil/src/index.css-673-}
+artifacts/um-milhao-pixels-brasil/src/index.css-674-.stat-item { padding: 25px 18px 23px 0; border-right: 1px solid rgba(255,244,201,.18); }
+artifacts/um-milhao-pixels-brasil/src/index.css-675-.stat-item:not(:first-child) { padding-left: clamp(14px, 3vw, 46px); }
+artifacts/um-milhao-pixels-brasil/src/index.css-676-.stat-item:last-child { border-right: 0; }
+artifacts/um-milhao-pixels-brasil/src/index.css-677-.stat-item div { display: flex; align-items: baseline; gap: 4px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-678-.stat-item strong { color: var(--sun); font: 700 clamp(24px, 3vw, 40px) var(--app-font-mono); letter-spacing: -.08em; }
+artifacts/um-milhao-pixels-brasil/src/index.css-679-.stat-item span { color: rgba(255,244,201,.6); font: 12px var(--app-font-mono); }
+artifacts/um-milhao-pixels-brasil/src/index.css-680-.stat-item small { display: block; margin-top: 5px; color: rgba(255,244,201,.6); font: 10px var(--app-font-mono); text-transform: uppercase; letter-spacing: .06em; }
+artifacts/um-milhao-pixels-brasil/src/index.css-681-
+artifacts/um-milhao-pixels-brasil/src/index.css-682-.manifesto-section, .how-section, .activity-section { padding: clamp(80px, 11vw, 160px) clamp(20px, 8vw, 132px); }
+artifacts/um-milhao-pixels-brasil/src/index.css-683-.section-label { color: var(--coral); }
+artifacts/um-milhao-pixels-brasil/src/index.css-684-.manifesto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8vw; margin-top: 68px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-685-.section-kicker { margin: 0; color: var(--violet); font: 700 clamp(23px, 3.1vw, 44px)/.98 var(--app-font-serif); letter-spacing: -.06em; }
+artifacts/um-milhao-pixels-brasil/src/index.css-686-.section-kicker span { color: var(--coral); }
+artifacts/um-milhao-pixels-brasil/src/index.css-687-.manifesto-text h2, .how-heading h2, .company-copy h2 {
+artifacts/um-milhao-pixels-brasil/src/index.css-688-  margin: 0;
+artifacts/um-milhao-pixels-brasil/src/index.css-689-  font: 700 clamp(42px, 5.6vw, 82px)/.92 var(--app-font-serif);
+artifacts/um-milhao-pixels-brasil/src/index.css-690-  letter-spacing: -.065em;
+artifacts/um-milhao-pixels-brasil/src/index.css-691-}
+artifacts/um-milhao-pixels-brasil/src/index.css-692-.manifesto-text h2 span, .how-heading h2 span { color: var(--coral); }
+artifacts/um-milhao-pixels-brasil/src/index.css-693-.manifesto-text > p:first-of-type { margin: 12px 0 28px; color: var(--coral); font: 600 clamp(18px, 2vw, 27px) var(--app-font-mono); }
+artifacts/um-milhao-pixels-brasil/src/index.css-694-.body-copy { max-width: 420px; margin-bottom: 32px; color: rgba(36,32,59,.72); font-size: 16px; line-height: 1.6; }
+artifacts/um-milhao-pixels-brasil/src/index.css:695:.marquee { display: flex; gap: 45px; margin: 100px -10vw -15px; overflow: hidden; white-space: nowrap; color: var(--mint); font: 700 clamp(36px, 6vw, 82px)/.9 var(--app-font-serif); letter-spacing: -.08em; transform: rotate(-2deg); }
+artifacts/um-milhao-pixels-brasil/src/index.css:696:.marquee span:nth-child(2) { color: var(--coral); }
+artifacts/um-milhao-pixels-brasil/src/index.css-697-
+artifacts/um-milhao-pixels-brasil/src/index.css-698-.how-section { background: var(--paper-deep); }
+artifacts/um-milhao-pixels-brasil/src/index.css-699-.how-heading { display: flex; justify-content: space-between; align-items: end; gap: 30px; margin: 62px 0 58px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-700-.how-heading p { max-width: 275px; margin: 0; color: rgba(36,32,59,.68); line-height: 1.45; }
+artifacts/um-milhao-pixels-brasil/src/index.css-701-.steps-list { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid rgba(36,32,59,.3); }
+artifacts/um-milhao-pixels-brasil/src/index.css-702-.step { min-height: 285px; padding: 25px 28px 25px 0; position: relative; border-right: 1px solid rgba(36,32,59,.3); }
+artifacts/um-milhao-pixels-brasil/src/index.css-703-.step:not(:first-child) { padding-left: 28px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-704-.step:last-child { border-right: 0; }
+artifacts/um-milhao-pixels-brasil/src/index.css-705-.step-number { color: var(--coral); font: 11px var(--app-font-mono); }
+artifacts/um-milhao-pixels-brasil/src/index.css-706-.step-icon { width: 44px; height: 44px; display: grid; place-items: center; margin: 42px 0 21px; color: var(--ink); border: 1px solid var(--ink); background: var(--sun); }
+artifacts/um-milhao-pixels-brasil/src/index.css-707-.step:nth-child(2) .step-icon { background: var(--mint); }.step:nth-child(3) .step-icon { background: var(--coral); }
+artifacts/um-milhao-pixels-brasil/src/index.css-708-.step h3 { margin: 0 0 10px; font: 700 22px var(--app-font-serif); letter-spacing: -.04em; }
+artifacts/um-milhao-pixels-brasil/src/index.css-709-.step p { max-width: 260px; margin: 0; color: rgba(36,32,59,.67); font-size: 14px; line-height: 1.45; }
+artifacts/um-milhao-pixels-brasil/src/index.css-710-.step-arrow { position: absolute; right: 21px; bottom: 22px; color: var(--coral); }
+artifacts/um-milhao-pixels-brasil/src/index.css-711-
+artifacts/um-milhao-pixels-brasil/src/index.css-712-.preview-section {
+artifacts/um-milhao-pixels-brasil/src/index.css-713-  display: grid;
+artifacts/um-milhao-pixels-brasil/src/index.css-714-  grid-template-columns: .8fr 1.2fr;
+artifacts/um-milhao-pixels-brasil/src/index.css-715-  gap: clamp(30px, 7vw, 110px);
+artifacts/um-milhao-pixels-brasil/src/index.css-716-  padding: clamp(70px, 10vw, 135px) clamp(20px, 8vw, 132px);
+artifacts/um-milhao-pixels-brasil/src/index.css-717-  background: var(--ink);
+artifacts/um-milhao-pixels-brasil/src/index.css-718-  color: var(--paper);
+artifacts/um-milhao-pixels-brasil/src/index.css-719-}
+artifacts/um-milhao-pixels-brasil/src/index.css-720-.section-label.light { color: var(--sun); }
+artifacts/um-milhao-pixels-brasil/src/index.css-721-.preview-copy h2 { margin: 54px 0 23px; font: 700 clamp(48px, 6vw, 88px)/.85 var(--app-font-serif); letter-spacing: -.075em; }
+artifacts/um-milhao-pixels-brasil/src/index.css-722-.preview-copy h2 span { color: var(--sun); }
+artifacts/um-milhao-pixels-brasil/src/index.css-723-.preview-copy p { max-width: 305px; margin-bottom: 32px; color: rgba(255,244,201,.65); line-height: 1.55; }
+artifacts/um-milhao-pixels-brasil/src/index.css-724-.preview-art { align-self: center; }
+artifacts/um-milhao-pixels-brasil/src/index.css-725-.preview-art-label { color: rgba(255,244,201,.62); }
+artifacts/um-milhao-pixels-brasil/src/index.css-726-.preview-art-label span { color: var(--sun); }
+artifacts/um-milhao-pixels-brasil/src/index.css-727-.preview-art .pixel-mosaic { min-height: 420px; border-color: var(--paper); box-shadow: 10px 10px 0 var(--coral); }
+artifacts/um-milhao-pixels-brasil/src/index.css-728-.preview-art .mosaic-coordinate { color: rgba(255,244,201,.58); }
+artifacts/um-milhao-pixels-brasil/src/index.css-729-.preview-legend, .canvas-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; margin-top: 18px; color: rgba(255,244,201,.62); font: 10px var(--app-font-mono); text-transform: uppercase; }
+artifacts/um-milhao-pixels-brasil/src/index.css-730-.preview-legend i, .canvas-footer i, .legend-free, .legend-used { width: 9px; height: 9px; display: inline-block; margin-right: 5px; border: 1px solid var(--paper); }
+artifacts/um-milhao-pixels-brasil/src/index.css-731-.legend-free { background: transparent; }.legend-used { background: var(--coral); border-color: var(--coral) !important; }
+artifacts/um-milhao-pixels-brasil/src/index.css-732-
+artifacts/um-milhao-pixels-brasil/src/index.css-733-.activity-section { background: var(--paper); }
+artifacts/um-milhao-pixels-brasil/src/index.css-734-.activity-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 28px; margin-top: 65px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-735-.ranking-card, .records-card { min-height: 400px; padding: clamp(23px, 4vw, 44px); border: 1px solid var(--ink); }
+artifacts/um-milhao-pixels-brasil/src/index.css-736-.ranking-card { background: var(--sun); box-shadow: 10px 10px 0 var(--ink); }
+--
+artifacts/um-milhao-pixels-brasil/src/index.css-796-/* ACCOUNT — compact public identity flow */
+artifacts/um-milhao-pixels-brasil/src/index.css-797-.header-login, .header-account { min-height: 36px; border: 1px solid var(--ink); color: var(--ink); background: transparent; cursor: pointer; font: 700 10px var(--app-font-mono); text-transform: uppercase; transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease; }
+artifacts/um-milhao-pixels-brasil/src/index.css-798-.header-login { padding: 0 11px; }.header-login:hover, .header-account:hover { background: var(--mint); transform: translate(-2px, -2px); box-shadow: 3px 3px 0 var(--ink); }
+artifacts/um-milhao-pixels-brasil/src/index.css-799-.header-account { display: inline-flex; align-items: center; gap: 7px; padding: 3px 9px 3px 4px; text-transform: none; }.header-account-avatar { width: 27px; height: 27px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; color: var(--ink); background: var(--sun); border: 1px solid var(--ink); font-size: 14px; }.header-account-avatar img, .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }.header-account-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+artifacts/um-milhao-pixels-brasil/src/index.css-800-.account-dialog-backdrop { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(36,32,59,.72); animation: account-fade-in .18s ease both; }.account-dialog { width: min(100%, 490px); max-height: min(760px, calc(100vh - 36px)); position: relative; overflow-y: auto; padding: 34px clamp(22px, 5vw, 42px) 28px; border: 1px solid var(--ink); background: var(--paper); box-shadow: 8px 8px 0 rgba(36,32,59,.52); animation: account-rise-in .22s ease both; }.account-dialog-close { position: absolute; top: 15px; right: 15px; display: inline-flex; padding: 5px; border: 0; color: var(--ink); background: transparent; cursor: pointer; }.account-dialog-close:hover { color: var(--coral); }
+artifacts/um-milhao-pixels-brasil/src/index.css-801-.account-dialog-kicker { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: var(--coral); font: 500 10px var(--app-font-mono); letter-spacing: .09em; text-transform: uppercase; }.account-dialog h2 { max-width: 390px; margin: 0; color: var(--ink); font: 800 clamp(34px, 8vw, 54px)/.9 var(--app-font-serif); letter-spacing: -.07em; }.account-dialog-intro { max-width: 380px; margin: 16px 0 24px; color: rgba(36,32,59,.7); font-size: 14px; line-height: 1.45; }
+artifacts/um-milhao-pixels-brasil/src/index.css-802-.google-button, .account-submit { width: 100%; min-height: 47px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--ink); color: var(--ink); background: var(--sun); cursor: pointer; font: 700 10px var(--app-font-mono); letter-spacing: .04em; text-transform: uppercase; transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease; }.google-button:hover, .account-submit:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--ink); }.google-button:disabled, .account-submit:disabled { cursor: wait; opacity: .58; }.google-mark { display: inline-flex; width: 21px; height: 21px; align-items: center; justify-content: center; border-radius: 50%; color: #4285f4; background: #fff; font: 700 13px Arial, sans-serif; }
+artifacts/um-milhao-pixels-brasil/src/index.css-803-.account-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0 18px; color: rgba(36,32,59,.45); font: 9px var(--app-font-mono); text-transform: uppercase; }.account-divider::before, .account-divider::after { content: ""; height: 1px; flex: 1; background: rgba(36,32,59,.2); }.account-form { display: grid; gap: 14px; }.account-form label { display: grid; gap: 7px; color: var(--ink); font: 10px var(--app-font-mono); text-transform: uppercase; letter-spacing: .05em; }
+artifacts/um-milhao-pixels-brasil/src/index.css-804-.account-input-wrap { min-height: 43px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid rgba(36,32,59,.38); background: rgba(255,255,255,.4); }.account-input-wrap:focus-within { border-color: var(--coral); box-shadow: 3px 3px 0 rgba(239,107,80,.22); }.account-input-wrap input, .account-form textarea { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font: 13px var(--app-font-sans); text-transform: none; letter-spacing: 0; }.account-input-wrap input::placeholder, .account-form textarea::placeholder { color: rgba(36,32,59,.4); }.account-input-wrap button { display: inline-flex; padding: 3px; border: 0; color: rgba(36,32,59,.55); background: transparent; cursor: pointer; }.input-prefix { color: var(--coral); font: 700 13px var(--app-font-mono); }.account-form textarea { min-height: 68px; padding: 11px 12px; resize: vertical; border: 1px solid rgba(36,32,59,.38); }.account-form textarea:focus { border-color: var(--coral); outline: 0; }
+artifacts/um-milhao-pixels-brasil/src/index.css-805-.account-error { margin: 0; padding: 10px 12px; color: #8e2e2e; background: rgba(239,107,80,.14); font: 10px/1.4 var(--app-font-mono); }.account-switch { margin: 21px 0 0; color: rgba(36,32,59,.62); text-align: center; font: 11px var(--app-font-mono); }.account-switch button { margin-left: 5px; padding: 0; border: 0; border-bottom: 1px solid var(--ink); color: var(--ink); background: transparent; cursor: pointer; font: inherit; font-weight: 700; }.account-legal { display: block; margin-top: 18px; color: rgba(36,32,59,.45); text-align: center; font: 9px/1.4 var(--app-font-mono); }
+artifacts/um-milhao-pixels-brasil/src/index.css-806-.account-link-button { justify-self: start; padding: 0; border: 0; border-bottom: 1px solid rgba(36,32,59,.5); color: rgba(36,32,59,.72); background: transparent; cursor: pointer; font: 10px var(--app-font-mono); text-transform: uppercase; }.account-link-button:hover { color: var(--coral); border-color: var(--coral); }.account-link-button:disabled { cursor: wait; opacity: .58; }
+artifacts/um-milhao-pixels-brasil/src/index.css-807-.account-success { display: flex; gap: 11px; align-items: flex-start; margin: 25px 0 4px; padding: 14px; color: var(--ink); background: var(--mint); font: 11px/1.4 var(--app-font-mono); }.account-success > svg { flex: 0 0 auto; margin-top: 1px; }.account-success div { display: grid; gap: 4px; }.account-success span { color: rgba(36,32,59,.7); }
+artifacts/um-milhao-pixels-brasil/src/index.css-808-.profile-form { gap: 13px; }.profile-identity-row { display: grid; grid-template-columns: 52px 1fr; gap: 10px; align-items: end; }.profile-avatar { width: 52px; height: 43px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--ink); background: var(--sun); font-size: 24px; }.profile-username { min-width: 0; }.profile-avatar-upload { display: grid; gap: 5px; padding: 9px 11px; border: 1px dashed rgba(36,32,59,.38); background: rgba(255,255,255,.25); }.profile-avatar-upload span { display: inline-flex; gap: 6px; align-items: center; }.profile-avatar-upload input { width: 100%; font: 11px var(--app-font-sans); text-transform: none; }.profile-avatar-upload small { color: rgba(36,32,59,.55); font: 9px var(--app-font-mono); text-transform: none; }.profile-two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }.profile-private-email { display: flex; gap: 9px; align-items: center; padding: 10px 12px; color: rgba(36,32,59,.7); background: rgba(217,183,240,.23); font: 10px var(--app-font-mono); }.profile-private-email span { display: grid; gap: 2px; }.profile-private-email b { color: var(--ink); font-weight: 500; text-transform: none; }.profile-private-email small { color: rgba(36,32,59,.5); text-transform: uppercase; }
+artifacts/um-milhao-pixels-brasil/src/index.css-809-.consent-row { display: flex !important; gap: 8px !important; align-items: flex-start; color: rgba(36,32,59,.7) !important; font: 10px/1.35 var(--app-font-mono) !important; letter-spacing: 0 !important; text-transform: none !important; }.consent-row input { flex: 0 0 auto; width: 14px; height: 14px; margin: 0; accent-color: var(--coral); }.consent-row small { color: rgba(36,32,59,.5); }.account-logout { display: flex; gap: 7px; align-items: center; margin: 18px auto 0; padding: 0; border: 0; color: rgba(36,32,59,.55); background: transparent; cursor: pointer; font: 10px var(--app-font-mono); text-transform: uppercase; }.account-logout:hover { color: var(--coral); }
+artifacts/um-milhao-pixels-brasil/src/index.css-810-@keyframes account-fade-in { from { opacity: 0; } to { opacity: 1; } } @keyframes account-rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+artifacts/um-milhao-pixels-brasil/src/index.css-811-
+artifacts/um-milhao-pixels-brasil/src/index.css-812-@media (max-width: 700px) { .header-account-name { display: none; }.header-account { padding-right: 4px; }.profile-identity-row { grid-template-columns: 44px 1fr; gap: 7px; }.profile-avatar { width: 44px; }.account-dialog { max-height: calc(100vh - 24px); padding: 29px 18px 23px; }.account-dialog h2 { font-size: 38px; } }
+artifacts/um-milhao-pixels-brasil/src/index.css-813-
+artifacts/um-milhao-pixels-brasil/src/index.css-814-@media (max-width: 620px) {
+artifacts/um-milhao-pixels-brasil/src/index.css-815-  .site-header { height: 67px; padding: 0 18px; }.desktop-nav { display: none; }.header-cta { min-height: 38px; padding: 0 11px; font-size: 9px; }.header-cta svg { width: 14px; }.brand-lockup { font-size: 9px; }.brand-pixel { width: 23px; height: 23px; }
+artifacts/um-milhao-pixels-brasil/src/index.css:816:  .hero { padding: 54px 20px 70px; }.hero h1 { font-size: clamp(43px, 12vw, 62px); letter-spacing: -.09em; }.wall-heading h1 { font-size: clamp(38px, 10vw, 54px); letter-spacing: -.1em; }.hero-deck { margin-top: 24px; font-size: 15px; }.hero-visual { width: 100%; margin-top: 25px; transform: rotate(1deg); }.pixel-mosaic.compact { min-height: 275px; }.hero-sticker { right: 5px; bottom: -20px; font-size: 9px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-817-  .stat-strip { grid-template-columns: repeat(2, 1fr); padding: 0 20px; }.stat-item, .stat-item:not(:first-child) { padding: 18px 8px 18px 0; border-bottom: 1px solid rgba(255,244,201,.18); }.stat-item:nth-child(2n) { padding-left: 15px; border-right: 0; }.stat-item:nth-child(3), .stat-item:nth-child(4) { border-bottom: 0; }.stat-item strong { font-size: 26px; }
+artifacts/um-milhao-pixels-brasil/src/index.css:818:  .manifesto-section, .how-section, .activity-section { padding: 75px 20px; }.manifesto-grid { grid-template-columns: 1fr; gap: 45px; margin-top: 45px; }.section-kicker { font-size: 29px; }.manifesto-text h2, .how-heading h2 { font-size: 48px; }.marquee { margin-top: 72px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-819-  .how-heading { display: block; margin: 43px 0 40px; }.how-heading p { margin-top: 22px; }.steps-list { display: block; }.step, .step:not(:first-child) { min-height: 0; padding: 22px 0 30px; border-right: 0; border-bottom: 1px solid rgba(36,32,59,.3); }.step:last-child { border-bottom: 0; }.step-icon { margin: 23px 0 16px; }.step-arrow { right: 2px; bottom: 29px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-820-  .preview-section { padding: 74px 20px; }.preview-copy h2 { font-size: 57px; }.preview-art { width: 100%; }.preview-art .pixel-mosaic { min-height: 280px; background-size: 23px 23px; }.preview-legend { gap: 12px; font-size: 9px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-821-  .activity-grid { grid-template-columns: 1fr; margin-top: 42px; }.ranking-card, .records-card { min-height: auto; padding: 25px 20px; }.ranking-card h2 { margin: 38px 0 30px; }.record-big { margin: 54px 0 27px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-822-  .company-section { display: block; padding: 75px 20px; }.company-stamp { margin: 0 0 55px 15px; }.company-copy h2 { margin-top: 35px; font-size: 49px; }.company-copy p { margin-bottom: 28px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-823-  .site-footer { padding: 40px 20px 22px; }.site-footer > p { margin: 20px 0 32px; }.footer-bottom { display: block; line-height: 1.6; }.footer-bottom a { margin-top: 13px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-824-  .wall-main { padding: 43px 14px 45px; }.wall-heading { display: block; margin-bottom: 33px; }.wall-intro { margin-top: 27px; }.canvas-toolbar { min-height: auto; flex-wrap: wrap; padding: 11px 12px; gap: 10px; }.canvas-coords { order: 3; width: 100%; margin-left: 0; }.zoom-controls { margin-left: auto; }.canvas-stage { height: 75vw; min-height: 310px; }.canvas-hint { left: 9px; bottom: 9px; font-size: 8px; }.canvas-footer { gap: 10px; padding: 12px; font-size: 8px; }.canvas-foot-note { width: 100%; margin-left: 0; }.selection-empty { display: block; }.selection-empty .empty-cross { margin-bottom: 20px; }.selection-empty p { max-width: none; }.selection-content { padding: 25px 20px; }.selection-panel h2 { font-size: 35px; }.panel-foot { padding: 15px; font-size: 8px; }.wall-bottom-note { align-items: flex-start; font-size: 9px; line-height: 1.4; }
+artifacts/um-milhao-pixels-brasil/src/index.css-825-}
+artifacts/um-milhao-pixels-brasil/src/index.css-826-
+artifacts/um-milhao-pixels-brasil/src/index.css-827-.interaction-mode-button { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid rgba(255,244,217,.35); background: transparent; color: rgba(255,244,217,.72); cursor: pointer; font: 500 9px var(--app-font-mono); text-transform: uppercase; }
+artifacts/um-milhao-pixels-brasil/src/index.css-828-.interaction-mode-button.active { border-color: var(--sun); color: var(--sun); }
+artifacts/um-milhao-pixels-brasil/src/index.css-829-.interaction-mode-button:hover { color: var(--paper); border-color: var(--paper); }
+artifacts/um-milhao-pixels-brasil/src/index.css-830-@media (max-width: 620px) { .interaction-mode-button { order: 2; margin-left: auto; } .zoom-controls { order: 2; margin-left: 0; } }
+artifacts/um-milhao-pixels-brasil/src/index.css-831-
+artifacts/um-milhao-pixels-brasil/src/index.css-832-/* Pixel art editor */
+artifacts/um-milhao-pixels-brasil/src/index.css-833-.pixel-editor-card { position: relative; overflow: visible; padding-bottom: 76px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-834-.pixel-editor-bar { position: absolute; z-index: 8; left: 18px; right: 18px; bottom: 18px; min-height: 58px; display: flex; align-items: center; gap: 14px; padding: 9px 12px; border: 1px solid rgba(255,244,217,.22); background: rgba(24,20,48,.97); box-shadow: 0 12px 35px rgba(0,0,0,.25); color: var(--paper); }
+artifacts/um-milhao-pixels-brasil/src/index.css-835-.pixel-editor-tools, .pixel-editor-actions { display: flex; gap: 7px; align-items: center; }
+artifacts/um-milhao-pixels-brasil/src/index.css-836-.pixel-editor-tools button, .pixel-editor-actions button { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 11px; border: 1px solid rgba(255,244,217,.18); background: transparent; color: rgba(255,244,217,.72); font: 600 9px var(--app-font-mono); text-transform: uppercase; cursor: pointer; }
+artifacts/um-milhao-pixels-brasil/src/index.css-837-.pixel-editor-tools button.active { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+artifacts/um-milhao-pixels-brasil/src/index.css-838-.pixel-editor-tools button:hover, .pixel-editor-actions button:hover:not(:disabled) { border-color: var(--sun); color: var(--sun); }
+artifacts/um-milhao-pixels-brasil/src/index.css-839-.pixel-editor-total { margin-left: auto; display: grid; grid-template-columns: auto auto; column-gap: 8px; align-items: baseline; padding: 0 12px; border-left: 1px solid rgba(255,244,217,.16); border-right: 1px solid rgba(255,244,217,.16); }
+artifacts/um-milhao-pixels-brasil/src/index.css-840-.pixel-editor-total strong:first-child { font: 700 22px var(--app-font-serif); }.pixel-editor-total span { font: 8px var(--app-font-mono); text-transform: uppercase; color: rgba(255,244,217,.5); }.pixel-editor-total strong:last-child { grid-column: 1 / span 2; font: 600 10px var(--app-font-mono); color: var(--sun); }
+artifacts/um-milhao-pixels-brasil/src/index.css-841-.pixel-editor-actions .editor-customize { background: var(--sun); color: var(--ink); border-color: var(--sun); }.pixel-editor-actions button:disabled { opacity: .35; cursor: not-allowed; }
+artifacts/um-milhao-pixels-brasil/src/index.css-842-.pixel-customizer { position: absolute; z-index: 12; right: 18px; bottom: 88px; width: min(390px, calc(100% - 36px)); background: var(--paper); color: var(--ink); border: 1px solid var(--ink); box-shadow: 9px 9px 0 rgba(0,0,0,.2); }
+artifacts/um-milhao-pixels-brasil/src/index.css-843-.pixel-customizer-head { min-height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 17px; border-bottom: 1px solid rgba(36,32,59,.15); font: 700 12px var(--app-font-mono); text-transform: uppercase; }.pixel-customizer-head button { border: 0; background: transparent; cursor: pointer; color: var(--ink); }
+artifacts/um-milhao-pixels-brasil/src/index.css-844-.pixel-customizer-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 11px 14px 0; }.pixel-customizer-tabs button { min-height: 36px; border: 0; background: rgba(36,32,59,.07); color: rgba(36,32,59,.55); cursor: pointer; font: 700 10px var(--app-font-mono); text-transform: uppercase; }.pixel-customizer-tabs button.active { background: var(--ink); color: var(--paper); }
+artifacts/um-milhao-pixels-brasil/src/index.css-845-.pixel-customizer-body { padding: 16px 14px 18px; }.pixel-customizer-body p { margin: 0 0 15px; font-size: 12px; line-height: 1.45; color: rgba(36,32,59,.64); }
+artifacts/um-milhao-pixels-brasil/src/index.css-846-.pixel-palette { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }.pixel-palette button { width: 29px; height: 29px; border-radius: 50%; border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(36,32,59,.15); cursor: pointer; }.pixel-palette button.active { outline: 3px solid #1687ff; outline-offset: 2px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-847-.customizer-primary { width: 100%; min-height: 43px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; font: 700 10px var(--app-font-mono); text-transform: uppercase; }
+artifacts/um-milhao-pixels-brasil/src/index.css-848-.image-upload-box { min-height: 112px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 2px dashed #78b8ff; background: #eef6ff; color: #176bd5; cursor: pointer; font: 700 11px var(--app-font-mono); }.image-upload-box small { color: rgba(36,32,59,.5); font-size: 8px; }.image-upload-box input { display: none; }
+artifacts/um-milhao-pixels-brasil/src/index.css-849-
+artifacts/um-milhao-pixels-brasil/src/index.css-850-@media (max-width: 860px) {
+artifacts/um-milhao-pixels-brasil/src/index.css-851-  .pixel-editor-card { padding-bottom: 150px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-852-  .pixel-editor-bar { left: 8px; right: 8px; bottom: 8px; flex-wrap: wrap; gap: 8px; padding: 8px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-853-  .pixel-editor-tools { width: 100%; }.pixel-editor-tools button { flex: 1; justify-content: center; }
+artifacts/um-milhao-pixels-brasil/src/index.css-854-  .pixel-editor-total { margin-left: 0; margin-right: auto; border-left: 0; padding-left: 4px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-855-  .pixel-editor-actions { margin-left: auto; }.pixel-editor-actions button { padding: 0 9px; }
+artifacts/um-milhao-pixels-brasil/src/index.css-856-  .pixel-customizer { position: fixed; z-index: 30; left: 10px; right: 10px; bottom: 10px; width: auto; max-height: 70dvh; overflow: auto; }
+artifacts/um-milhao-pixels-brasil/src/index.css-857-}
+artifacts/um-milhao-pixels-brasil/src/index.css-858-@media (max-width: 520px) {
+--
+artifacts/um-milhao-pixels-brasil/src/index.css-1340-.hero-copy h1 {
+artifacts/um-milhao-pixels-brasil/src/index.css-1341-  color: var(--v2-text);
+artifacts/um-milhao-pixels-brasil/src/index.css-1342-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1343-
+artifacts/um-milhao-pixels-brasil/src/index.css-1344-.hero-copy h1 em {
+artifacts/um-milhao-pixels-brasil/src/index.css-1345-  color: var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1346-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1347-
+artifacts/um-milhao-pixels-brasil/src/index.css-1348-.hero-deck,
+artifacts/um-milhao-pixels-brasil/src/index.css-1349-.hero-bottom-note,
+artifacts/um-milhao-pixels-brasil/src/index.css-1350-.visual-caption,
+artifacts/um-milhao-pixels-brasil/src/index.css-1351-.text-link {
+artifacts/um-milhao-pixels-brasil/src/index.css-1352-  color: var(--v2-muted);
+artifacts/um-milhao-pixels-brasil/src/index.css-1353-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1354-
+artifacts/um-milhao-pixels-brasil/src/index.css-1355-.hero-visual .pixel-mosaic {
+artifacts/um-milhao-pixels-brasil/src/index.css-1356-  border-color: #eaeaea;
+artifacts/um-milhao-pixels-brasil/src/index.css-1357-  box-shadow: 12px 12px 0 var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1358-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1359-
+artifacts/um-milhao-pixels-brasil/src/index.css:1360:.hero-sticker {
+artifacts/um-milhao-pixels-brasil/src/index.css-1361-  background: var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1362-  color: #090909;
+artifacts/um-milhao-pixels-brasil/src/index.css-1363-  border-color: #090909;
+artifacts/um-milhao-pixels-brasil/src/index.css-1364-  box-shadow: 4px 4px 0 #fff;
+artifacts/um-milhao-pixels-brasil/src/index.css-1365-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1366-
+artifacts/um-milhao-pixels-brasil/src/index.css-1367-/* BOTÕES */
+artifacts/um-milhao-pixels-brasil/src/index.css-1368-
+artifacts/um-milhao-pixels-brasil/src/index.css-1369-.button-yellow,
+artifacts/um-milhao-pixels-brasil/src/index.css-1370-.button-coral {
+artifacts/um-milhao-pixels-brasil/src/index.css-1371-  background: var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1372-  color: #090909;
+artifacts/um-milhao-pixels-brasil/src/index.css-1373-  border-color: var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1374-  box-shadow: 5px 5px 0 #3c1f10;
+artifacts/um-milhao-pixels-brasil/src/index.css-1375-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1376-
+artifacts/um-milhao-pixels-brasil/src/index.css-1377-.button-yellow:hover,
+artifacts/um-milhao-pixels-brasil/src/index.css-1378-.button-coral:hover {
+artifacts/um-milhao-pixels-brasil/src/index.css-1379-  background: var(--v2-orange-soft);
+artifacts/um-milhao-pixels-brasil/src/index.css-1380-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1381-
+artifacts/um-milhao-pixels-brasil/src/index.css-1382-.button-outline {
+artifacts/um-milhao-pixels-brasil/src/index.css-1383-  background: transparent;
+artifacts/um-milhao-pixels-brasil/src/index.css-1384-  color: var(--v2-text);
+artifacts/um-milhao-pixels-brasil/src/index.css-1385-  border-color: #666;
+artifacts/um-milhao-pixels-brasil/src/index.css-1386-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1387-
+artifacts/um-milhao-pixels-brasil/src/index.css-1388-.button-outline:hover {
+artifacts/um-milhao-pixels-brasil/src/index.css-1389-  color: var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1390-  border-color: var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1391-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1392-
+artifacts/um-milhao-pixels-brasil/src/index.css-1393-.inline-arrow-link,
+artifacts/um-milhao-pixels-brasil/src/index.css-1394-.text-link {
+artifacts/um-milhao-pixels-brasil/src/index.css-1395-  color: var(--v2-text);
+artifacts/um-milhao-pixels-brasil/src/index.css-1396-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1397-
+artifacts/um-milhao-pixels-brasil/src/index.css-1398-.inline-arrow-link:hover,
+artifacts/um-milhao-pixels-brasil/src/index.css-1399-.text-link:hover {
+artifacts/um-milhao-pixels-brasil/src/index.css-1400-  color: var(--v2-orange);
+--
+artifacts/um-milhao-pixels-brasil/src/index.css-1429-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1430-
+artifacts/um-milhao-pixels-brasil/src/index.css-1431-.section-kicker {
+artifacts/um-milhao-pixels-brasil/src/index.css-1432-  color: #d9d9d9;
+artifacts/um-milhao-pixels-brasil/src/index.css-1433-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1434-
+artifacts/um-milhao-pixels-brasil/src/index.css-1435-.section-kicker span,
+artifacts/um-milhao-pixels-brasil/src/index.css-1436-.manifesto-text h2 span {
+artifacts/um-milhao-pixels-brasil/src/index.css-1437-  color: var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1438-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1439-
+artifacts/um-milhao-pixels-brasil/src/index.css-1440-.manifesto-text h2 {
+artifacts/um-milhao-pixels-brasil/src/index.css-1441-  color: var(--v2-text);
+artifacts/um-milhao-pixels-brasil/src/index.css-1442-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1443-
+artifacts/um-milhao-pixels-brasil/src/index.css-1444-.manifesto-text p,
+artifacts/um-milhao-pixels-brasil/src/index.css-1445-.body-copy {
+artifacts/um-milhao-pixels-brasil/src/index.css-1446-  color: var(--v2-muted);
+artifacts/um-milhao-pixels-brasil/src/index.css-1447-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1448-
+artifacts/um-milhao-pixels-brasil/src/index.css:1449:.marquee {
+artifacts/um-milhao-pixels-brasil/src/index.css-1450-  border-color: var(--v2-line);
+artifacts/um-milhao-pixels-brasil/src/index.css-1451-  color: #292929;
+artifacts/um-milhao-pixels-brasil/src/index.css-1452-  -webkit-text-stroke: 1px #555;
+artifacts/um-milhao-pixels-brasil/src/index.css-1453-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1454-
+artifacts/um-milhao-pixels-brasil/src/index.css-1455-/* COMO FUNCIONA */
+artifacts/um-milhao-pixels-brasil/src/index.css-1456-
+artifacts/um-milhao-pixels-brasil/src/index.css-1457-.how-section {
+artifacts/um-milhao-pixels-brasil/src/index.css-1458-  background: #101010;
+artifacts/um-milhao-pixels-brasil/src/index.css-1459-  color: var(--v2-text);
+artifacts/um-milhao-pixels-brasil/src/index.css-1460-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1461-
+artifacts/um-milhao-pixels-brasil/src/index.css-1462-.how-heading h2 {
+artifacts/um-milhao-pixels-brasil/src/index.css-1463-  color: var(--v2-text);
+artifacts/um-milhao-pixels-brasil/src/index.css-1464-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1465-
+artifacts/um-milhao-pixels-brasil/src/index.css-1466-.how-heading h2 span {
+artifacts/um-milhao-pixels-brasil/src/index.css-1467-  color: var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1468-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1469-
+artifacts/um-milhao-pixels-brasil/src/index.css-1470-.how-heading p,
+artifacts/um-milhao-pixels-brasil/src/index.css-1471-.step p {
+artifacts/um-milhao-pixels-brasil/src/index.css-1472-  color: var(--v2-muted);
+artifacts/um-milhao-pixels-brasil/src/index.css-1473-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1474-
+artifacts/um-milhao-pixels-brasil/src/index.css-1475-.step {
+artifacts/um-milhao-pixels-brasil/src/index.css-1476-  border-color: var(--v2-line);
+artifacts/um-milhao-pixels-brasil/src/index.css-1477-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1478-
+artifacts/um-milhao-pixels-brasil/src/index.css-1479-.step-number {
+artifacts/um-milhao-pixels-brasil/src/index.css-1480-  color: var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1481-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1482-
+artifacts/um-milhao-pixels-brasil/src/index.css-1483-.step-icon {
+artifacts/um-milhao-pixels-brasil/src/index.css-1484-  background: var(--v2-surface-2);
+artifacts/um-milhao-pixels-brasil/src/index.css-1485-  color: var(--v2-orange);
+artifacts/um-milhao-pixels-brasil/src/index.css-1486-  border-color: #555;
+artifacts/um-milhao-pixels-brasil/src/index.css-1487-}
+artifacts/um-milhao-pixels-brasil/src/index.css-1488-
+artifacts/um-milhao-pixels-brasil/src/index.css-1489-.step h3 {
+--
+artifacts/um-milhao-pixels-brasil/src/index.css-2219-/* Parede maior em tablets e desktop */
+artifacts/um-milhao-pixels-brasil/src/index.css-2220-@media (min-width: 768px) {
+artifacts/um-milhao-pixels-brasil/src/index.css-2221-  .canvas-stage {
+artifacts/um-milhao-pixels-brasil/src/index.css-2222-    height: min(80vw, 900px) !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-2223-    min-height: 650px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-2224-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-2225-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2226-
+artifacts/um-milhao-pixels-brasil/src/index.css-2227-/* iPad horizontal */
+artifacts/um-milhao-pixels-brasil/src/index.css-2228-@media (min-width: 900px) and (max-width: 1366px) and (orientation: landscape) {
+artifacts/um-milhao-pixels-brasil/src/index.css-2229-  .canvas-stage {
+artifacts/um-milhao-pixels-brasil/src/index.css-2230-    height: min(78vw, 850px) !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-2231-    min-height: 680px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-2232-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-2233-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2234-
+artifacts/um-milhao-pixels-brasil/src/index.css-2235-/* =========================================================
+artifacts/um-milhao-pixels-brasil/src/index.css-2236-   LETREIRO AO VIVO — PAREDE
+artifacts/um-milhao-pixels-brasil/src/index.css-2237-   ========================================================= */
+artifacts/um-milhao-pixels-brasil/src/index.css-2238-
+artifacts/um-milhao-pixels-brasil/src/index.css:2239:.live-wall-ticker {
+artifacts/um-milhao-pixels-brasil/src/index.css-2240-  width: 100%;
+artifacts/um-milhao-pixels-brasil/src/index.css-2241-  height: 42px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2242-  display: flex;
+artifacts/um-milhao-pixels-brasil/src/index.css-2243-  align-items: center;
+artifacts/um-milhao-pixels-brasil/src/index.css-2244-  overflow: hidden;
+artifacts/um-milhao-pixels-brasil/src/index.css-2245-  background: #ff681d;
+artifacts/um-milhao-pixels-brasil/src/index.css-2246-  color: #090909;
+artifacts/um-milhao-pixels-brasil/src/index.css-2247-  border-top: 1px solid #ff681d;
+artifacts/um-milhao-pixels-brasil/src/index.css-2248-  border-bottom: 1px solid #ff681d;
+artifacts/um-milhao-pixels-brasil/src/index.css-2249-  font-family: var(--app-font-mono);
+artifacts/um-milhao-pixels-brasil/src/index.css-2250-  font-size: 12px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2251-  font-weight: 700;
+artifacts/um-milhao-pixels-brasil/src/index.css-2252-  text-transform: uppercase;
+artifacts/um-milhao-pixels-brasil/src/index.css-2253-  letter-spacing: .055em;
+artifacts/um-milhao-pixels-brasil/src/index.css-2254-  white-space: nowrap;
+artifacts/um-milhao-pixels-brasil/src/index.css-2255-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2256-
+artifacts/um-milhao-pixels-brasil/src/index.css:2257:.live-wall-ticker-track {
+artifacts/um-milhao-pixels-brasil/src/index.css-2258-  width: max-content;
+artifacts/um-milhao-pixels-brasil/src/index.css-2259-  display: flex;
+artifacts/um-milhao-pixels-brasil/src/index.css-2260-  align-items: center;
+artifacts/um-milhao-pixels-brasil/src/index.css:2261:  animation: live-wall-ticker-scroll 42s linear infinite;
+artifacts/um-milhao-pixels-brasil/src/index.css-2262-  will-change: transform;
+artifacts/um-milhao-pixels-brasil/src/index.css-2263-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2264-
+artifacts/um-milhao-pixels-brasil/src/index.css:2265:.live-wall-ticker-group {
+artifacts/um-milhao-pixels-brasil/src/index.css-2266-  display: flex;
+artifacts/um-milhao-pixels-brasil/src/index.css-2267-  align-items: center;
+artifacts/um-milhao-pixels-brasil/src/index.css-2268-  flex-shrink: 0;
+artifacts/um-milhao-pixels-brasil/src/index.css-2269-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2270-
+artifacts/um-milhao-pixels-brasil/src/index.css:2271:.live-wall-ticker-item {
+artifacts/um-milhao-pixels-brasil/src/index.css-2272-  display: inline-flex;
+artifacts/um-milhao-pixels-brasil/src/index.css-2273-  align-items: center;
+artifacts/um-milhao-pixels-brasil/src/index.css-2274-  gap: 30px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2275-  padding-left: 30px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2276-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2277-
+artifacts/um-milhao-pixels-brasil/src/index.css:2278:.live-wall-ticker-item i {
+artifacts/um-milhao-pixels-brasil/src/index.css-2279-  font-style: normal;
+artifacts/um-milhao-pixels-brasil/src/index.css-2280-  font-size: 16px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2281-  line-height: 1;
+artifacts/um-milhao-pixels-brasil/src/index.css-2282-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2283-
+artifacts/um-milhao-pixels-brasil/src/index.css:2284:.live-wall-ticker-static {
+artifacts/um-milhao-pixels-brasil/src/index.css-2285-  width: 100%;
+artifacts/um-milhao-pixels-brasil/src/index.css-2286-  display: flex;
+artifacts/um-milhao-pixels-brasil/src/index.css-2287-  justify-content: center;
+artifacts/um-milhao-pixels-brasil/src/index.css-2288-  align-items: center;
+artifacts/um-milhao-pixels-brasil/src/index.css-2289-  gap: 22px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2290-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2291-
+artifacts/um-milhao-pixels-brasil/src/index.css:2292:@keyframes live-wall-ticker-scroll {
+artifacts/um-milhao-pixels-brasil/src/index.css-2293-  from {
+artifacts/um-milhao-pixels-brasil/src/index.css-2294-    transform: translateX(0);
+artifacts/um-milhao-pixels-brasil/src/index.css-2295-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-2296-
+artifacts/um-milhao-pixels-brasil/src/index.css-2297-  to {
+artifacts/um-milhao-pixels-brasil/src/index.css-2298-    transform: translateX(-50%);
+artifacts/um-milhao-pixels-brasil/src/index.css-2299-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-2300-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2301-
+artifacts/um-milhao-pixels-brasil/src/index.css:2302:.live-wall-ticker:hover .live-wall-ticker-track {
+artifacts/um-milhao-pixels-brasil/src/index.css-2303-  animation-play-state: paused;
+artifacts/um-milhao-pixels-brasil/src/index.css-2304-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2305-
+artifacts/um-milhao-pixels-brasil/src/index.css-2306-@media (max-width: 620px) {
+artifacts/um-milhao-pixels-brasil/src/index.css:2307:  .live-wall-ticker {
+artifacts/um-milhao-pixels-brasil/src/index.css-2308-    height: 36px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2309-    font-size: 10px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2310-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-2311-
+artifacts/um-milhao-pixels-brasil/src/index.css:2312:  .live-wall-ticker-item {
+artifacts/um-milhao-pixels-brasil/src/index.css-2313-    gap: 22px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2314-    padding-left: 22px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2315-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-2316-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2317-
+artifacts/um-milhao-pixels-brasil/src/index.css-2318-@media (prefers-reduced-motion: reduce) {
+artifacts/um-milhao-pixels-brasil/src/index.css:2319:  .live-wall-ticker-track {
+artifacts/um-milhao-pixels-brasil/src/index.css-2320-    animation: none;
+artifacts/um-milhao-pixels-brasil/src/index.css-2321-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-2322-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2323-
+artifacts/um-milhao-pixels-brasil/src/index.css-2324-
+artifacts/um-milhao-pixels-brasil/src/index.css-2325-/* =========================================================
+artifacts/um-milhao-pixels-brasil/src/index.css-2326-   RANKING 2.0 — ABAS
+artifacts/um-milhao-pixels-brasil/src/index.css-2327-   ========================================================= */
+artifacts/um-milhao-pixels-brasil/src/index.css-2328-
+artifacts/um-milhao-pixels-brasil/src/index.css-2329-.ranking-tabs {
+artifacts/um-milhao-pixels-brasil/src/index.css-2330-  display: grid;
+artifacts/um-milhao-pixels-brasil/src/index.css-2331-  grid-template-columns: repeat(4, 1fr);
+artifacts/um-milhao-pixels-brasil/src/index.css-2332-  gap: 4px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2333-  margin: 22px 0 18px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2334-  padding: 4px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2335-  background: #090909;
+artifacts/um-milhao-pixels-brasil/src/index.css-2336-  border: 1px solid #303030;
+artifacts/um-milhao-pixels-brasil/src/index.css-2337-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2338-
+artifacts/um-milhao-pixels-brasil/src/index.css-2339-.ranking-tabs button {
+artifacts/um-milhao-pixels-brasil/src/index.css-2340-  min-height: 38px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2341-  padding: 8px 10px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2342-  border: 0;
+artifacts/um-milhao-pixels-brasil/src/index.css-2343-  background: transparent;
+artifacts/um-milhao-pixels-brasil/src/index.css-2344-  color: #858585;
+artifacts/um-milhao-pixels-brasil/src/index.css-2345-  font: inherit;
+artifacts/um-milhao-pixels-brasil/src/index.css-2346-  font-size: 10px;
+artifacts/um-milhao-pixels-brasil/src/index.css-2347-  font-weight: 800;
+artifacts/um-milhao-pixels-brasil/src/index.css-2348-  text-transform: uppercase;
+artifacts/um-milhao-pixels-brasil/src/index.css-2349-  letter-spacing: .045em;
+artifacts/um-milhao-pixels-brasil/src/index.css-2350-  cursor: pointer;
+artifacts/um-milhao-pixels-brasil/src/index.css-2351-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2352-
+artifacts/um-milhao-pixels-brasil/src/index.css-2353-.ranking-tabs button:hover {
+artifacts/um-milhao-pixels-brasil/src/index.css-2354-  color: #f5f4ef;
+artifacts/um-milhao-pixels-brasil/src/index.css-2355-}
+artifacts/um-milhao-pixels-brasil/src/index.css-2356-
+artifacts/um-milhao-pixels-brasil/src/index.css-2357-.ranking-tabs button.active {
+artifacts/um-milhao-pixels-brasil/src/index.css-2358-  background: #ff681d;
+artifacts/um-milhao-pixels-brasil/src/index.css-2359-  color: #090909;
+--
+artifacts/um-milhao-pixels-brasil/src/index.css-3041-    width: min(290px, calc(100vw - 18px)) !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-3042-    max-height: min(40vh, 285px) !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-3043-    padding: 10px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-3044-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-3045-
+artifacts/um-milhao-pixels-brasil/src/index.css-3046-  .wall-tutorial-actions {
+artifacts/um-milhao-pixels-brasil/src/index.css-3047-    grid-template-columns: 72px 1fr !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-3048-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-3049-
+artifacts/um-milhao-pixels-brasil/src/index.css-3050-  .wall-tutorial-primary {
+artifacts/um-milhao-pixels-brasil/src/index.css-3051-    grid-row: auto !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-3052-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-3053-
+artifacts/um-milhao-pixels-brasil/src/index.css-3054-  .wall-tutorial-secondary {
+artifacts/um-milhao-pixels-brasil/src/index.css-3055-    grid-row: auto !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-3056-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-3057-}
+artifacts/um-milhao-pixels-brasil/src/index.css-3058-
+artifacts/um-milhao-pixels-brasil/src/index.css-3059-
+artifacts/um-milhao-pixels-brasil/src/index.css-3060-/* =========================================================
+artifacts/um-milhao-pixels-brasil/src/index.css:3061:   HALL DA FAMA 2.0
+artifacts/um-milhao-pixels-brasil/src/index.css-3062-   ========================================================= */
+artifacts/um-milhao-pixels-brasil/src/index.css-3063-
+artifacts/um-milhao-pixels-brasil/src/index.css-3064-.hall-card {
+artifacts/um-milhao-pixels-brasil/src/index.css-3065-  display: flex;
+artifacts/um-milhao-pixels-brasil/src/index.css-3066-  flex-direction: column;
+artifacts/um-milhao-pixels-brasil/src/index.css-3067-}
+artifacts/um-milhao-pixels-brasil/src/index.css-3068-
+artifacts/um-milhao-pixels-brasil/src/index.css-3069-.hall-heading {
+artifacts/um-milhao-pixels-brasil/src/index.css-3070-  margin: 28px 0 20px;
+artifacts/um-milhao-pixels-brasil/src/index.css-3071-}
+artifacts/um-milhao-pixels-brasil/src/index.css-3072-
+artifacts/um-milhao-pixels-brasil/src/index.css-3073-.hall-heading h2 {
+artifacts/um-milhao-pixels-brasil/src/index.css-3074-  margin: 0;
+artifacts/um-milhao-pixels-brasil/src/index.css-3075-  color: #f5f4ef;
+artifacts/um-milhao-pixels-brasil/src/index.css-3076-  font-size: clamp(32px, 4vw, 52px);
+artifacts/um-milhao-pixels-brasil/src/index.css-3077-  line-height: .92;
+artifacts/um-milhao-pixels-brasil/src/index.css-3078-  letter-spacing: -.04em;
+artifacts/um-milhao-pixels-brasil/src/index.css-3079-}
+artifacts/um-milhao-pixels-brasil/src/index.css-3080-
+artifacts/um-milhao-pixels-brasil/src/index.css-3081-.hall-heading h2 span {
+artifacts/um-milhao-pixels-brasil/src/index.css-3082-  color: #ff681d;
+artifacts/um-milhao-pixels-brasil/src/index.css-3083-}
+artifacts/um-milhao-pixels-brasil/src/index.css-3084-
+artifacts/um-milhao-pixels-brasil/src/index.css-3085-.hall-heading p {
+artifacts/um-milhao-pixels-brasil/src/index.css-3086-  max-width: 420px;
+artifacts/um-milhao-pixels-brasil/src/index.css-3087-  margin: 16px 0 0;
+artifacts/um-milhao-pixels-brasil/src/index.css-3088-  color: #8e8e8e;
+artifacts/um-milhao-pixels-brasil/src/index.css-3089-  font-size: 12px;
+artifacts/um-milhao-pixels-brasil/src/index.css-3090-  line-height: 1.55;
+artifacts/um-milhao-pixels-brasil/src/index.css-3091-}
+artifacts/um-milhao-pixels-brasil/src/index.css-3092-
+artifacts/um-milhao-pixels-brasil/src/index.css-3093-.hall-grid {
+artifacts/um-milhao-pixels-brasil/src/index.css-3094-  display: grid;
+artifacts/um-milhao-pixels-brasil/src/index.css-3095-  border-top: 1px solid #303030;
+artifacts/um-milhao-pixels-brasil/src/index.css-3096-}
+artifacts/um-milhao-pixels-brasil/src/index.css-3097-
+artifacts/um-milhao-pixels-brasil/src/index.css-3098-.hall-item {
+artifacts/um-milhao-pixels-brasil/src/index.css-3099-  position: relative;
+artifacts/um-milhao-pixels-brasil/src/index.css-3100-  display: grid;
+artifacts/um-milhao-pixels-brasil/src/index.css-3101-  grid-template-columns: 46px 1fr auto;
+--
+artifacts/um-milhao-pixels-brasil/src/index.css-7823-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7824-
+artifacts/um-milhao-pixels-brasil/src/index.css-7825-  /* Esta é a correção principal do espaço preto */
+artifacts/um-milhao-pixels-brasil/src/index.css-7826-  .hero-visual {
+artifacts/um-milhao-pixels-brasil/src/index.css-7827-    width: 100% !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7828-    max-width: none !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7829-    justify-self: stretch !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7830-    margin: 12px 0 0 !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7831-    padding: 0 !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7832-    transform: none !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7833-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7834-
+artifacts/um-milhao-pixels-brasil/src/index.css-7835-  .visual-caption {
+artifacts/um-milhao-pixels-brasil/src/index.css-7836-    margin: 0 0 8px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7837-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7838-
+artifacts/um-milhao-pixels-brasil/src/index.css-7839-  .hero-visual .pixel-mosaic.compact {
+artifacts/um-milhao-pixels-brasil/src/index.css-7840-    min-height: 245px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7841-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7842-
+artifacts/um-milhao-pixels-brasil/src/index.css:7843:  .hero-sticker {
+artifacts/um-milhao-pixels-brasil/src/index.css-7844-    bottom: -14px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7845-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7846-}
+artifacts/um-milhao-pixels-brasil/src/index.css-7847-
+artifacts/um-milhao-pixels-brasil/src/index.css-7848-/* HOME MOBILE - COMPACTAÇÃO DAS SEÇÕES */
+artifacts/um-milhao-pixels-brasil/src/index.css-7849-@media (max-width: 620px) {
+artifacts/um-milhao-pixels-brasil/src/index.css-7850-
+artifacts/um-milhao-pixels-brasil/src/index.css-7851-  /* Ranking e recordes */
+artifacts/um-milhao-pixels-brasil/src/index.css-7852-  .activity-section {
+artifacts/um-milhao-pixels-brasil/src/index.css-7853-    padding-top: 30px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7854-    padding-bottom: 30px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7855-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7856-
+artifacts/um-milhao-pixels-brasil/src/index.css-7857-  .activity-grid {
+artifacts/um-milhao-pixels-brasil/src/index.css-7858-    margin-top: 24px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7859-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7860-
+artifacts/um-milhao-pixels-brasil/src/index.css-7861-  /* O começo */
+artifacts/um-milhao-pixels-brasil/src/index.css-7862-  .manifesto-section {
+artifacts/um-milhao-pixels-brasil/src/index.css-7863-    padding-top: 30px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7864-    padding-bottom: 30px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7865-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7866-
+artifacts/um-milhao-pixels-brasil/src/index.css-7867-  .manifesto-grid {
+artifacts/um-milhao-pixels-brasil/src/index.css-7868-    margin-top: 26px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7869-    gap: 28px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7870-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7871-
+artifacts/um-milhao-pixels-brasil/src/index.css-7872-  /* Como funciona */
+artifacts/um-milhao-pixels-brasil/src/index.css-7873-  .how-section {
+artifacts/um-milhao-pixels-brasil/src/index.css-7874-    padding-top: 30px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7875-    padding-bottom: 30px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7876-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7877-
+artifacts/um-milhao-pixels-brasil/src/index.css-7878-  .how-heading {
+artifacts/um-milhao-pixels-brasil/src/index.css-7879-    margin-top: 26px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7880-    margin-bottom: 26px !important;
+artifacts/um-milhao-pixels-brasil/src/index.css-7881-  }
+artifacts/um-milhao-pixels-brasil/src/index.css-7882-
+artifacts/um-milhao-pixels-brasil/src/index.css-7883-  /* A parede */
+--
+artifacts/um-milhao-pixels-brasil/src/App.tsx-531-      avatar_path: string | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-532-      pixels: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-533-      purchases: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-534-    }>;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-535-    daily: Array<{
+artifacts/um-milhao-pixels-brasil/src/App.tsx-536-      name: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-537-      username: string | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-538-      avatar_emoji: string | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-539-      avatar_path: string | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-540-      pixels: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-541-      purchases: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-542-    }>;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-543-  };
+artifacts/um-milhao-pixels-brasil/src/App.tsx-544-  recent_purchases: Array<{
+artifacts/um-milhao-pixels-brasil/src/App.tsx-545-    name: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-546-    username: string | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-547-    pixel_count: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-548-    paid_at: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-549-  }>;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-550-  records: {
+artifacts/um-milhao-pixels-brasil/src/App.tsx:551:    first_purchase: {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-552-      order_id: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-553-      pixel_count: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-554-      paid_at: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-555-      name: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-556-      username: string | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-557-      bounds: {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-558-        min_x: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-559-        min_y: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-560-        max_x: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-561-        max_y: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-562-      } | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-563-    } | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-564-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-565-    latest_purchase: {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-566-      order_id: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-567-      pixel_count: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-568-      paid_at: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-569-      name: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-570-      username: string | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-571-      bounds: {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-572-        min_x: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-573-        min_y: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-574-        max_x: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-575-        max_y: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-576-      } | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-577-    } | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-578-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-579-    largest_purchase: {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-580-      order_id: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-581-      pixel_count: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-582-      paid_at: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-583-      name: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-584-      username: string | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-585-      bounds: {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-586-        min_x: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-587-        min_y: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-588-        max_x: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-589-        max_y: number;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-590-      } | null;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-591-    } | null;
+--
+artifacts/um-milhao-pixels-brasil/src/App.tsx-633-        // estiverem temporariamente indisponíveis.
+artifacts/um-milhao-pixels-brasil/src/App.tsx-634-      }
+artifacts/um-milhao-pixels-brasil/src/App.tsx-635-    };
+artifacts/um-milhao-pixels-brasil/src/App.tsx-636-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-637-    void load();
+artifacts/um-milhao-pixels-brasil/src/App.tsx-638-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-639-    const interval = window.setInterval(
+artifacts/um-milhao-pixels-brasil/src/App.tsx-640-      () => void load(),
+artifacts/um-milhao-pixels-brasil/src/App.tsx-641-      30000,
+artifacts/um-milhao-pixels-brasil/src/App.tsx-642-    );
+artifacts/um-milhao-pixels-brasil/src/App.tsx-643-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-644-    return () => {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-645-      cancelled = true;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-646-      window.clearInterval(interval);
+artifacts/um-milhao-pixels-brasil/src/App.tsx-647-    };
+artifacts/um-milhao-pixels-brasil/src/App.tsx-648-  }, []);
+artifacts/um-milhao-pixels-brasil/src/App.tsx-649-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-650-  return stats;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-651-}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-652-
+artifacts/um-milhao-pixels-brasil/src/App.tsx:653:function LiveWallTicker() {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-654-  const stats = usePublicWallStats();
+artifacts/um-milhao-pixels-brasil/src/App.tsx-655-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-656-  if (!stats || stats.purchase_count === 0) {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-657-    return (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-658-      <div
+artifacts/um-milhao-pixels-brasil/src/App.tsx:659:        className="live-wall-ticker"
+artifacts/um-milhao-pixels-brasil/src/App.tsx:660:        data-testid="live-wall-ticker"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-661-      >
+artifacts/um-milhao-pixels-brasil/src/App.tsx:662:        <div className="live-wall-ticker-static">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-663-          A PAREDE ESTÁ AO VIVO
+artifacts/um-milhao-pixels-brasil/src/App.tsx-664-          <span>•</span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-665-          O PRÓXIMO PIXEL PODE SER O SEU
+artifacts/um-milhao-pixels-brasil/src/App.tsx-666-        </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-667-      </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-668-    );
+artifacts/um-milhao-pixels-brasil/src/App.tsx-669-  }
+artifacts/um-milhao-pixels-brasil/src/App.tsx-670-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-671-  const messages: string[] = [];
+artifacts/um-milhao-pixels-brasil/src/App.tsx-672-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-673-  const leader = stats.ranking[0];
+artifacts/um-milhao-pixels-brasil/src/App.tsx-674-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-675-  if (leader) {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-676-    messages.push(
+artifacts/um-milhao-pixels-brasil/src/App.tsx-677-      `RANKING: ${leader.name} LIDERA COM ${leader.pixels.toLocaleString('pt-BR')} ${leader.pixels === 1 ? 'PIXEL' : 'PIXELS'}`
+artifacts/um-milhao-pixels-brasil/src/App.tsx-678-    );
+artifacts/um-milhao-pixels-brasil/src/App.tsx-679-  }
+artifacts/um-milhao-pixels-brasil/src/App.tsx-680-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-681-  if (stats.records.largest_purchase) {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-682-    const pixels = stats.records.largest_purchase.pixel_count;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-683-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-684-    messages.push(
+artifacts/um-milhao-pixels-brasil/src/App.tsx-685-      `RECORDE: MAIOR COMPRA FOI DE ${pixels.toLocaleString('pt-BR')} ${pixels === 1 ? 'PIXEL' : 'PIXELS'}`
+artifacts/um-milhao-pixels-brasil/src/App.tsx-686-    );
+artifacts/um-milhao-pixels-brasil/src/App.tsx-687-  }
+artifacts/um-milhao-pixels-brasil/src/App.tsx-688-
+artifacts/um-milhao-pixels-brasil/src/App.tsx:689:  if (stats.records.first_purchase) {
+artifacts/um-milhao-pixels-brasil/src/App.tsx:690:    const pixels = stats.records.first_purchase.pixel_count;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-691-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-692-    messages.push(
+artifacts/um-milhao-pixels-brasil/src/App.tsx:693:      `HALL DA FAMA: PRIMEIRA COMPRA — ${pixels.toLocaleString('pt-BR')} ${pixels === 1 ? 'PIXEL' : 'PIXELS'}`
+artifacts/um-milhao-pixels-brasil/src/App.tsx-694-    );
+artifacts/um-milhao-pixels-brasil/src/App.tsx-695-  }
+artifacts/um-milhao-pixels-brasil/src/App.tsx-696-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-697-  (stats.recent_purchases ?? []).slice(0, 8).forEach((purchase) => {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-698-    messages.push(
+artifacts/um-milhao-pixels-brasil/src/App.tsx-699-      `AGORA: ${purchase.name} COMPROU ${purchase.pixel_count.toLocaleString('pt-BR')} ${purchase.pixel_count === 1 ? 'PIXEL' : 'PIXELS'}`
+artifacts/um-milhao-pixels-brasil/src/App.tsx-700-    );
+artifacts/um-milhao-pixels-brasil/src/App.tsx-701-  });
+artifacts/um-milhao-pixels-brasil/src/App.tsx-702-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-703-  const renderMessages = (prefix: string) =>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-704-    messages.map((message, index) => (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-705-      <span
+artifacts/um-milhao-pixels-brasil/src/App.tsx:706:        className="live-wall-ticker-item"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-707-        key={`${prefix}-${index}`}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-708-      >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-709-        {message}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-710-        <i aria-hidden="true">•</i>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-711-      </span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-712-    ));
+artifacts/um-milhao-pixels-brasil/src/App.tsx-713-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-714-  return (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-715-    <div
+artifacts/um-milhao-pixels-brasil/src/App.tsx:716:      className="live-wall-ticker"
+artifacts/um-milhao-pixels-brasil/src/App.tsx:717:      data-testid="live-wall-ticker"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-718-      aria-label="Atividade ao vivo da parede"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-719-    >
+artifacts/um-milhao-pixels-brasil/src/App.tsx:720:      <div className="live-wall-ticker-track">
+artifacts/um-milhao-pixels-brasil/src/App.tsx:721:        <div className="live-wall-ticker-group">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-722-          {renderMessages('a')}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-723-        </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-724-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-725-        <div
+artifacts/um-milhao-pixels-brasil/src/App.tsx:726:          className="live-wall-ticker-group"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-727-          aria-hidden="true"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-728-        >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-729-          {renderMessages('b')}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-730-        </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-731-      </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-732-    </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-733-  );
+artifacts/um-milhao-pixels-brasil/src/App.tsx-734-}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-735-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-736-function StatStrip() {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-737-  const stats = usePublicWallStats();
+artifacts/um-milhao-pixels-brasil/src/App.tsx-738-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-739-  const formatMoney = (cents: number) =>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-740-    new Intl.NumberFormat('pt-BR', {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-741-      style: 'currency',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-742-      currency: 'BRL',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-743-      maximumFractionDigits: 0,
+artifacts/um-milhao-pixels-brasil/src/App.tsx-744-    }).format(cents / 100);
+artifacts/um-milhao-pixels-brasil/src/App.tsx-745-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-746-  const items = [
+artifacts/um-milhao-pixels-brasil/src/App.tsx-747-    [
+artifacts/um-milhao-pixels-brasil/src/App.tsx-748-      stats ? stats.total_pixels.toLocaleString('pt-BR') : '—',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-749-      '/ 1.000.000',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-750-      'pixels ocupados',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-751-    ],
+artifacts/um-milhao-pixels-brasil/src/App.tsx-752-    [
+artifacts/um-milhao-pixels-brasil/src/App.tsx-753-      stats
+artifacts/um-milhao-pixels-brasil/src/App.tsx-754-        ? `${stats.occupied_percent.toLocaleString('pt-BR', {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-755-            maximumFractionDigits: 4,
+artifacts/um-milhao-pixels-brasil/src/App.tsx-756-          })}%`
+artifacts/um-milhao-pixels-brasil/src/App.tsx-757-        : '—',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-758-      '',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-759-      'completo',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-760-    ],
+artifacts/um-milhao-pixels-brasil/src/App.tsx-761-    [
+artifacts/um-milhao-pixels-brasil/src/App.tsx-762-      stats ? stats.buyer_count.toLocaleString('pt-BR') : '—',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-763-      '',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-764-      'compradores',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-765-    ],
+artifacts/um-milhao-pixels-brasil/src/App.tsx-766-  ];
+--
+artifacts/um-milhao-pixels-brasil/src/App.tsx-797-            <h1>COMPRE UM<br /><em>PIXEL.</em><br />DEIXE SUA<br /><em>MARCA.</em></h1>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-798-            <p className="hero-deck">Um milhão de pequenos espaços para criar uma memória coletiva na internet.</p>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-799-            <div className="hero-actions">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-800-              <Link href="/parede" className="button button-yellow" data-testid="button-buy-hero">Comprar pixels <ArrowRight size={18} /></Link>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-801-              <Link href="/parede" className="button button-outline" data-testid="button-explore-hero">Explorar a parede</Link>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-802-              <a className="text-link" href="#como-funciona" data-testid="link-scroll-how">Entenda a ideia <ChevronDown size={16} /></a>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-803-            </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-804-          </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-805-          <div className="hero-visual reveal reveal-delay">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-806-            <div className="visual-caption">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-807-              <span>A PAREDE ESTÁ AO VIVO</span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-808-              <span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-809-                {stats
+artifacts/um-milhao-pixels-brasil/src/App.tsx-810-                  ? `${stats.total_pixels.toLocaleString('pt-BR')} / 1.000.000`
+artifacts/um-milhao-pixels-brasil/src/App.tsx-811-                  : 'CARREGANDO...'}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-812-              </span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-813-            </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-814-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-815-            <RealWallMiniMap />
+artifacts/um-milhao-pixels-brasil/src/App.tsx-816-
+artifacts/um-milhao-pixels-brasil/src/App.tsx:817:            <div className="hero-sticker">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-818-              <Sparkles size={15} /> feito por todo mundo
+artifacts/um-milhao-pixels-brasil/src/App.tsx-819-            </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-820-          </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-821-          <div className="hero-bottom-note">rolar para descobrir <ArrowDownRight size={17} /></div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-822-        </section>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-823-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-824-        <StatStrip />
+artifacts/um-milhao-pixels-brasil/src/App.tsx-825-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-826-        <DemoActivity />
+artifacts/um-milhao-pixels-brasil/src/App.tsx-827-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-828-        <section className="manifesto-section" data-testid="section-manifesto">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-829-          <div className="section-label">02 — o começo</div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-830-          <div className="manifesto-grid">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-831-            <div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-832-              <p className="section-kicker">UM ESPAÇO PEQUENO.<br /><span>UMA IDEIA GIGANTE.</span></p>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-833-            </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-834-            <div className="manifesto-text">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-835-              <h2>1 milhão de pixels.<br /><span>R$1 cada.</span></h2>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-836-              <p>O que você vai criar?</p>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-837-              <p className="body-copy">Uma frase. Um desenho. O nome da sua cidade. Um recado para alguém do outro lado do país. A parede começa vazia e vai ganhando história, pixel por pixel.</p>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-838-              <Link href="/parede" className="inline-arrow-link" data-testid="link-manifesto-wall">Ver a parede de perto <ArrowRight size={17} /></Link>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-839-            </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-840-          </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx:841:          <div className="marquee" aria-hidden="true"><span>UMA PAREDE FEITA DE IDEIAS</span><span>UMA PAREDE FEITA DE IDEIAS</span></div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-842-        </section>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-843-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-844-        <section className="how-section" id="como-funciona" data-testid="section-how">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-845-          <div className="section-label">03 — como funciona?</div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-846-          <div className="how-heading">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-847-            <h2>É simples assim<span>.</span></h2>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-848-            <p>Sem complicar. Escolha um lugar, imagine algo e deixe um sinal seu.</p>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-849-          </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-850-          <div className="steps-list">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-851-            {[
+artifacts/um-milhao-pixels-brasil/src/App.tsx-852-              ['01', 'Encontre um espaço', 'Navegue pela parede e escolha suas coordenadas favoritas.'],
+artifacts/um-milhao-pixels-brasil/src/App.tsx-853-              ['02', 'Imagine o que cabe', 'Cada pixel pode carregar uma ideia, uma marca ou uma lembrança.'],
+artifacts/um-milhao-pixels-brasil/src/App.tsx-854-              ['03', 'Deixe sua marca', 'Em breve, você poderá transformar seu quadrado em parte da história.'],
+artifacts/um-milhao-pixels-brasil/src/App.tsx-855-            ].map(([number, title, text]) => (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-856-              <article className="step" key={number} data-testid={`step-${number}`}>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-857-                <span className="step-number">{number}</span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-858-                <div className="step-icon">{number === '01' ? <Crosshair size={22} /> : number === '02' ? <Sparkles size={22} /> : <Star size={22} />}</div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-859-                <h3>{title}</h3>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-860-                <p>{text}</p>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-861-                <ArrowDownRight className="step-arrow" size={21} />
+artifacts/um-milhao-pixels-brasil/src/App.tsx-862-              </article>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-863-            ))}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-864-          </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-865-        </section>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-866-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-867-        <section
+artifacts/um-milhao-pixels-brasil/src/App.tsx-868-          className="preview-section"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-869-          data-testid="section-wall-preview"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-870-          style={{
+artifacts/um-milhao-pixels-brasil/src/App.tsx-871-            gridTemplateColumns: '1fr',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-872-          }}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-873-        >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-874-          <div
+artifacts/um-milhao-pixels-brasil/src/App.tsx-875-            className="preview-copy"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-876-            style={{
+artifacts/um-milhao-pixels-brasil/src/App.tsx-877-              maxWidth: 760,
+artifacts/um-milhao-pixels-brasil/src/App.tsx-878-            }}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-879-          >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-880-            <div className="section-label light">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-881-              04 — a parede
+--
+artifacts/um-milhao-pixels-brasil/src/App.tsx-956-        pixels: purchase.pixel_count,
+artifacts/um-milhao-pixels-brasil/src/App.tsx-957-        purchases: 1,
+artifacts/um-milhao-pixels-brasil/src/App.tsx-958-      }),
+artifacts/um-milhao-pixels-brasil/src/App.tsx-959-    );
+artifacts/um-milhao-pixels-brasil/src/App.tsx-960-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-961-  const ranking =
+artifacts/um-milhao-pixels-brasil/src/App.tsx-962-    rankingMode === 'weekly'
+artifacts/um-milhao-pixels-brasil/src/App.tsx-963-      ? weeklyRanking
+artifacts/um-milhao-pixels-brasil/src/App.tsx-964-      : rankingMode === 'daily'
+artifacts/um-milhao-pixels-brasil/src/App.tsx-965-        ? dailyRanking
+artifacts/um-milhao-pixels-brasil/src/App.tsx-966-        : rankingMode === 'recent'
+artifacts/um-milhao-pixels-brasil/src/App.tsx-967-          ? recentRanking
+artifacts/um-milhao-pixels-brasil/src/App.tsx-968-          : generalRanking;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-969-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-970-  const emptyMessage =
+artifacts/um-milhao-pixels-brasil/src/App.tsx-971-    rankingMode === 'weekly'
+artifacts/um-milhao-pixels-brasil/src/App.tsx-972-      ? 'Ainda não houve compras nos últimos 7 dias.'
+artifacts/um-milhao-pixels-brasil/src/App.tsx-973-      : rankingMode === 'daily'
+artifacts/um-milhao-pixels-brasil/src/App.tsx-974-        ? 'Ainda não houve compras nas últimas 24 horas.'
+artifacts/um-milhao-pixels-brasil/src/App.tsx-975-        : rankingMode === 'recent'
+artifacts/um-milhao-pixels-brasil/src/App.tsx:976:          ? 'A primeira compra aparecerá aqui.'
+artifacts/um-milhao-pixels-brasil/src/App.tsx:977:          : 'O ranking começa com a primeira compra.';
+artifacts/um-milhao-pixels-brasil/src/App.tsx-978-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-979-  const tabs = [
+artifacts/um-milhao-pixels-brasil/src/App.tsx-980-    ['general', 'Geral'],
+artifacts/um-milhao-pixels-brasil/src/App.tsx-981-    ['weekly', 'Semanal'],
+artifacts/um-milhao-pixels-brasil/src/App.tsx-982-    ['daily', 'Diário'],
+artifacts/um-milhao-pixels-brasil/src/App.tsx-983-    ['recent', 'Recentes'],
+artifacts/um-milhao-pixels-brasil/src/App.tsx-984-  ] as const;
+artifacts/um-milhao-pixels-brasil/src/App.tsx-985-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-986-  return (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-987-    <section
+artifacts/um-milhao-pixels-brasil/src/App.tsx-988-      className="activity-section"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-989-      id="ranking"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-990-      data-testid="section-activity"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-991-    >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-992-      <div className="section-label">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-993-        01 — ranking e recordes
+artifacts/um-milhao-pixels-brasil/src/App.tsx-994-      </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-995-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-996-      <div className="activity-grid">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-997-        <div className="ranking-card">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-998-          <div className="card-topline">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-999-            <span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1000-              <Trophy size={16} /> ranking
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1001-            </span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1002-            <span>ao vivo</span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1003-          </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1004-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1005-          <h2>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1006-            Quem deixou
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1007-            <br />
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1008-            <span>mais marca?</span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1009-          </h2>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1010-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1011-          <div
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1012-            className="ranking-tabs"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1013-            role="tablist"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1014-            aria-label="Período do ranking"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1015-          >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1016-            {tabs.map(([value, label]) => (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1017-              <button
+--
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1065-                      {entry.pixels.toLocaleString('pt-BR')}{' '}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1066-                      {entry.pixels === 1
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1067-                        ? 'pixel'
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1068-                        : 'pixels'}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1069-                    </small>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1070-                  </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1071-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1072-                  <ArrowRight size={16} />
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1073-                </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1074-              ))
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1075-            )}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1076-          </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1077-        </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1078-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1079-        <div
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1080-          className="records-card hall-card"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1081-          data-testid="hall-da-fama"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1082-        >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1083-          <div className="card-topline">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1084-            <span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1085:              <Star size={16} /> hall da fama
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1086-            </span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1087-            <span>real</span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1088-          </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1089-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1090-          <div className="hall-heading">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1091-            <h2>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1092-              Marcas que
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1093-              <br />
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1094-              <span>já viraram história.</span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1095-            </h2>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1096-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1097-            <p>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1098-              Só entram aqui conquistas comprovadas pelas
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1099-              compras reais da parede.
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1100-            </p>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1101-          </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1102-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1103-          {!stats || stats.purchase_count === 0 ? (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1104-            <div className="demo-notice">
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1105:              O Hall da Fama começa com a primeira compra.
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1106-            </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1107-          ) : (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1108-            <div className="hall-grid">
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1109:              {stats.records.first_purchase && (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1110-                <article className="hall-item">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1111-                  <div className="hall-icon">01</div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1112-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1113-                  <div className="hall-copy">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1114-                    <small>primeiro comprador</small>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1115-                    <strong>
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1116:                      {stats.records.first_purchase.name}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1117-                    </strong>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1118-                    <span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1119:                      {stats.records.first_purchase.pixel_count.toLocaleString(
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1120-                        'pt-BR',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1121-                      )}{' '}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1122-                      pixels ·{' '}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1123-                      {formatDate(
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1124:                        stats.records.first_purchase.paid_at,
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1125-                      )}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1126-                    </span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1127-                  </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1128-
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1129:                  {stats.records.first_purchase.bounds && (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1130-                    <Link
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1131-                      className="hall-link"
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1132:                      href={`/parede?focus=${stats.records.first_purchase.bounds.min_x},${stats.records.first_purchase.bounds.min_y},${stats.records.first_purchase.bounds.max_x},${stats.records.first_purchase.bounds.max_y}`}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1133-                    >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1134-                      Ver na parede
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1135-                      <ArrowRight size={14} />
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1136-                    </Link>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1137-                  )}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1138-                </article>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1139-              )}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1140-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1141-              {stats.records.largest_buyer && (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1142-                <article className="hall-item">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1143-                  <div className="hall-icon">★</div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1144-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1145-                  <div className="hall-copy">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1146-                    <small>maior comprador</small>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1147-                    <strong>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1148-                      {stats.records.largest_buyer.name}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1149-                    </strong>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1150-                    <span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1151-                      {stats.records.largest_buyer.pixels.toLocaleString(
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1152-                        'pt-BR',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1153-                      )}{' '}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1154-                      pixels em{' '}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1155-                      {stats.records.largest_buyer.purchases.toLocaleString(
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1156-                        'pt-BR',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1157-                      )}{' '}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1158-                      {stats.records.largest_buyer.purchases === 1
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1159-                        ? 'compra'
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1160-                        : 'compras'}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1161-                    </span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1162-                  </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1163-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1164-                  {stats.records.largest_buyer.username && (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1165-                    <Link
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1166-                      className="hall-link"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1167-                      href={`/usuario/${stats.records.largest_buyer.username}`}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1168-                    >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1169-                      Ver perfil
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1170-                      <ArrowRight size={14} />
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1171-                    </Link>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-1172-                  )}
+--
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4268-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4269-    return () => {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4270-      window.clearTimeout(firstTimer);
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4271-      window.clearTimeout(secondTimer);
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4272-      window.removeEventListener(
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4273-        'resize',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4274-        calculatePosition,
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4275-      );
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4276-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4277-      if (target instanceof HTMLElement) {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4278-        target.classList.remove(
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4279-          'wall-tutorial-highlight'
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4280-        );
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4281-      }
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4282-    };
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4283-  }, [tutorialOpen, tutorialStep]);
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4284-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4285-  return (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4286-    <div className="wall-page">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4287-      <Header />
+artifacts/um-milhao-pixels-brasil/src/App.tsx:4288:      <LiveWallTicker />
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4289-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4290-      <div className="wall-tutorial-bar">
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4291-        <button
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4292-          type="button"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4293-          className="wall-tutorial-launch"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4294-          onClick={() => {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4295-            setTutorialStep(0);
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4296-            setTutorialOpen(true);
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4297-          }}
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4298-          data-testid="button-wall-tutorial"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4299-        >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4300-          <span className="wall-tutorial-question">?</span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4301-          Tutorial da parede
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4302-        </button>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4303-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4304-        <span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4305-          primeira vez aqui? veja como funciona em menos de 1 minuto
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4306-        </span>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4307-      </div>
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4308-
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4309-      {tutorialOpen && (
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4310-        <div
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4311-          className="wall-tutorial-overlay"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4312-          role="presentation"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4313-        >
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4314-          <div
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4315-            className="wall-tutorial-dialog"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4316-            style={
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4317-              tutorialPosition
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4318-                ? {
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4319-                    top: tutorialPosition.top,
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4320-                    left: tutorialPosition.left,
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4321-                    right: 'auto',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4322-                    bottom: 'auto',
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4323-                  }
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4324-                : undefined
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4325-            }
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4326-            role="dialog"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4327-            aria-modal="true"
+artifacts/um-milhao-pixels-brasil/src/App.tsx-4328-            aria-labelledby="wall-tutorial-title"

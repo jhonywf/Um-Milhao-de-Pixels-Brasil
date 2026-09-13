@@ -686,11 +686,11 @@ function LiveWallTicker() {
     );
   }
 
-  if (stats.records.first_purchase) {
-    const pixels = stats.records.first_purchase.pixel_count;
+  const dailyLeader = stats.rankings?.daily?.[0];
 
+  if (dailyLeader) {
     messages.push(
-      `HALL DA FAMA: PRIMEIRA COMPRA — ${pixels.toLocaleString('pt-BR')} ${pixels === 1 ? 'PIXEL' : 'PIXELS'}`
+      `RANKING DIÁRIO: ${dailyLeader.name} LIDERA HOJE COM ${dailyLeader.pixels.toLocaleString('pt-BR')} ${dailyLeader.pixels === 1 ? 'PIXEL' : 'PIXELS'}`
     );
   }
 
