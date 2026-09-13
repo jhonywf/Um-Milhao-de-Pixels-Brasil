@@ -1356,6 +1356,13 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
         };
       }
 
+      if (order.provider === "admin_courtesy") {
+        return {
+          name: "Comprador Anônimo",
+          username: null as string | null,
+        };
+      }
+
       const profile = profileById.get(order.user_id);
       const canShowProfile = profile?.consent_public_profile === true;
 
@@ -1377,20 +1384,10 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       .reverse()
       .slice(0, 10)
       .map((order) => {
-        const profile = profileById.get(order.user_id);
-        const canShowProfile = profile?.consent_public_profile === true;
+        const identity = publicIdentityForOrder(order);
 
         return {
-          name: canShowProfile
-            ? profile?.display_name ||
-              (profile?.username
-                ? `@${profile.username}`
-                : "Comprador")
-            : "Comprador anônimo",
-          username:
-            canShowProfile && profile?.username
-              ? profile.username
-              : null,
+          ...identity,
           pixel_count: Number(order.pixel_count || 0),
           paid_at: order.paid_at ?? order.created_at,
         };
@@ -1408,7 +1405,12 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
       >();
 
       for (const order of sourceOrders) {
-        const current = totals.get(order.user_id) ?? {
+        const rankingKey =
+          order.provider === "admin_courtesy"
+            ? "__admin_courtesy__"
+            : order.user_id;
+
+        const current = totals.get(rankingKey) ?? {
           pixels: 0,
           purchases: 0,
         };
@@ -1416,11 +1418,22 @@ router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => 
         current.pixels += Number(order.pixel_count || 0);
         current.purchases += 1;
 
-        totals.set(order.user_id, current);
+        totals.set(rankingKey, current);
       }
 
       return [...totals.entries()]
         .map(([userId, values]) => {
+          if (userId === "__admin_courtesy__") {
+            return {
+              name: "Comprador Anônimo",
+              username: null,
+              avatar_emoji: null,
+              avatar_path: null,
+              pixels: values.pixels,
+              purchases: values.purchases,
+            };
+          }
+
           const profile = profileById.get(userId);
           const canShowProfile =
             profile?.consent_public_profile === true;
