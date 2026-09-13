@@ -1,0 +1,157 @@
+===== RESERVAS NO FRONTEND =====
+artifacts/um-milhao-pixels-brasil/src/data/pixel-blocks.ts:1:export type PixelBlockStatus = 'available' | 'reserved' | 'sold' | 'demo';
+artifacts/um-milhao-pixels-brasil/src/data/future-contracts.ts:26:  status: 'available' | 'reserved' | 'purchased' | 'published' | 'demo';
+artifacts/um-milhao-pixels-brasil/src/data/future-contracts.ts:46:  expires_at: string;
+artifacts/um-milhao-pixels-brasil/src/data/future-contracts.ts:60:  type: 'profile_completed' | 'pixel_reserved' | 'pixel_purchased' | 'pixel_published' | 'like_added';
+artifacts/um-milhao-pixels-brasil/src/data/pixel-block-service.ts:6: * reserved/sold blocks without changing the Canvas interaction code.
+artifacts/um-milhao-pixels-brasil/src/data/wall-reservation-service.ts:12:  reservation_id: string;
+artifacts/um-milhao-pixels-brasil/src/data/wall-reservation-service.ts:16:  expires_at: string;
+artifacts/um-milhao-pixels-brasil/src/data/wall-reservation-service.ts:23:  reserved: 0;
+artifacts/um-milhao-pixels-brasil/src/data/wall-reservation-service.ts:32:  status: 'reserved' | 'purchased';
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:1:export type MercadoPagoCheckout = {
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:3:  checkout_url: string;
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:4:  reservation_id: string;
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:7:  expires_at: string;
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:11:  reservation_id: string;
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:26:export async function createMercadoPagoCheckout(
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:27:  reservationId: string,
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:29:): Promise<MercadoPagoCheckout> {
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:37:    body: JSON.stringify({ reservation_id: reservationId }),
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:49:  return payload as MercadoPagoCheckout;
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:53:  reservationId: string,
+artifacts/um-milhao-pixels-brasil/src/data/payment-service.ts:56:  const query = new URLSearchParams({ reservation_id: reservationId });
+artifacts/um-milhao-pixels-brasil/src/data/my-purchases-service.ts:10:  reservation_id: string;
+artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:144:    if (!session?.refresh_token || !session.expires_at) return;
+artifacts/um-milhao-pixels-brasil/src/auth/auth-context.tsx:146:    const secondsUntilExpiry = session.expires_at - Math.floor(Date.now() / 1000);
+artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:20:  expires_at?: number;
+artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:77:  const expiresAt = Number(session.expires_at) > 0
+artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:78:    ? Number(session.expires_at)
+artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:80:  return { ...session, expires_in: expiresIn, expires_at: expiresAt };
+artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:210:  if (normalized.expires_at && normalized.expires_at <= Math.floor(Date.now() / 1000) + 30 && normalized.refresh_token) {
+artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:349:  // preserved here so storage.objects RLS can evaluate auth.uid() correctly.
+artifacts/um-milhao-pixels-brasil/src/auth/auth-service.ts:430:    expires_at: Number(hash.get('expires_at') ?? 0) || undefined,
+artifacts/um-milhao-pixels-brasil/src/index.css:7106:   Controles + resumo/checkout sempre acessíveis
+artifacts/um-milhao-pixels-brasil/src/App.tsx:37:import { createMercadoPagoCheckout, getMercadoPagoPaymentStatus } from '@/data/payment-service';
+artifacts/um-milhao-pixels-brasil/src/App.tsx:45:  reservation_id: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:78:      expires_at: string;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1289:    const reservationId =
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1290:      window.localStorage.getItem('pixel-wall-checkout-reservation') ||
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1294:    if (!reservationId) {
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1312:        const status = await getMercadoPagoPaymentStatus(reservationId, session.access_token);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1319:          window.localStorage.removeItem('pixel-wall-checkout-reservation');
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1325:              (item) => item.reservation_id === reservationId,
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1737:const pendingCheckoutIntentKey = 'um-milhao-pixels.pending-checkout';
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1739:function markPendingCheckoutIntent() {
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1741:  window.localStorage.setItem(pendingCheckoutIntentKey, '1');
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1744:function hasPendingCheckoutIntent() {
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1746:  return window.localStorage.getItem(pendingCheckoutIntentKey) === '1';
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1749:function clearPendingCheckoutIntent() {
+artifacts/um-milhao-pixels-brasil/src/App.tsx:1751:  window.localStorage.removeItem(pendingCheckoutIntentKey);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:2284:                'reserved' &&
+artifacts/um-milhao-pixels-brasil/src/App.tsx:3811:  const handleReserved = (reservation: WallReservationSuccess) => {
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5009:            onReserved={handleReserved}
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5029:  onReserved,
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5037:  onReserved: (reservation: WallReservationSuccess) => void;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5043:  const [openingCheckout, setOpeningCheckout] = useState(false);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5048:  const autoCheckoutStartedRef = useRef(false);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5057:      const expiresAt = new Date(lastReservation.expires_at).getTime();
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5083:  const openMercadoPagoCheckout = async (
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5088:    setOpeningCheckout(true);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5091:      const checkout = await createMercadoPagoCheckout(
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5092:        reservation.reservation_id,
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5097:        'pixel-wall-checkout-reservation',
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5098:        reservation.reservation_id,
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5102:        'pixel-wall-checkout-url',
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5103:        checkout.checkout_url,
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5106:      clearPendingCheckoutIntent();
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5109:      window.location.assign(checkout.checkout_url);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5111:      clearPendingCheckoutIntent();
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5117:      setOpeningCheckout(false);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5121:  const reserveAndOpenCheckout = async () => {
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5128:      clearPendingCheckoutIntent();
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5129:      autoCheckoutStartedRef.current = false;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5143:        clearPendingCheckoutIntent();
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5144:        autoCheckoutStartedRef.current = false;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5154:      onReserved(result);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5157:      await openMercadoPagoCheckout(
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5162:      clearPendingCheckoutIntent();
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5163:      autoCheckoutStartedRef.current = false;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5185:      markPendingCheckoutIntent();
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5190:    if (reserving || openingCheckout || lastReservation) return;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5192:    autoCheckoutStartedRef.current = true;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5193:    await reserveAndOpenCheckout();
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5197:    const restoreCheckoutState = () => {
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5198:      setOpeningCheckout(false);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5201:    window.addEventListener('pageshow', restoreCheckoutState);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5205:        setOpeningCheckout(false);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5212:      window.removeEventListener('pageshow', restoreCheckoutState);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5221:      'pixel-wall-checkout-reservation',
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5225:      'pixel-wall-checkout-url',
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5228:    clearPendingCheckoutIntent();
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5231:    setOpeningCheckout(false);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5236:    autoCheckoutStartedRef.current = false;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5244:    if (!session || !lastReservation || openingCheckout) return;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5251:    const savedReservationId = window.localStorage.getItem(
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5252:      'pixel-wall-checkout-reservation',
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5255:    const savedCheckoutUrl = window.sessionStorage.getItem(
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5256:      'pixel-wall-checkout-url',
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5260:      savedReservationId === lastReservation.reservation_id &&
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5261:      savedCheckoutUrl
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5263:      setOpeningCheckout(true);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5264:      window.location.assign(savedCheckoutUrl);
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5268:    await openMercadoPagoCheckout(
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5280:      !hasPendingCheckoutIntent() ||
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5281:      autoCheckoutStartedRef.current
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5286:    autoCheckoutStartedRef.current = true;
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5287:    void reserveAndOpenCheckout();
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5351:                disabled={openingCheckout}
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5355:                  : openingCheckout
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5357:                    : 'Voltar ao checkout'}
+artifacts/um-milhao-pixels-brasil/src/App.tsx:5358:                {!openingCheckout && <ArrowRight size={17} />}
+artifacts/um-milhao-pixels-brasil/src/App.tsx:6586:                CHECKOUT
+artifacts/um-milhao-pixels-brasil/src/App.tsx:6680:                            cart.expires_at,
+
+===== RESERVAS NO BACKEND =====
+artifacts/api-server/src/routes/mercado-pago.ts:20:  expires_at: string;
+artifacts/api-server/src/routes/mercado-pago.ts:43:  reservation_id: string;
+artifacts/api-server/src/routes/mercado-pago.ts:55:  reservation_id: string;
+artifacts/api-server/src/routes/mercado-pago.ts:186:    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
+artifacts/api-server/src/routes/mercado-pago.ts:191:  const response = await fetch(`${supabaseUrl}/rest/v1/wall_reservations?${query.toString()}`, {
+artifacts/api-server/src/routes/mercado-pago.ts:209:  if (new Date(reservation.expires_at).getTime() <= Date.now()) return null;
+artifacts/api-server/src/routes/mercado-pago.ts:222:    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
+artifacts/api-server/src/routes/mercado-pago.ts:227:  const response = await fetch(`${supabaseUrl}/rest/v1/wall_reservations?${query.toString()}`, {
+artifacts/api-server/src/routes/mercado-pago.ts:305:    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
+artifacts/api-server/src/routes/mercado-pago.ts:310:  const rows = await serviceRoleGet<ReservationRow[]>(`wall_reservations?${query.toString()}`);
+artifacts/api-server/src/routes/mercado-pago.ts:316:    select: "id,status,reservation_id,provider_reference",
+artifacts/api-server/src/routes/mercado-pago.ts:328:    select: "id,status,reservation_id,provider_reference",
+artifacts/api-server/src/routes/mercado-pago.ts:329:    reservation_id: `eq.${reservationId}`,
+artifacts/api-server/src/routes/mercado-pago.ts:416:      p_reservation_id: reservationId,
+artifacts/api-server/src/routes/mercado-pago.ts:435:  const reservationId = typeof req.body?.reservation_id === "string" ? req.body.reservation_id.trim() : "";
+artifacts/api-server/src/routes/mercado-pago.ts:511:          reservation_id: reservation.id,
+artifacts/api-server/src/routes/mercado-pago.ts:522:        expiration_date_to: new Date(reservation.expires_at).toISOString(),
+artifacts/api-server/src/routes/mercado-pago.ts:553:      reservation_id: reservation.id,
+artifacts/api-server/src/routes/mercado-pago.ts:556:      expires_at: reservation.expires_at,
+artifacts/api-server/src/routes/mercado-pago.ts:566:  const reservationId = readQueryString(req.query.reservation_id);
+artifacts/api-server/src/routes/mercado-pago.ts:646:          reservation.expires_at,
+artifacts/api-server/src/routes/mercado-pago.ts:684:            reservation_id: reservation.id,
+artifacts/api-server/src/routes/mercado-pago.ts:706:      reservation_id: reservation.id,
+artifacts/api-server/src/routes/mercado-pago.ts:893:       *   mas cujo expires_at já passou;
+artifacts/api-server/src/routes/mercado-pago.ts:904:            expires_at: string;
+artifacts/api-server/src/routes/mercado-pago.ts:907:          "wall_reservations?select=id,user_id,status,pixel_count,amount_cents,expires_at&order=expires_at.desc",
+artifacts/api-server/src/routes/mercado-pago.ts:913:            reservation_id: string;
+artifacts/api-server/src/routes/mercado-pago.ts:917:          "wall_orders?select=reservation_id,status",
+artifacts/api-server/src/routes/mercado-pago.ts:929:                order.reservation_id,
+artifacts/api-server/src/routes/mercado-pago.ts:946:                reservation.expires_at,
+artifacts/api-server/src/routes/mercado-pago.ts:980:            expires_at:
+artifacts/api-server/src/routes/mercado-pago.ts:981:              reservation.expires_at,
+artifacts/api-server/src/routes/mercado-pago.ts:1048:      reservation_id: string;
+artifacts/api-server/src/routes/mercado-pago.ts:1057:      "wall_orders?select=id,user_id,status,reservation_id,pixel_count,amount_cents,currency,provider,provider_reference,paid_at,created_at&order=created_at.desc",
+artifacts/api-server/src/routes/mercado-pago.ts:1142:        reservation_id: order.reservation_id,
+artifacts/api-server/src/routes/mercado-pago.ts:1318:          `wall_pixel_claims?${claimsQuery.toString()}`,
+artifacts/api-server/src/routes/mercado-pago.ts:1629:        `wall_pixel_claims?${pixelQuery.toString()}`,
+artifacts/api-server/src/routes/mercado-pago.ts:1735:      select: "id,status,reservation_id,pixel_count,amount_cents,currency,provider,provider_reference,paid_at,created_at",
+artifacts/api-server/src/routes/mercado-pago.ts:1767:      `wall_pixel_claims?${pixelQuery.toString()}`,
+artifacts/api-server/src/routes/mercado-pago.ts:1797:        reservation_id: order.reservation_id,
+artifacts/api-server/src/routes/mercado-pago.ts:1922:      if (order?.status === "paid" && order.reservation_id === reservation.id) {
+artifacts/api-server/src/routes/mercado-pago.ts:1933:    const reservationExpiresAtMs = Date.parse(reservation.expires_at);
+artifacts/api-server/src/routes/mercado-pago.ts:1954:          reservationExpiresAt: reservation.expires_at,

@@ -1,0 +1,297 @@
+function SelectionPanel({
+  selectedPixels,
+  selectedBlock,
+  coordinateText,
+  lastReservation,
+  onReserved,
+  onAvailabilityConflict,
+  onResetExpired,
+}: {
+  selectedPixels: SelectedPixel[];
+  selectedBlock: PixelBlock | null;
+  coordinateText: string;
+  lastReservation: WallReservationSuccess | null;
+  onReserved: (reservation: WallReservationSuccess) => void;
+  onAvailabilityConflict: () => Promise<void>;
+  onResetExpired: () => void;
+}) {
+  const [reservationError, setReservationError] = useState<string | null>(null);
+  const [reserving, setReserving] = useState(false);
+  const [openingCheckout, setOpeningCheckout] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [reservationSecondsLeft, setReservationSecondsLeft] = useState<number | null>(null);
+  const { user, session, openAuth } = useAuth();
+  const selectedCount = selectedPixels.length;
+  const autoCheckoutStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (!lastReservation) {
+      setReservationSecondsLeft(null);
+      return;
+    }
+
+    const updateReservationClock = () => {
+      const expiresAt = new Date(lastReservation.expires_at).getTime();
+      const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      setReservationSecondsLeft(remaining);
+    };
+
+    updateReservationClock();
+
+    const interval = window.setInterval(updateReservationClock, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [lastReservation]);
+
+  const reservationExpired =
+    lastReservation !== null &&
+    reservationSecondsLeft !== null &&
+    reservationSecondsLeft <= 0;
+
+  const reservationClock =
+    reservationSecondsLeft === null
+      ? null
+      : `${String(Math.floor(reservationSecondsLeft / 60)).padStart(2, '0')}:${String(
+          reservationSecondsLeft % 60,
+        ).padStart(2, '0')}`;
+
+  const openMercadoPagoCheckout = async (
+    reservation: WallReservationSuccess,
+    accessToken: string,
+  ) => {
+    setPaymentError(null);
+    setOpeningCheckout(true);
+
+    try {
+      const checkout = await createMercadoPagoCheckout(
+        reservation.reservation_id,
+        accessToken,
+      );
+
+      window.localStorage.setItem(
+        'pixel-wall-checkout-reservation',
+        reservation.reservation_id,
+      );
+
+      window.sessionStorage.setItem(
+        'pixel-wall-checkout-url',
+        checkout.checkout_url,
+      );
+
+      clearPendingCheckoutIntent();
+      clearPendingPixelSelection();
+
+      window.location.assign(checkout.checkout_url);
+    } catch (caught) {
+      clearPendingCheckoutIntent();
+      setPaymentError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível iniciar o pagamento agora.',
+      );
+      setOpeningCheckout(false);
+    }
+  };
+
+  const reserveAndOpenCheckout = async () => {
+    setReservationError(null);
+    setPaymentError(null);
+
+    if (!session) return;
+
+    if (selectedCount < 1) {
+      clearPendingCheckoutIntent();
+      autoCheckoutStartedRef.current = false;
+      setReservationError('Selecione pelo menos 1 pixel para continuar.');
+      return;
+    }
+
+    setReserving(true);
+
+    try {
+      const result = await reserveWallPixels(
+        selectedPixels,
+        session.access_token,
+      );
+
+      if (!result.ok) {
+        clearPendingCheckoutIntent();
+        autoCheckoutStartedRef.current = false;
+
+        setReservationError(
+          'Um ou mais pixels foram reservados por outra pessoa enquanto você fazia login. A parede foi atualizada; ajuste sua seleção e tente novamente.',
+        );
+
+        await onAvailabilityConflict();
+        return;
+      }
+
+      onReserved(result);
+      setReserving(false);
+
+      await openMercadoPagoCheckout(
+        result,
+        session.access_token,
+      );
+    } catch (caught) {
+      clearPendingCheckoutIntent();
+      autoCheckoutStartedRef.current = false;
+
+      setReservationError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível reservar os pixels agora.',
+      );
+
+      setReserving(false);
+    }
+  };
+
+  const handleReserve = async () => {
+    setReservationError(null);
+
+    if (!user || !session) {
+      if (selectedCount < 1) {
+        setReservationError('Selecione pelo menos 1 pixel para continuar.');
+        return;
+      }
+
+      savePendingPixelSelection(selectedPixels);
+      markPendingCheckoutIntent();
+      openAuth();
+      return;
+    }
+
+    if (reserving || openingCheckout || lastReservation) return;
+
+    autoCheckoutStartedRef.current = true;
+    await reserveAndOpenCheckout();
+  };
+
+  useEffect(() => {
+    const restoreCheckoutState = () => {
+      setOpeningCheckout(false);
+    };
+
+    window.addEventListener('pageshow', restoreCheckoutState);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setOpeningCheckout(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pageshow', restoreCheckoutState);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  const handleExpiredReservationReset = async () => {
+    if (!reservationExpired) return;
+
+    window.localStorage.removeItem(
+      'pixel-wall-checkout-reservation',
+    );
+
+    window.sessionStorage.removeItem(
+      'pixel-wall-checkout-url',
+    );
+
+    clearPendingCheckoutIntent();
+    clearPendingPixelSelection();
+
+    setOpeningCheckout(false);
+    setPaymentError(null);
+    setReservationError(null);
+    setReservationSecondsLeft(null);
+
+    autoCheckoutStartedRef.current = false;
+
+    onResetExpired();
+
+    await onAvailabilityConflict();
+  };
+
+  const handlePayment = async () => {
+    if (!session || !lastReservation || openingCheckout) return;
+
+    if (reservationExpired) {
+      setPaymentError('Sua reserva expirou. Selecione novamente os pixels para continuar.');
+      return;
+    }
+
+    const savedReservationId = window.localStorage.getItem(
+      'pixel-wall-checkout-reservation',
+    );
+
+    const savedCheckoutUrl = window.sessionStorage.getItem(
+      'pixel-wall-checkout-url',
+    );
+
+    if (
+      savedReservationId === lastReservation.reservation_id &&
+      savedCheckoutUrl
+    ) {
+      setOpeningCheckout(true);
+      window.location.assign(savedCheckoutUrl);
+      return;
+    }
+
+    await openMercadoPagoCheckout(
+      lastReservation,
+      session.access_token,
+    );
+  };
+
+  useEffect(() => {
+    if (
+      !user ||
+      !session ||
+      lastReservation ||
+      selectedCount < 1 ||
+      !hasPendingCheckoutIntent() ||
+      autoCheckoutStartedRef.current
+    ) {
+      return;
+    }
+
+    autoCheckoutStartedRef.current = true;
+    void reserveAndOpenCheckout();
+  }, [user, session, lastReservation, selectedCount]);
+
+  return (
+    <aside className={`selection-panel ${(selectedCount || selectedBlock) ? 'has-selection' : ''}`}>
+      {selectedBlock ? (
+        <div className="selection-content compact-selection">
+          <span className="selection-type">área ocupada</span><h2>{selectedBlock.name}</h2><p>{selectedBlock.detail}</p>
+          <div className="selection-detail"><span>coordenada</span><b>{coordinateText}</b></div>
+        </div>
+      ) : selectedCount > 0 ? (
+        <div className="selection-content selection-summary">
+          <div className="selection-summary-title"><span>Resumo da seleção</span><strong>{selectedCount} pixels</strong></div>
+          <div className="selection-summary-grid">
+            <div><span>valor atual</span><b>R$ {selectedCount.toFixed(2).replace('.', ',')}</b></div>
+
+          </div>
+          <button className="selection-button" onClick={handleReserve} disabled={reserving || !!lastReservation}>
+            {reserving ? 'Reservando...' : lastReservation ? 'Seleção reservada' : 'Continuar com esta seleção'}
+            {!reserving && !lastReservation && <ArrowRight size={17} />}
+            {lastReservation && <Check size={17} />}
+          </button>
+          {selectedCount < 1 && !lastReservation && (
+            <div className="demo-notice" role="status">Selecione mais {5 - selectedCount} {5 - selectedCount === 1 ? 'pixel' : 'pixels'} para atingir o mínimo de R$ 5,00.</div>
+          )}
+          {reservationError && <div className="demo-notice" role="alert">{reservationError}</div>}
+          {lastReservation && (
+            <>
+              <div
+                className={`demo-notice reservation-countdown ${
+                  reservationExpired
+                    ? 'reservation-expired'
+                    : reservationSecondsLeft !== null && reservationSecondsLeft <= 180
+                      ? 'reservation-warning'

@@ -1,0 +1,47 @@
+./etapa-3b-reserva-real.patch-209-+export type WallReservationResult = WallReservationSuccess | WallReservationUnavailable;
+./etapa-3b-reserva-real.patch-210-+
+./etapa-3b-reserva-real.patch-211-+function readableReservationError(payload: unknown) {
+./etapa-3b-reserva-real.patch-212-+  const message = typeof payload === 'object' && payload && 'message' in payload
+./etapa-3b-reserva-real.patch-213-+    ? String(payload.message)
+./etapa-3b-reserva-real.patch-214-+    : '';
+./etapa-3b-reserva-real.patch-215-+
+./etapa-3b-reserva-real.patch-216-+  if (message.includes('AUTH_REQUIRED')) return 'Entre na sua conta para reservar pixels.';
+./etapa-3b-reserva-real.patch-217-+  if (message.includes('PROFILE_REQUIRED')) return 'Complete seu perfil antes de continuar.';
+./etapa-3b-reserva-real.patch-218-+  if (message.includes('MINIMUM_PIXELS')) return 'Selecione pelo menos 5 pixels para continuar.';
+./etapa-3b-reserva-real.patch-219-+  if (message.includes('MAXIMUM_PIXELS')) return 'Essa seleção ultrapassa o limite máximo permitido por reserva.';
+./etapa-3b-reserva-real.patch-220-+  if (message.includes('DUPLICATE_PIXELS')) return 'A seleção contém pixels duplicados. Limpe a seleção e tente novamente.';
+./etapa-3b-reserva-real.patch-221-+  if (message.includes('INVALID_PIXEL')) return 'Encontramos um pixel inválido na seleção. Limpe e tente novamente.';
+./etapa-3b-reserva-real.patch-222-+
+./etapa-3b-reserva-real.patch-223-+  return 'Não foi possível reservar os pixels agora. Tente novamente.';
+./etapa-3b-reserva-real.patch-224-+}
+./etapa-3b-reserva-real.patch-225-+
+./etapa-3b-reserva-real.patch-226-+export async function reserveWallPixels(
+./etapa-3b-reserva-real.patch-227-+  pixels: WallPixelInput[],
+./etapa-3b-reserva-real.patch-228-+  accessToken: string,
+./etapa-3b-reserva-real.patch-229-+): Promise<WallReservationResult> {
+./etapa-3b-reserva-real.patch-230-+  if (!supabasePublishableKey) {
+./etapa-3b-reserva-real.patch-231-+    throw new Error('A chave pública do Supabase não está configurada.');
+./etapa-3b-reserva-real.patch-232-+  }
+./etapa-3b-reserva-real.patch-233-+
+./etapa-3b-reserva-real.patch:234:+  const response = await fetch(`${supabasePublicUrl}/rest/v1/rpc/reserve_wall_pixels`, {
+./etapa-3b-reserva-real.patch-235-+    method: 'POST',
+./etapa-3b-reserva-real.patch-236-+    headers: {
+./etapa-3b-reserva-real.patch-237-+      Accept: 'application/json',
+./etapa-3b-reserva-real.patch-238-+      'Content-Type': 'application/json',
+./etapa-3b-reserva-real.patch-239-+      apikey: supabasePublishableKey,
+./etapa-3b-reserva-real.patch-240-+      Authorization: `Bearer ${accessToken}`,
+./etapa-3b-reserva-real.patch-241-+    },
+./etapa-3b-reserva-real.patch-242-+    body: JSON.stringify({ p_pixels: pixels }),
+./etapa-3b-reserva-real.patch-243-+  });
+./etapa-3b-reserva-real.patch-244-+
+./etapa-3b-reserva-real.patch-245-+  const contentType = response.headers.get('content-type') ?? '';
+./etapa-3b-reserva-real.patch-246-+  const payload = contentType.includes('application/json')
+./etapa-3b-reserva-real.patch-247-+    ? await response.json()
+./etapa-3b-reserva-real.patch-248-+    : await response.text();
+./etapa-3b-reserva-real.patch-249-+
+./etapa-3b-reserva-real.patch-250-+  if (!response.ok) {
+./etapa-3b-reserva-real.patch-251-+    throw new Error(readableReservationError(payload));
+./etapa-3b-reserva-real.patch-252-+  }
+./etapa-3b-reserva-real.patch-253-+
+./etapa-3b-reserva-real.patch-254-+  return payload as WallReservationResult;
+./etapa-3b-reserva-real.patch-255-+}

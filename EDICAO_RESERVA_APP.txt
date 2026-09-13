@@ -1,0 +1,315 @@
+===== IMPORT RESERVATION SERVICE =====
+31-import { getPixelBlocks } from '@/data/pixel-block-service';
+32-import type { PixelBlock } from '@/data/pixel-blocks';
+33-import { AuthProvider, useAuth } from '@/auth/auth-context';
+34-import { AuthDialogs } from '@/auth/auth-dialogs';
+35-import { supabasePublicStorageUrl } from '@/auth/auth-service';
+36:import { loadPublicWallPixels, reserveWallPixels, type PublicWallPixel, type WallReservationSuccess } from '@/data/wall-reservation-service';
+37-import { createMercadoPagoCheckout, getMercadoPagoPaymentStatus } from '@/data/payment-service';
+38-import { getMyPurchases, type MyPurchasesResponse } from '@/data/my-purchases-service';
+39-
+40-const queryClient = new QueryClient();
+41-
+42-type AdminOrder = {
+43-  id: string;
+44-  user_id: string;
+45-  reservation_id: string;
+46-  status: string;
+47-  pixel_count: number;
+48-  amount_cents: number;
+49-  currency: string;
+50-  provider: string | null;
+51-  provider_reference: string | null;
+
+===== ESTADOS selectedPixels / lastReservation =====
+1790-}
+1791-
+1792-type PixelTool = 'select' | 'erase' | 'pan';
+1793-
+1794-const PIXEL_PALETTE = [
+1795-  '#ef4444', '#f97316', '#f59e0b', '#facc15', '#a3e635', '#22c55e', '#15803d',
+1796-  '#14b8a6', '#06b6d4', '#38bdf8', '#3b82f6', '#1d4ed8', '#9333ea', '#db2777',
+1797-  '#7c5c4f', '#ffffff', '#8b8b8b', '#3f3f46', '#111111',
+1798-];
+1799-
+1800-function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
+1801-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+1802-  const stageRef = useRef<HTMLDivElement | null>(null);
+1803-  const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
+1804-  const [tool, setTool] = useState<PixelTool>('select');
+1805:  const [selectedPixels, setSelectedPixels] = useState<Map<string, SelectedPixel>>(() => loadPendingPixelSelection());
+1806-  const [selectedBlock, setSelectedBlock] = useState<PixelBlock | null>(null);
+1807-  const [availablePixelPrompt, setAvailablePixelPrompt] = useState<{ x: number; y: number } | null>(null);
+1808-  const [selectionArmed, setSelectionArmed] = useState(false);
+1809-  const [isDragging, setIsDragging] = useState(false);
+1810-  const [customizeOpen, setCustomizeOpen] = useState(false);
+1811-
+1812-  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+1813-  const [imageSizePickerOpen, setImageSizePickerOpen] = useState(false);
+1814-  const [customImageSize, setCustomImageSize] = useState("50");
+1815-  const [imageSizeError, setImageSizeError] = useState<string | null>(null);
+1816-  const [imageEditorError, setImageEditorError] = useState<string | null>(null);
+1817-  const [imageFileName, setImageFileName] = useState("");
+1818-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+1819-  const [imagePixelPreview, setImagePixelPreview] = useState<string | null>(null);
+1820-  const [imagePixelColors, setImagePixelColors] = useState<string[]>([]);
+1821-
+1822-  const [selectionCustomized, setSelectionCustomized] = useState(false);
+1823-  const [imageMoveMode, setImageMoveMode] = useState(false);
+1824-  const [selectionNudgeOpen, setSelectionNudgeOpen] = useState(false);
+1825-  const [clearMenuOpen, setClearMenuOpen] = useState(false);
+1826-  const [eraseAreaMode, setEraseAreaMode] = useState(false);
+1827-  const [activeColor, setActiveColor] = useState('#ef4444');
+1828-  const [customColor, setCustomColor] = useState('#ff681d');
+1829-  const [customColorActive, setCustomColorActive] = useState(false);
+1830:  const [lastReservation, setLastReservation] = useState<WallReservationSuccess | null>(null);
+1831-  const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
+1832-  const publicPixelBucketsRef = useRef(
+1833-    new Map<string, PublicWallPixel[]>(),
+1834-  );
+1835-  const publicPixelBucketSize = 50;
+1836-  const [wallSyncError, setWallSyncError] = useState<string | null>(null);
+1837-
+1838-  const wallSyncInFlightRef = useRef(false);
+1839-  const wallLastSyncAtRef = useRef(0);
+1840-
+1841-  const cameraRef = useRef(camera);
+1842-  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+1843-  const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
+1844-  const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
+1845-  const rectangleSelectRef = useRef<{
+1846-    pointerId: number;
+1847-    startX: number;
+1848-    startY: number;
+1849-    base: Map<string, SelectedPixel>;
+1850-  } | null>(null);
+1851-
+1852-  const imageMoveRef = useRef<{
+1853-    pointerId: number;
+1854-    startWorldX: number;
+1855-    startWorldY: number;
+--
+3353-    setIsDragging(false);
+3354-  };
+3355-
+3356-  const clearSelection = () => {
+3357-    setSelectedPixels(new Map());
+3358-    setSelectedBlock(null);
+3359-    setAvailablePixelPrompt(null);
+3360-    setSelectionArmed(false);
+3361-    setSelectionCustomized(false);
+3362-    setSelectionNudgeOpen(false);
+3363-    setClearMenuOpen(false);
+3364-    setEraseAreaMode(false);
+3365-    rectangleSelectRef.current = null;
+3366-    setCustomizeOpen(false);
+3367-    setRecolorMode(false);
+3368:    setLastReservation(null);
+3369-  };
+3370-
+3371-  const fillAll = (color: string) => {
+3372-    if (lastReservation) return;
+3373-    setActiveColor(color);
+3374-    setSelectionCustomized(true);
+3375-    setSelectedPixels((current) => {
+3376-      const next = new Map<string, SelectedPixel>();
+3377-      current.forEach((pixel, key) => next.set(key, { ...pixel, color }));
+3378-      return next;
+3379-    });
+3380-  };
+3381-
+3382-  const getSelectedRectangle = () => {
+3383-    const pixels = Array.from(selectedPixels.values());
+3384-
+3385-    if (!pixels.length) {
+3386-      return null;
+3387-    }
+3388-
+3389-    const xs = pixels.map((pixel) => pixel.x);
+3390-    const ys = pixels.map((pixel) => pixel.y);
+3391-
+3392-    const minX = Math.min(...xs);
+3393-    const maxX = Math.max(...xs);
+--
+3798-        }
+3799-      }
+3800-
+3801-      return next;
+3802-    });
+3803-
+3804-    setImageEditorOpen(false);
+3805-    setImageMoveMode(true);
+3806-    setTool('pan');
+3807-    setSelectionArmed(false);
+3808-  };
+3809-
+3810-
+3811-  const handleReserved = (reservation: WallReservationSuccess) => {
+3812-    clearPendingPixelSelection();
+3813:    setLastReservation(reservation);
+3814-    setCustomizeOpen(false);
+3815-    setRecolorMode(false);
+3816-    setAvailablePixelPrompt(null);
+3817-  };
+3818-
+3819-
+3820-  const [tutorialOpen, setTutorialOpen] = useState(false);
+3821-  const [tutorialStep, setTutorialStep] = useState(0);
+3822-  const [tutorialPosition, setTutorialPosition] = useState<{
+3823-    top: number;
+3824-    left: number;
+3825-  } | null>(null);
+3826-
+3827-  const wallTutorialSteps = [
+3828-    {
+3829-      title: 'Navegue e use o zoom',
+3830-      text: 'Use Mover para explorar a parede. Arraste com um dedo para navegar e use dois dedos para dar zoom. Você também pode usar os botões + e −.',
+3831-      target: '.floating-zoom',
+3832-      placement: 'top-right',
+3833-    },
+3834-    {
+3835-      title: 'Selecione seus pixels',
+3836-      text: 'Toque em um pixel livre e escolha Selecionar pixel. Depois, toque ou arraste sobre a parede para montar a área que deseja comprar.',
+3837-      target: '[data-testid="canvas-pixel-wall"]',
+3838-      placement: 'bottom-right',
+
+===== SELECTION PANEL NA WALL PAGE =====
+4974-                      className="pixel-custom-color-input"
+4975-                      onChange={(event) => {
+4976-                        const color = event.target.value;
+4977-                        setCustomColor(color);
+4978-                        setActiveColor(color);
+4979-                        setCustomColorActive(true);
+4980-                      }}
+4981-                      aria-label="Seletor de cor personalizada"
+4982-                    />
+4983-                  </label>
+4984-                  </div>
+4985-                  <div className="customizer-actions">
+4986-                    <button
+4987-  className="customizer-primary"
+4988-  onClick={() => {
+4989-    fillAll(activeColor);
+4990-    setCustomizeOpen(false);
+4991-  }}
+4992->
+4993-  Aplicar aos {selectedCount} pixels
+4994-</button>
+4995-                    <button className="customizer-secondary" onClick={() => { setRecolorMode(true); setTool('select'); setCustomizeOpen(false); }}>Pintar pixel por pixel</button>
+4996-                  </div>
+4997-                </div>
+4998-              </div>
+4999-            )}
+5000-            {recolorMode && (
+5001-              <div className="recolor-banner"><span><Paintbrush size={14} /> Pintando pixels individualmente</span><button onClick={() => setRecolorMode(false)}>Concluir</button></div>
+5002-            )}
+5003-          </section>
+5004:          <SelectionPanel
+5005-            selectedPixels={selectedList}
+5006-            selectedBlock={selectedBlock}
+5007-            coordinateText={coordinateText}
+5008-            lastReservation={lastReservation}
+5009-            onReserved={handleReserved}
+5010-            onAvailabilityConflict={refreshPublicPixels}
+5011-            onResetExpired={clearSelection}
+5012-          />
+5013-        </div>
+5014-        {wallSyncError && <div className="demo-notice" role="status">{wallSyncError} A proteção do banco continua ativa; tente atualizar a página.</div>}
+5015-        <div className="wall-bottom-note">
+5016-        <Grid2X2 size={17} />
+5017-        Toque e arraste para selecionar vários pixels. Para remover um pixel selecionado, toque nele novamente. Ao continuar, sua seleção fica reservada por 15 minutos.
+5018-      </div>
+5019-      </main>
+5020-    </div>
+5021-  );
+5022-}
+5023-
+5024-function SelectionPanel({
+5025-  selectedPixels,
+5026-  selectedBlock,
+5027-  coordinateText,
+5028-  lastReservation,
+5029-  onReserved,
+5030-  onAvailabilityConflict,
+5031-  onResetExpired,
+5032-}: {
+5033-  selectedPixels: SelectedPixel[];
+5034-  selectedBlock: PixelBlock | null;
+5035-  coordinateText: string;
+5036-  lastReservation: WallReservationSuccess | null;
+5037-  onReserved: (reservation: WallReservationSuccess) => void;
+5038-  onAvailabilityConflict: () => Promise<void>;
+5039-  onResetExpired: () => void;
+5040-}) {
+5041-  const [reservationError, setReservationError] = useState<string | null>(null);
+5042-  const [reserving, setReserving] = useState(false);
+5043-  const [openingCheckout, setOpeningCheckout] = useState(false);
+5044-  const [paymentError, setPaymentError] = useState<string | null>(null);
+5045-  const [reservationSecondsLeft, setReservationSecondsLeft] = useState<number | null>(null);
+5046-  const { user, session, openAuth } = useAuth();
+5047-  const selectedCount = selectedPixels.length;
+5048-  const autoCheckoutStartedRef = useRef(false);
+5049-
+5050-  useEffect(() => {
+5051-    if (!lastReservation) {
+5052-      setReservationSecondsLeft(null);
+5053-      return;
+5054-    }
+
+===== HANDLE RESERVED =====
+3791-            next.set(key, {
+3792-              ...pixel,
+3793-              color: imagePixelColors[colorIndex],
+3794-            });
+3795-          }
+3796-
+3797-          colorIndex += 1;
+3798-        }
+3799-      }
+3800-
+3801-      return next;
+3802-    });
+3803-
+3804-    setImageEditorOpen(false);
+3805-    setImageMoveMode(true);
+3806-    setTool('pan');
+3807-    setSelectionArmed(false);
+3808-  };
+3809-
+3810-
+3811:  const handleReserved = (reservation: WallReservationSuccess) => {
+3812-    clearPendingPixelSelection();
+3813-    setLastReservation(reservation);
+3814-    setCustomizeOpen(false);
+3815-    setRecolorMode(false);
+3816-    setAvailablePixelPrompt(null);
+3817-  };
+3818-
+3819-
+3820-  const [tutorialOpen, setTutorialOpen] = useState(false);
+3821-  const [tutorialStep, setTutorialStep] = useState(0);
+3822-  const [tutorialPosition, setTutorialPosition] = useState<{
+3823-    top: number;
+3824-    left: number;
+3825-  } | null>(null);
+3826-
+3827-  const wallTutorialSteps = [
+3828-    {
+3829-      title: 'Navegue e use o zoom',
+3830-      text: 'Use Mover para explorar a parede. Arraste com um dedo para navegar e use dois dedos para dar zoom. Você também pode usar os botões + e −.',
+3831-      target: '.floating-zoom',
+3832-      placement: 'top-right',
+3833-    },
+3834-    {
+3835-      title: 'Selecione seus pixels',
+3836-      text: 'Toque em um pixel livre e escolha Selecionar pixel. Depois, toque ou arraste sobre a parede para montar a área que deseja comprar.',
+3837-      target: '[data-testid="canvas-pixel-wall"]',
+3838-      placement: 'bottom-right',
+3839-    },
+3840-    {
+3841-      title: 'Selecione vários de uma vez',
+3842-      text: 'Com Selecionar ativo, toque e arraste para marcar vários pixels de uma só vez. Você pode repetir o gesto para aumentar sua seleção.',
+3843-      target: '[data-testid="pixel-editor-bar"]',
+3844-      placement: 'top-right',
+3845-    },
+3846-    {

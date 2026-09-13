@@ -1,0 +1,1102 @@
+===== WALL RESERVATION SERVICE =====
+const supabasePublicUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cnyjodkusuikivdwbwcg.supabase.co';
+const supabasePublishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+export type WallPixelInput = {
+  x: number;
+  y: number;
+  color: string;
+};
+
+export type WallReservationSuccess = {
+  ok: true;
+  reservation_id: string;
+  pixel_count: number;
+  amount_cents: number;
+  currency: 'BRL';
+  expires_at: string;
+};
+
+export type WallReservationUnavailable = {
+  ok: false;
+  code: 'PIXELS_UNAVAILABLE';
+  requested: number;
+  reserved: 0;
+};
+
+export type WallReservationResult = WallReservationSuccess | WallReservationUnavailable;
+
+export type PublicWallPixel = {
+  x: number;
+  y: number;
+  color: string | null;
+  status: 'reserved' | 'purchased';
+};
+
+export async function loadPublicWallPixels(): Promise<PublicWallPixel[]> {
+  if (!supabasePublishableKey) {
+    throw new Error('A chave pública do Supabase não está configurada.');
+  }
+
+  const pageSize = 1000;
+  const pixels: PublicWallPixel[] = [];
+
+  for (let offset = 0; ; offset += pageSize) {
+    const response = await fetch(
+      `${supabasePublicUrl}/rest/v1/public_wall_pixels?select=x,y,color,status&order=y.asc,x.asc`,
+      {
+        headers: {
+          Accept: 'application/json',
+          apikey: supabasePublishableKey,
+          Range: `${offset}-${offset + pageSize - 1}`,
+        },
+        cache: 'no-store',
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error('Não foi possível atualizar a disponibilidade da parede.');
+    }
+
+    const page = await response.json() as PublicWallPixel[];
+    pixels.push(...page);
+
+    if (page.length < pageSize) break;
+  }
+
+  return pixels;
+}
+
+function readableReservationError(payload: unknown) {
+  const message = typeof payload === 'object' && payload && 'message' in payload
+    ? String(payload.message)
+    : '';
+
+  if (message.includes('AUTH_REQUIRED')) return 'Entre na sua conta para reservar pixels.';
+  if (message.includes('PROFILE_REQUIRED')) return 'Complete seu perfil antes de continuar.';
+  if (message.includes('MINIMUM_PIXELS')) return 'Selecione pelo menos 1 pixel para continuar.';
+  if (message.includes('MAXIMUM_PIXELS')) return 'Essa seleção ultrapassa o limite máximo permitido por reserva.';
+  if (message.includes('DUPLICATE_PIXELS')) return 'A seleção contém pixels duplicados. Limpe a seleção e tente novamente.';
+  if (message.includes('INVALID_PIXEL')) return 'Encontramos um pixel inválido na seleção. Limpe e tente novamente.';
+
+  return 'Não foi possível reservar os pixels agora. Tente novamente.';
+}
+
+export async function reserveWallPixels(
+  pixels: WallPixelInput[],
+  accessToken: string,
+): Promise<WallReservationResult> {
+  if (!supabasePublishableKey) {
+    throw new Error('A chave pública do Supabase não está configurada.');
+  }
+
+  const response = await fetch(`${supabasePublicUrl}/rest/v1/rpc/reserve_wall_pixels`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      apikey: supabasePublishableKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ p_pixels: pixels }),
+  });
+
+  const contentType = response.headers.get('content-type') ?? '';
+  const payload = contentType.includes('application/json')
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    throw new Error(readableReservationError(payload));
+  }
+
+  return payload as WallReservationResult;
+}
+
+===== APP - ESTADO/RENDER DA PAREDE =====
+    if (
+      visibleMinX <= visibleMaxX &&
+      visibleMinY <= visibleMaxY
+    ) {
+      const firstBucketX = Math.floor(
+        visibleMinX /
+          publicPixelBucketSize,
+      );
+
+      const lastBucketX = Math.floor(
+        visibleMaxX /
+          publicPixelBucketSize,
+      );
+
+      const firstBucketY = Math.floor(
+        visibleMinY /
+          publicPixelBucketSize,
+      );
+
+      const lastBucketY = Math.floor(
+        visibleMaxY /
+          publicPixelBucketSize,
+      );
+
+      for (
+        let bucketY = firstBucketY;
+        bucketY <= lastBucketY;
+        bucketY += 1
+      ) {
+        for (
+          let bucketX = firstBucketX;
+          bucketX <= lastBucketX;
+          bucketX += 1
+        ) {
+          const bucket =
+            publicPixelBucketsRef.current.get(
+              `${bucketX}:${bucketY}`,
+            );
+
+          if (!bucket) continue;
+
+          for (const pixel of bucket) {
+            if (
+              pixel.x < visibleMinX ||
+              pixel.x > visibleMaxX ||
+              pixel.y < visibleMinY ||
+              pixel.y > visibleMaxY
+            ) {
+              continue;
+            }
+
+            const x =
+              originX +
+              pixel.x *
+                camera.scale;
+
+            const y =
+              originY +
+              pixel.y *
+                camera.scale;
+
+            const size =
+              Math.max(
+                1,
+                camera.scale,
+              );
+
+            ctx.fillStyle =
+              pixel.status === 'purchased'
+                ? (
+                    pixel.color ??
+                    '#111111'
+                  )
+                : '#b9b4aa';
+
+            ctx.fillRect(
+              x,
+              y,
+              size,
+              size,
+            );
+
+            if (
+              pixel.status ===
+                'reserved' &&
+              camera.scale >= 6
+            ) {
+              ctx.strokeStyle =
+                'rgba(70, 66, 58, 0.72)';
+
+              ctx.lineWidth =
+                Math.max(
+                  1,
+                  camera.scale *
+                    0.10,
+                );
+
+              ctx.beginPath();
+
+              ctx.moveTo(
+                x + size * 0.18,
+                y + size * 0.18,
+              );
+
+              ctx.lineTo(
+                x + size * 0.82,
+                y + size * 0.82,
+              );
+
+              ctx.moveTo(
+                x + size * 0.82,
+                y + size * 0.18,
+              );
+
+              ctx.lineTo(
+                x + size * 0.18,
+                y + size * 0.82,
+              );
+
+              ctx.stroke();
+            }
+
+===== APP - HANDLE RESERVED =====
+      imagePixelColors.length !==
+      rectangle.width * rectangle.height
+    ) {
+      setImageEditorError(
+        "Envie uma imagem antes de aplicar.",
+      );
+      return;
+    }
+
+    setSelectionCustomized(true);
+
+    setSelectedPixels((current) => {
+      const next =
+        new Map<string, SelectedPixel>(current);
+
+      let colorIndex = 0;
+
+      for (
+        let y = rectangle.minY;
+        y <= rectangle.maxY;
+        y += 1
+      ) {
+        for (
+          let x = rectangle.minX;
+          x <= rectangle.maxX;
+          x += 1
+        ) {
+          const key = `${x}:${y}`;
+          const pixel = next.get(key);
+
+          if (pixel) {
+            next.set(key, {
+              ...pixel,
+              color: imagePixelColors[colorIndex],
+            });
+          }
+
+          colorIndex += 1;
+        }
+      }
+
+      return next;
+    });
+
+    setImageEditorOpen(false);
+    setImageMoveMode(true);
+    setTool('pan');
+    setSelectionArmed(false);
+  };
+
+
+  const handleReserved = (reservation: WallReservationSuccess) => {
+    clearPendingPixelSelection();
+    setLastReservation(reservation);
+    setCustomizeOpen(false);
+    setRecolorMode(false);
+    setAvailablePixelPrompt(null);
+  };
+
+
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tutorialPosition, setTutorialPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
+  const wallTutorialSteps = [
+    {
+      title: 'Navegue e use o zoom',
+      text: 'Use Mover para explorar a parede. Arraste com um dedo para navegar e use dois dedos para dar zoom. Você também pode usar os botões + e −.',
+      target: '.floating-zoom',
+      placement: 'top-right',
+    },
+    {
+      title: 'Selecione seus pixels',
+      text: 'Toque em um pixel livre e escolha Selecionar pixel. Depois, toque ou arraste sobre a parede para montar a área que deseja comprar.',
+      target: '[data-testid="canvas-pixel-wall"]',
+      placement: 'bottom-right',
+    },
+    {
+      title: 'Selecione vários de uma vez',
+      text: 'Com Selecionar ativo, toque e arraste para marcar vários pixels de uma só vez. Você pode repetir o gesto para aumentar sua seleção.',
+      target: '[data-testid="pixel-editor-bar"]',
+      placement: 'top-right',
+    },
+    {
+      title: 'Personalize sua seleção',
+      text: 'Aqui você pode usar uma imagem ou escolher uma cor para sua seleção. Também é possível pintar pixels individualmente.',
+      target: '.pixel-customizer',
+      placement: 'top-right',
+
+===== APP - CHECKOUT/RESERVA =====
+    </div>
+  );
+}
+
+function SelectionPanel({
+  selectedPixels,
+  selectedBlock,
+  coordinateText,
+  lastReservation,
+  onReserved,
+  onAvailabilityConflict,
+  onResetExpired,
+}: {
+  selectedPixels: SelectedPixel[];
+  selectedBlock: PixelBlock | null;
+  coordinateText: string;
+  lastReservation: WallReservationSuccess | null;
+  onReserved: (reservation: WallReservationSuccess) => void;
+  onAvailabilityConflict: () => Promise<void>;
+  onResetExpired: () => void;
+}) {
+  const [reservationError, setReservationError] = useState<string | null>(null);
+  const [reserving, setReserving] = useState(false);
+  const [openingCheckout, setOpeningCheckout] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [reservationSecondsLeft, setReservationSecondsLeft] = useState<number | null>(null);
+  const { user, session, openAuth } = useAuth();
+  const selectedCount = selectedPixels.length;
+  const autoCheckoutStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (!lastReservation) {
+      setReservationSecondsLeft(null);
+      return;
+    }
+
+    const updateReservationClock = () => {
+      const expiresAt = new Date(lastReservation.expires_at).getTime();
+      const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      setReservationSecondsLeft(remaining);
+    };
+
+    updateReservationClock();
+
+    const interval = window.setInterval(updateReservationClock, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [lastReservation]);
+
+  const reservationExpired =
+    lastReservation !== null &&
+    reservationSecondsLeft !== null &&
+    reservationSecondsLeft <= 0;
+
+  const reservationClock =
+    reservationSecondsLeft === null
+      ? null
+      : `${String(Math.floor(reservationSecondsLeft / 60)).padStart(2, '0')}:${String(
+          reservationSecondsLeft % 60,
+        ).padStart(2, '0')}`;
+
+  const openMercadoPagoCheckout = async (
+    reservation: WallReservationSuccess,
+    accessToken: string,
+  ) => {
+    setPaymentError(null);
+    setOpeningCheckout(true);
+
+    try {
+      const checkout = await createMercadoPagoCheckout(
+        reservation.reservation_id,
+        accessToken,
+      );
+
+      window.localStorage.setItem(
+        'pixel-wall-checkout-reservation',
+        reservation.reservation_id,
+      );
+
+      window.sessionStorage.setItem(
+        'pixel-wall-checkout-url',
+        checkout.checkout_url,
+      );
+
+      clearPendingCheckoutIntent();
+      clearPendingPixelSelection();
+
+      window.location.assign(checkout.checkout_url);
+    } catch (caught) {
+      clearPendingCheckoutIntent();
+      setPaymentError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível iniciar o pagamento agora.',
+      );
+      setOpeningCheckout(false);
+    }
+  };
+
+  const reserveAndOpenCheckout = async () => {
+    setReservationError(null);
+    setPaymentError(null);
+
+    if (!session) return;
+
+    if (selectedCount < 1) {
+      clearPendingCheckoutIntent();
+      autoCheckoutStartedRef.current = false;
+      setReservationError('Selecione pelo menos 1 pixel para continuar.');
+      return;
+    }
+
+    setReserving(true);
+
+    try {
+      const result = await reserveWallPixels(
+        selectedPixels,
+        session.access_token,
+      );
+
+      if (!result.ok) {
+        clearPendingCheckoutIntent();
+        autoCheckoutStartedRef.current = false;
+
+        setReservationError(
+          'Um ou mais pixels foram reservados por outra pessoa enquanto você fazia login. A parede foi atualizada; ajuste sua seleção e tente novamente.',
+        );
+
+        await onAvailabilityConflict();
+        return;
+      }
+
+      onReserved(result);
+      setReserving(false);
+
+      await openMercadoPagoCheckout(
+        result,
+        session.access_token,
+      );
+    } catch (caught) {
+      clearPendingCheckoutIntent();
+      autoCheckoutStartedRef.current = false;
+
+      setReservationError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível reservar os pixels agora.',
+      );
+
+      setReserving(false);
+    }
+  };
+
+  const handleReserve = async () => {
+    setReservationError(null);
+
+    if (!user || !session) {
+      if (selectedCount < 1) {
+        setReservationError('Selecione pelo menos 1 pixel para continuar.');
+        return;
+      }
+
+      savePendingPixelSelection(selectedPixels);
+      markPendingCheckoutIntent();
+      openAuth();
+      return;
+    }
+
+    if (reserving || openingCheckout || lastReservation) return;
+
+    autoCheckoutStartedRef.current = true;
+    await reserveAndOpenCheckout();
+  };
+
+  useEffect(() => {
+    const restoreCheckoutState = () => {
+      setOpeningCheckout(false);
+    };
+
+    window.addEventListener('pageshow', restoreCheckoutState);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setOpeningCheckout(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pageshow', restoreCheckoutState);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  const handleExpiredReservationReset = async () => {
+    if (!reservationExpired) return;
+
+    window.localStorage.removeItem(
+      'pixel-wall-checkout-reservation',
+    );
+
+    window.sessionStorage.removeItem(
+      'pixel-wall-checkout-url',
+    );
+
+    clearPendingCheckoutIntent();
+    clearPendingPixelSelection();
+
+    setOpeningCheckout(false);
+    setPaymentError(null);
+    setReservationError(null);
+    setReservationSecondsLeft(null);
+
+    autoCheckoutStartedRef.current = false;
+
+    onResetExpired();
+
+    await onAvailabilityConflict();
+  };
+
+  const handlePayment = async () => {
+    if (!session || !lastReservation || openingCheckout) return;
+
+    if (reservationExpired) {
+      setPaymentError('Sua reserva expirou. Selecione novamente os pixels para continuar.');
+      return;
+    }
+
+    const savedReservationId = window.localStorage.getItem(
+      'pixel-wall-checkout-reservation',
+    );
+
+    const savedCheckoutUrl = window.sessionStorage.getItem(
+      'pixel-wall-checkout-url',
+    );
+
+    if (
+      savedReservationId === lastReservation.reservation_id &&
+      savedCheckoutUrl
+    ) {
+      setOpeningCheckout(true);
+      window.location.assign(savedCheckoutUrl);
+      return;
+    }
+
+    await openMercadoPagoCheckout(
+      lastReservation,
+      session.access_token,
+    );
+  };
+
+  useEffect(() => {
+    if (
+      !user ||
+      !session ||
+      lastReservation ||
+      selectedCount < 1 ||
+      !hasPendingCheckoutIntent() ||
+      autoCheckoutStartedRef.current
+    ) {
+      return;
+    }
+
+    autoCheckoutStartedRef.current = true;
+    void reserveAndOpenCheckout();
+  }, [user, session, lastReservation, selectedCount]);
+
+  return (
+    <aside className={`selection-panel ${(selectedCount || selectedBlock) ? 'has-selection' : ''}`}>
+      {selectedBlock ? (
+        <div className="selection-content compact-selection">
+          <span className="selection-type">área ocupada</span><h2>{selectedBlock.name}</h2><p>{selectedBlock.detail}</p>
+          <div className="selection-detail"><span>coordenada</span><b>{coordinateText}</b></div>
+        </div>
+      ) : selectedCount > 0 ? (
+        <div className="selection-content selection-summary">
+          <div className="selection-summary-title"><span>Resumo da seleção</span><strong>{selectedCount} pixels</strong></div>
+          <div className="selection-summary-grid">
+            <div><span>valor atual</span><b>R$ {selectedCount.toFixed(2).replace('.', ',')}</b></div>
+
+          </div>
+          <button className="selection-button" onClick={handleReserve} disabled={reserving || !!lastReservation}>
+            {reserving ? 'Reservando...' : lastReservation ? 'Seleção reservada' : 'Continuar com esta seleção'}
+            {!reserving && !lastReservation && <ArrowRight size={17} />}
+            {lastReservation && <Check size={17} />}
+          </button>
+          {selectedCount < 1 && !lastReservation && (
+            <div className="demo-notice" role="status">Selecione mais {5 - selectedCount} {5 - selectedCount === 1 ? 'pixel' : 'pixels'} para atingir o mínimo de R$ 5,00.</div>
+          )}
+          {reservationError && <div className="demo-notice" role="alert">{reservationError}</div>}
+          {lastReservation && (
+            <>
+              <div
+                className={`demo-notice reservation-countdown ${
+                  reservationExpired
+                    ? 'reservation-expired'
+                    : reservationSecondsLeft !== null && reservationSecondsLeft <= 180
+                      ? 'reservation-warning'
+                      : ''
+                }`}
+                role="status"
+              >
+                {reservationExpired ? (
+                  <>
+                    <span>Reserva expirada.</span>
+                    <strong>Selecione novamente os pixels para continuar.</strong>
+                  </>
+                ) : (
+                  <>
+                    <Check size={15} />
+                    <span>{lastReservation.pixel_count} pixels reservados</span>
+                    {reservationClock && (
+                      <strong className="reservation-clock">{reservationClock}</strong>
+                    )}
+                    <span>
+                      Valor: R$ {(lastReservation.amount_cents / 100).toFixed(2).replace('.', ',')}
+                    </span>
+                  </>
+                )}
+              </div>
+              <button
+                className="selection-button"
+                type="button"
+                onClick={
+                  reservationExpired
+                    ? handleExpiredReservationReset
+                    : handlePayment
+                }
+                disabled={openingCheckout}
+              >
+                {reservationExpired
+                  ? 'Selecionar novamente'
+                  : openingCheckout
+                    ? 'Abrindo Mercado Pago...'
+                    : 'Voltar ao checkout'}
+                {!openingCheckout && <ArrowRight size={17} />}
+              </button>
+              {paymentError && <div className="demo-notice" role="alert">{paymentError}</div>}
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="selection-empty compact-empty"><div className="empty-cross"><Crosshair size={24} /></div><div><h2>Monte seu desenho.</h2><p>Arraste com um dedo para navegar. Toque em um pixel livre para selecioná-lo. Use dois dedos para ampliar ou reduzir.</p></div></div>
+      )}
+      <div className="panel-foot"><span><span className="pulse-dot" /> seleção livre</span><Link href="/"><ArrowLeft size={14} /> voltar ao início</Link></div>
+    </aside>
+  );
+}
+
+function MyPixelsPage() {
+  const { user, session, loading, openAuth, openProfile } = useAuth();
+
+  const [data, setData] = useState<MyPurchasesResponse | null>(null);
+  const [loadingPurchases, setLoadingPurchases] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!session) {
+
+===== BACKEND - ROTAS DE RESERVA =====
+artifacts/api-server/src/routes/mercado-pago.ts-176-
+artifacts/api-server/src/routes/mercado-pago.ts-177-  return expected.length === received.length && timingSafeEqual(expected, received);
+artifacts/api-server/src/routes/mercado-pago.ts-178-}
+artifacts/api-server/src/routes/mercado-pago.ts-179-
+artifacts/api-server/src/routes/mercado-pago.ts-180-async function loadOwnActiveReservation(reservationId: string, accessToken: string) {
+artifacts/api-server/src/routes/mercado-pago.ts-181-  if (!supabasePublishableKey) {
+artifacts/api-server/src/routes/mercado-pago.ts-182-    throw new Error("SUPABASE_PUBLIC_KEY_MISSING");
+artifacts/api-server/src/routes/mercado-pago.ts-183-  }
+artifacts/api-server/src/routes/mercado-pago.ts-184-
+artifacts/api-server/src/routes/mercado-pago.ts-185-  const query = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-186-    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
+artifacts/api-server/src/routes/mercado-pago.ts-187-    id: `eq.${reservationId}`,
+artifacts/api-server/src/routes/mercado-pago.ts-188-    limit: "1",
+artifacts/api-server/src/routes/mercado-pago.ts-189-  });
+artifacts/api-server/src/routes/mercado-pago.ts-190-
+artifacts/api-server/src/routes/mercado-pago.ts:191:  const response = await fetch(`${supabaseUrl}/rest/v1/wall_reservations?${query.toString()}`, {
+artifacts/api-server/src/routes/mercado-pago.ts-192-    headers: {
+artifacts/api-server/src/routes/mercado-pago.ts-193-      Accept: "application/json",
+artifacts/api-server/src/routes/mercado-pago.ts-194-      apikey: supabasePublishableKey,
+artifacts/api-server/src/routes/mercado-pago.ts-195-      Authorization: `Bearer ${accessToken}`,
+artifacts/api-server/src/routes/mercado-pago.ts-196-    },
+artifacts/api-server/src/routes/mercado-pago.ts-197-    cache: "no-store",
+artifacts/api-server/src/routes/mercado-pago.ts-198-  });
+artifacts/api-server/src/routes/mercado-pago.ts-199-
+artifacts/api-server/src/routes/mercado-pago.ts-200-  if (!response.ok) {
+artifacts/api-server/src/routes/mercado-pago.ts-201-    return null;
+artifacts/api-server/src/routes/mercado-pago.ts-202-  }
+artifacts/api-server/src/routes/mercado-pago.ts-203-
+artifacts/api-server/src/routes/mercado-pago.ts-204-  const rows = await response.json() as ReservationRow[];
+artifacts/api-server/src/routes/mercado-pago.ts-205-  const reservation = rows[0] ?? null;
+artifacts/api-server/src/routes/mercado-pago.ts-206-
+artifacts/api-server/src/routes/mercado-pago.ts-207-  if (!reservation) return null;
+artifacts/api-server/src/routes/mercado-pago.ts-208-  if (reservation.status !== "active") return null;
+artifacts/api-server/src/routes/mercado-pago.ts-209-  if (new Date(reservation.expires_at).getTime() <= Date.now()) return null;
+artifacts/api-server/src/routes/mercado-pago.ts-210-  if (!Number.isInteger(reservation.pixel_count) || reservation.pixel_count < 1) return null;
+artifacts/api-server/src/routes/mercado-pago.ts-211-  if (!Number.isInteger(reservation.amount_cents) || reservation.amount_cents < 1) return null;
+artifacts/api-server/src/routes/mercado-pago.ts-212-
+artifacts/api-server/src/routes/mercado-pago.ts-213-  return reservation;
+artifacts/api-server/src/routes/mercado-pago.ts-214-}
+artifacts/api-server/src/routes/mercado-pago.ts-215-
+artifacts/api-server/src/routes/mercado-pago.ts-216-async function loadOwnReservation(reservationId: string, accessToken: string) {
+artifacts/api-server/src/routes/mercado-pago.ts-217-  if (!supabasePublishableKey) {
+artifacts/api-server/src/routes/mercado-pago.ts-218-    throw new Error("SUPABASE_PUBLIC_KEY_MISSING");
+artifacts/api-server/src/routes/mercado-pago.ts-219-  }
+artifacts/api-server/src/routes/mercado-pago.ts-220-
+artifacts/api-server/src/routes/mercado-pago.ts-221-  const query = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-222-    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
+artifacts/api-server/src/routes/mercado-pago.ts-223-    id: `eq.${reservationId}`,
+artifacts/api-server/src/routes/mercado-pago.ts-224-    limit: "1",
+artifacts/api-server/src/routes/mercado-pago.ts-225-  });
+artifacts/api-server/src/routes/mercado-pago.ts-226-
+artifacts/api-server/src/routes/mercado-pago.ts:227:  const response = await fetch(`${supabaseUrl}/rest/v1/wall_reservations?${query.toString()}`, {
+artifacts/api-server/src/routes/mercado-pago.ts-228-    headers: {
+artifacts/api-server/src/routes/mercado-pago.ts-229-      Accept: "application/json",
+artifacts/api-server/src/routes/mercado-pago.ts-230-      apikey: supabasePublishableKey,
+artifacts/api-server/src/routes/mercado-pago.ts-231-      Authorization: `Bearer ${accessToken}`,
+artifacts/api-server/src/routes/mercado-pago.ts-232-    },
+artifacts/api-server/src/routes/mercado-pago.ts-233-    cache: "no-store",
+artifacts/api-server/src/routes/mercado-pago.ts-234-  });
+artifacts/api-server/src/routes/mercado-pago.ts-235-
+artifacts/api-server/src/routes/mercado-pago.ts-236-  if (!response.ok) return null;
+artifacts/api-server/src/routes/mercado-pago.ts-237-
+artifacts/api-server/src/routes/mercado-pago.ts-238-  const rows = await response.json() as ReservationRow[];
+artifacts/api-server/src/routes/mercado-pago.ts-239-  return rows[0] ?? null;
+artifacts/api-server/src/routes/mercado-pago.ts-240-}
+artifacts/api-server/src/routes/mercado-pago.ts-241-
+artifacts/api-server/src/routes/mercado-pago.ts-242-async function serviceRoleGet<T>(path: string): Promise<T> {
+artifacts/api-server/src/routes/mercado-pago.ts-243-  if (!supabaseServiceRoleKey) {
+artifacts/api-server/src/routes/mercado-pago.ts-244-    throw new Error("SUPABASE_SERVICE_ROLE_KEY_MISSING");
+artifacts/api-server/src/routes/mercado-pago.ts-245-  }
+artifacts/api-server/src/routes/mercado-pago.ts-246-
+artifacts/api-server/src/routes/mercado-pago.ts-247-  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+artifacts/api-server/src/routes/mercado-pago.ts-248-    headers: {
+artifacts/api-server/src/routes/mercado-pago.ts-249-      Accept: "application/json",
+artifacts/api-server/src/routes/mercado-pago.ts-250-      apikey: supabaseServiceRoleKey,
+artifacts/api-server/src/routes/mercado-pago.ts-251-      ...(supabaseServiceRoleKey.startsWith("sb_secret_")
+artifacts/api-server/src/routes/mercado-pago.ts-252-        ? {}
+artifacts/api-server/src/routes/mercado-pago.ts-253-        : { Authorization: `Bearer ${supabaseServiceRoleKey}` }),
+artifacts/api-server/src/routes/mercado-pago.ts-254-    },
+artifacts/api-server/src/routes/mercado-pago.ts-255-    cache: "no-store",
+artifacts/api-server/src/routes/mercado-pago.ts-256-  });
+artifacts/api-server/src/routes/mercado-pago.ts-257-
+artifacts/api-server/src/routes/mercado-pago.ts-258-  if (!response.ok) {
+artifacts/api-server/src/routes/mercado-pago.ts-259-    throw new Error(`SUPABASE_SERVICE_ROLE_READ_FAILED:${response.status}`);
+artifacts/api-server/src/routes/mercado-pago.ts-260-  }
+artifacts/api-server/src/routes/mercado-pago.ts-261-
+artifacts/api-server/src/routes/mercado-pago.ts-262-  return await response.json() as T;
+artifacts/api-server/src/routes/mercado-pago.ts-263-}
+artifacts/api-server/src/routes/mercado-pago.ts-264-
+artifacts/api-server/src/routes/mercado-pago.ts-265-
+artifacts/api-server/src/routes/mercado-pago.ts-266-async function serviceRoleInsert(
+artifacts/api-server/src/routes/mercado-pago.ts-267-  table: string,
+artifacts/api-server/src/routes/mercado-pago.ts-268-  payload: Record<string, unknown>,
+artifacts/api-server/src/routes/mercado-pago.ts-269-) {
+artifacts/api-server/src/routes/mercado-pago.ts-270-  if (!supabaseServiceRoleKey) {
+artifacts/api-server/src/routes/mercado-pago.ts-271-    throw new Error("SUPABASE_SERVICE_ROLE_KEY_MISSING");
+artifacts/api-server/src/routes/mercado-pago.ts-272-  }
+--
+artifacts/api-server/src/routes/mercado-pago.ts-295-  if (!response.ok) {
+artifacts/api-server/src/routes/mercado-pago.ts-296-    const details = await response.text().catch(() => "");
+artifacts/api-server/src/routes/mercado-pago.ts-297-    throw new Error(
+artifacts/api-server/src/routes/mercado-pago.ts-298-      `SUPABASE_SERVICE_ROLE_INSERT_FAILED:${response.status}:${details}`,
+artifacts/api-server/src/routes/mercado-pago.ts-299-    );
+artifacts/api-server/src/routes/mercado-pago.ts-300-  }
+artifacts/api-server/src/routes/mercado-pago.ts-301-}
+artifacts/api-server/src/routes/mercado-pago.ts-302-
+artifacts/api-server/src/routes/mercado-pago.ts-303-async function loadReservationForWebhook(reservationId: string) {
+artifacts/api-server/src/routes/mercado-pago.ts-304-  const query = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-305-    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
+artifacts/api-server/src/routes/mercado-pago.ts-306-    id: `eq.${reservationId}`,
+artifacts/api-server/src/routes/mercado-pago.ts-307-    limit: "1",
+artifacts/api-server/src/routes/mercado-pago.ts-308-  });
+artifacts/api-server/src/routes/mercado-pago.ts-309-
+artifacts/api-server/src/routes/mercado-pago.ts:310:  const rows = await serviceRoleGet<ReservationRow[]>(`wall_reservations?${query.toString()}`);
+artifacts/api-server/src/routes/mercado-pago.ts-311-  return rows[0] ?? null;
+artifacts/api-server/src/routes/mercado-pago.ts-312-}
+artifacts/api-server/src/routes/mercado-pago.ts-313-
+artifacts/api-server/src/routes/mercado-pago.ts-314-async function findExistingPaidOrder(paymentId: string) {
+artifacts/api-server/src/routes/mercado-pago.ts-315-  const query = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-316-    select: "id,status,reservation_id,provider_reference",
+artifacts/api-server/src/routes/mercado-pago.ts-317-    provider: "eq.mercado_pago",
+artifacts/api-server/src/routes/mercado-pago.ts-318-    provider_reference: `eq.${paymentId}`,
+artifacts/api-server/src/routes/mercado-pago.ts-319-    limit: "1",
+artifacts/api-server/src/routes/mercado-pago.ts-320-  });
+artifacts/api-server/src/routes/mercado-pago.ts-321-
+artifacts/api-server/src/routes/mercado-pago.ts-322-  const rows = await serviceRoleGet<WallOrderRow[]>(`wall_orders?${query.toString()}`);
+artifacts/api-server/src/routes/mercado-pago.ts-323-  return rows[0] ?? null;
+artifacts/api-server/src/routes/mercado-pago.ts-324-}
+artifacts/api-server/src/routes/mercado-pago.ts-325-
+artifacts/api-server/src/routes/mercado-pago.ts-326-async function findOrderByReservation(reservationId: string) {
+artifacts/api-server/src/routes/mercado-pago.ts-327-  const query = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-328-    select: "id,status,reservation_id,provider_reference",
+artifacts/api-server/src/routes/mercado-pago.ts-329-    reservation_id: `eq.${reservationId}`,
+artifacts/api-server/src/routes/mercado-pago.ts-330-    limit: "1",
+artifacts/api-server/src/routes/mercado-pago.ts-331-  });
+artifacts/api-server/src/routes/mercado-pago.ts-332-
+artifacts/api-server/src/routes/mercado-pago.ts-333-  const rows = await serviceRoleGet<WallOrderRow[]>(`wall_orders?${query.toString()}`);
+artifacts/api-server/src/routes/mercado-pago.ts-334-  return rows[0] ?? null;
+artifacts/api-server/src/routes/mercado-pago.ts-335-}
+artifacts/api-server/src/routes/mercado-pago.ts-336-
+artifacts/api-server/src/routes/mercado-pago.ts-337-async function findMercadoPagoPaymentByReservation(
+artifacts/api-server/src/routes/mercado-pago.ts-338-  reservationId: string,
+artifacts/api-server/src/routes/mercado-pago.ts-339-): Promise<MercadoPagoPayment | null> {
+artifacts/api-server/src/routes/mercado-pago.ts-340-  const params = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-341-    external_reference: reservationId,
+artifacts/api-server/src/routes/mercado-pago.ts-342-    status: "approved",
+artifacts/api-server/src/routes/mercado-pago.ts-343-    sort: "date_created",
+artifacts/api-server/src/routes/mercado-pago.ts-344-    criteria: "desc",
+artifacts/api-server/src/routes/mercado-pago.ts-345-    limit: "10",
+artifacts/api-server/src/routes/mercado-pago.ts-346-    offset: "0",
+artifacts/api-server/src/routes/mercado-pago.ts-347-  });
+artifacts/api-server/src/routes/mercado-pago.ts-348-
+artifacts/api-server/src/routes/mercado-pago.ts-349-  const response = await fetch(
+artifacts/api-server/src/routes/mercado-pago.ts-350-    `https://api.mercadopago.com/v1/payments/search?${params.toString()}`,
+artifacts/api-server/src/routes/mercado-pago.ts-351-    {
+artifacts/api-server/src/routes/mercado-pago.ts-352-      headers: {
+artifacts/api-server/src/routes/mercado-pago.ts-353-        Accept: "application/json",
+artifacts/api-server/src/routes/mercado-pago.ts-354-        Authorization: `Bearer ${mercadoPagoAccessToken}`,
+artifacts/api-server/src/routes/mercado-pago.ts-355-      },
+--
+artifacts/api-server/src/routes/mercado-pago.ts-892-       * - OU reserva ainda marcada active,
+artifacts/api-server/src/routes/mercado-pago.ts-893-       *   mas cujo expires_at já passou;
+artifacts/api-server/src/routes/mercado-pago.ts-894-       * - sem pedido pago correspondente.
+artifacts/api-server/src/routes/mercado-pago.ts-895-       */
+artifacts/api-server/src/routes/mercado-pago.ts-896-      const reservations =
+artifacts/api-server/src/routes/mercado-pago.ts-897-        await serviceRoleGet<
+artifacts/api-server/src/routes/mercado-pago.ts-898-          Array<{
+artifacts/api-server/src/routes/mercado-pago.ts-899-            id: string;
+artifacts/api-server/src/routes/mercado-pago.ts-900-            user_id: string;
+artifacts/api-server/src/routes/mercado-pago.ts-901-            status: string;
+artifacts/api-server/src/routes/mercado-pago.ts-902-            pixel_count: number;
+artifacts/api-server/src/routes/mercado-pago.ts-903-            amount_cents: number;
+artifacts/api-server/src/routes/mercado-pago.ts-904-            expires_at: string;
+artifacts/api-server/src/routes/mercado-pago.ts-905-          }>
+artifacts/api-server/src/routes/mercado-pago.ts-906-        >(
+artifacts/api-server/src/routes/mercado-pago.ts:907:          "wall_reservations?select=id,user_id,status,pixel_count,amount_cents,expires_at&order=expires_at.desc",
+artifacts/api-server/src/routes/mercado-pago.ts-908-        );
+artifacts/api-server/src/routes/mercado-pago.ts-909-
+artifacts/api-server/src/routes/mercado-pago.ts-910-      const orders =
+artifacts/api-server/src/routes/mercado-pago.ts-911-        await serviceRoleGet<
+artifacts/api-server/src/routes/mercado-pago.ts-912-          Array<{
+artifacts/api-server/src/routes/mercado-pago.ts-913-            reservation_id: string;
+artifacts/api-server/src/routes/mercado-pago.ts-914-            status: string;
+artifacts/api-server/src/routes/mercado-pago.ts-915-          }>
+artifacts/api-server/src/routes/mercado-pago.ts-916-        >(
+artifacts/api-server/src/routes/mercado-pago.ts-917-          "wall_orders?select=reservation_id,status",
+artifacts/api-server/src/routes/mercado-pago.ts-918-        );
+artifacts/api-server/src/routes/mercado-pago.ts-919-
+artifacts/api-server/src/routes/mercado-pago.ts-920-      const paidReservationIds =
+artifacts/api-server/src/routes/mercado-pago.ts-921-        new Set(
+artifacts/api-server/src/routes/mercado-pago.ts-922-          orders
+artifacts/api-server/src/routes/mercado-pago.ts-923-            .filter(
+artifacts/api-server/src/routes/mercado-pago.ts-924-              (order) =>
+artifacts/api-server/src/routes/mercado-pago.ts-925-                order.status === "paid",
+artifacts/api-server/src/routes/mercado-pago.ts-926-            )
+artifacts/api-server/src/routes/mercado-pago.ts-927-            .map(
+artifacts/api-server/src/routes/mercado-pago.ts-928-              (order) =>
+artifacts/api-server/src/routes/mercado-pago.ts-929-                order.reservation_id,
+artifacts/api-server/src/routes/mercado-pago.ts-930-            ),
+artifacts/api-server/src/routes/mercado-pago.ts-931-        );
+artifacts/api-server/src/routes/mercado-pago.ts-932-
+artifacts/api-server/src/routes/mercado-pago.ts-933-      const abandoned =
+artifacts/api-server/src/routes/mercado-pago.ts-934-        reservations
+artifacts/api-server/src/routes/mercado-pago.ts-935-          .filter((reservation) => {
+artifacts/api-server/src/routes/mercado-pago.ts-936-            if (
+artifacts/api-server/src/routes/mercado-pago.ts-937-              paidReservationIds.has(
+artifacts/api-server/src/routes/mercado-pago.ts-938-                reservation.id,
+artifacts/api-server/src/routes/mercado-pago.ts-939-              )
+artifacts/api-server/src/routes/mercado-pago.ts-940-            ) {
+artifacts/api-server/src/routes/mercado-pago.ts-941-              return false;
+artifacts/api-server/src/routes/mercado-pago.ts-942-            }
+artifacts/api-server/src/routes/mercado-pago.ts-943-
+artifacts/api-server/src/routes/mercado-pago.ts-944-            const expiredByTime =
+artifacts/api-server/src/routes/mercado-pago.ts-945-              new Date(
+artifacts/api-server/src/routes/mercado-pago.ts-946-                reservation.expires_at,
+artifacts/api-server/src/routes/mercado-pago.ts-947-              ).getTime() < nowMs;
+artifacts/api-server/src/routes/mercado-pago.ts-948-
+artifacts/api-server/src/routes/mercado-pago.ts-949-            return (
+artifacts/api-server/src/routes/mercado-pago.ts-950-              reservation.status ===
+artifacts/api-server/src/routes/mercado-pago.ts-951-                "expired" ||
+artifacts/api-server/src/routes/mercado-pago.ts-952-              reservation.status ===
+--
+artifacts/api-server/src/routes/mercado-pago.ts-1303-    >();
+artifacts/api-server/src/routes/mercado-pago.ts-1304-
+artifacts/api-server/src/routes/mercado-pago.ts-1305-    if (notableOrderIds.length > 0) {
+artifacts/api-server/src/routes/mercado-pago.ts-1306-      const claimsQuery = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-1307-        select: "x,y,order_id",
+artifacts/api-server/src/routes/mercado-pago.ts-1308-        status: "eq.purchased",
+artifacts/api-server/src/routes/mercado-pago.ts-1309-        order_id: `in.(${[...new Set(notableOrderIds)].join(",")})`,
+artifacts/api-server/src/routes/mercado-pago.ts-1310-      });
+artifacts/api-server/src/routes/mercado-pago.ts-1311-
+artifacts/api-server/src/routes/mercado-pago.ts-1312-      try {
+artifacts/api-server/src/routes/mercado-pago.ts-1313-        const claims = await serviceRoleGet<Array<{
+artifacts/api-server/src/routes/mercado-pago.ts-1314-          x: number;
+artifacts/api-server/src/routes/mercado-pago.ts-1315-          y: number;
+artifacts/api-server/src/routes/mercado-pago.ts-1316-          order_id: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-1317-        }>>(
+artifacts/api-server/src/routes/mercado-pago.ts:1318:          `wall_pixel_claims?${claimsQuery.toString()}`,
+artifacts/api-server/src/routes/mercado-pago.ts-1319-        );
+artifacts/api-server/src/routes/mercado-pago.ts-1320-
+artifacts/api-server/src/routes/mercado-pago.ts-1321-        const grouped = new Map<
+artifacts/api-server/src/routes/mercado-pago.ts-1322-          string,
+artifacts/api-server/src/routes/mercado-pago.ts-1323-          Array<{ x: number; y: number }>
+artifacts/api-server/src/routes/mercado-pago.ts-1324-        >();
+artifacts/api-server/src/routes/mercado-pago.ts-1325-
+artifacts/api-server/src/routes/mercado-pago.ts-1326-        for (const claim of claims) {
+artifacts/api-server/src/routes/mercado-pago.ts-1327-          if (!claim.order_id) continue;
+artifacts/api-server/src/routes/mercado-pago.ts-1328-
+artifacts/api-server/src/routes/mercado-pago.ts-1329-          const list = grouped.get(claim.order_id) ?? [];
+artifacts/api-server/src/routes/mercado-pago.ts-1330-          list.push({ x: claim.x, y: claim.y });
+artifacts/api-server/src/routes/mercado-pago.ts-1331-          grouped.set(claim.order_id, list);
+artifacts/api-server/src/routes/mercado-pago.ts-1332-        }
+artifacts/api-server/src/routes/mercado-pago.ts-1333-
+artifacts/api-server/src/routes/mercado-pago.ts-1334-        for (const [orderId, pixels] of grouped.entries()) {
+artifacts/api-server/src/routes/mercado-pago.ts-1335-          if (pixels.length === 0) continue;
+artifacts/api-server/src/routes/mercado-pago.ts-1336-
+artifacts/api-server/src/routes/mercado-pago.ts-1337-          boundsByOrder.set(orderId, {
+artifacts/api-server/src/routes/mercado-pago.ts-1338-            min_x: Math.min(...pixels.map((pixel) => pixel.x)),
+artifacts/api-server/src/routes/mercado-pago.ts-1339-            min_y: Math.min(...pixels.map((pixel) => pixel.y)),
+artifacts/api-server/src/routes/mercado-pago.ts-1340-            max_x: Math.max(...pixels.map((pixel) => pixel.x)),
+artifacts/api-server/src/routes/mercado-pago.ts-1341-            max_y: Math.max(...pixels.map((pixel) => pixel.y)),
+artifacts/api-server/src/routes/mercado-pago.ts-1342-          });
+artifacts/api-server/src/routes/mercado-pago.ts-1343-        }
+artifacts/api-server/src/routes/mercado-pago.ts-1344-      } catch {
+artifacts/api-server/src/routes/mercado-pago.ts-1345-        // O Hall continua disponível mesmo se os bounds
+artifacts/api-server/src/routes/mercado-pago.ts-1346-        // estiverem temporariamente indisponíveis.
+artifacts/api-server/src/routes/mercado-pago.ts-1347-      }
+artifacts/api-server/src/routes/mercado-pago.ts-1348-    }
+artifacts/api-server/src/routes/mercado-pago.ts-1349-
+artifacts/api-server/src/routes/mercado-pago.ts-1350-    const publicIdentityForOrder = (
+artifacts/api-server/src/routes/mercado-pago.ts-1351-      order: (typeof orders)[number] | null,
+artifacts/api-server/src/routes/mercado-pago.ts-1352-    ) => {
+artifacts/api-server/src/routes/mercado-pago.ts-1353-      if (!order) {
+artifacts/api-server/src/routes/mercado-pago.ts-1354-        return {
+artifacts/api-server/src/routes/mercado-pago.ts-1355-          name: "Comprador anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts-1356-          username: null as string | null,
+artifacts/api-server/src/routes/mercado-pago.ts-1357-        };
+artifacts/api-server/src/routes/mercado-pago.ts-1358-      }
+artifacts/api-server/src/routes/mercado-pago.ts-1359-
+artifacts/api-server/src/routes/mercado-pago.ts-1360-      if (order.provider === "admin_courtesy") {
+artifacts/api-server/src/routes/mercado-pago.ts-1361-        return {
+artifacts/api-server/src/routes/mercado-pago.ts-1362-          name: "Comprador Anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts-1363-          username: null as string | null,
+--
+artifacts/api-server/src/routes/mercado-pago.ts-1614-        return;
+artifacts/api-server/src/routes/mercado-pago.ts-1615-      }
+artifacts/api-server/src/routes/mercado-pago.ts-1616-
+artifacts/api-server/src/routes/mercado-pago.ts-1617-      const pixelQuery = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-1618-        select: "x,y,color",
+artifacts/api-server/src/routes/mercado-pago.ts-1619-        order_id: `eq.${order.id}`,
+artifacts/api-server/src/routes/mercado-pago.ts-1620-        status: "eq.purchased",
+artifacts/api-server/src/routes/mercado-pago.ts-1621-        order: "y.asc,x.asc",
+artifacts/api-server/src/routes/mercado-pago.ts-1622-      });
+artifacts/api-server/src/routes/mercado-pago.ts-1623-
+artifacts/api-server/src/routes/mercado-pago.ts-1624-      const pixels = await serviceRoleGet<Array<{
+artifacts/api-server/src/routes/mercado-pago.ts-1625-        x: number;
+artifacts/api-server/src/routes/mercado-pago.ts-1626-        y: number;
+artifacts/api-server/src/routes/mercado-pago.ts-1627-        color: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-1628-      }>>(
+artifacts/api-server/src/routes/mercado-pago.ts:1629:        `wall_pixel_claims?${pixelQuery.toString()}`,
+artifacts/api-server/src/routes/mercado-pago.ts-1630-      );
+artifacts/api-server/src/routes/mercado-pago.ts-1631-
+artifacts/api-server/src/routes/mercado-pago.ts-1632-      if (pixels.length === 0) {
+artifacts/api-server/src/routes/mercado-pago.ts-1633-        res.status(404).json({
+artifacts/api-server/src/routes/mercado-pago.ts-1634-          message: "Os pixels dessa obra não estão disponíveis.",
+artifacts/api-server/src/routes/mercado-pago.ts-1635-        });
+artifacts/api-server/src/routes/mercado-pago.ts-1636-        return;
+artifacts/api-server/src/routes/mercado-pago.ts-1637-      }
+artifacts/api-server/src/routes/mercado-pago.ts-1638-
+artifacts/api-server/src/routes/mercado-pago.ts-1639-      const xs = pixels.map((pixel) => pixel.x);
+artifacts/api-server/src/routes/mercado-pago.ts-1640-      const ys = pixels.map((pixel) => pixel.y);
+artifacts/api-server/src/routes/mercado-pago.ts-1641-
+artifacts/api-server/src/routes/mercado-pago.ts-1642-      const bounds = {
+artifacts/api-server/src/routes/mercado-pago.ts-1643-        min_x: Math.min(...xs),
+artifacts/api-server/src/routes/mercado-pago.ts-1644-        min_y: Math.min(...ys),
+artifacts/api-server/src/routes/mercado-pago.ts-1645-        max_x: Math.max(...xs),
+artifacts/api-server/src/routes/mercado-pago.ts-1646-        max_y: Math.max(...ys),
+artifacts/api-server/src/routes/mercado-pago.ts-1647-      };
+artifacts/api-server/src/routes/mercado-pago.ts-1648-
+artifacts/api-server/src/routes/mercado-pago.ts-1649-      let owner = {
+artifacts/api-server/src/routes/mercado-pago.ts-1650-        name: "Comprador anônimo",
+artifacts/api-server/src/routes/mercado-pago.ts-1651-        username: null as string | null,
+artifacts/api-server/src/routes/mercado-pago.ts-1652-        avatar_emoji: null as string | null,
+artifacts/api-server/src/routes/mercado-pago.ts-1653-        avatar_path: null as string | null,
+artifacts/api-server/src/routes/mercado-pago.ts-1654-      };
+artifacts/api-server/src/routes/mercado-pago.ts-1655-
+artifacts/api-server/src/routes/mercado-pago.ts-1656-      try {
+artifacts/api-server/src/routes/mercado-pago.ts-1657-        const profileQuery = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-1658-          select:
+artifacts/api-server/src/routes/mercado-pago.ts-1659-            "display_name,username,avatar_emoji,avatar_path,consent_public_profile",
+artifacts/api-server/src/routes/mercado-pago.ts-1660-          id: `eq.${order.user_id}`,
+artifacts/api-server/src/routes/mercado-pago.ts-1661-          limit: "1",
+artifacts/api-server/src/routes/mercado-pago.ts-1662-        });
+artifacts/api-server/src/routes/mercado-pago.ts-1663-
+artifacts/api-server/src/routes/mercado-pago.ts-1664-        const profiles = await serviceRoleGet<Array<{
+artifacts/api-server/src/routes/mercado-pago.ts-1665-          display_name: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-1666-          username: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-1667-          avatar_emoji: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-1668-          avatar_path: string | null;
+artifacts/api-server/src/routes/mercado-pago.ts-1669-          consent_public_profile: boolean | null;
+artifacts/api-server/src/routes/mercado-pago.ts-1670-        }>>(
+artifacts/api-server/src/routes/mercado-pago.ts-1671-          `profiles?${profileQuery.toString()}`,
+artifacts/api-server/src/routes/mercado-pago.ts-1672-        );
+artifacts/api-server/src/routes/mercado-pago.ts-1673-
+artifacts/api-server/src/routes/mercado-pago.ts-1674-        const profile = profiles[0];
+--
+artifacts/api-server/src/routes/mercado-pago.ts-1752-      return;
+artifacts/api-server/src/routes/mercado-pago.ts-1753-    }
+artifacts/api-server/src/routes/mercado-pago.ts-1754-
+artifacts/api-server/src/routes/mercado-pago.ts-1755-    const orderIds = orders
+artifacts/api-server/src/routes/mercado-pago.ts-1756-      .map((order) => order.id)
+artifacts/api-server/src/routes/mercado-pago.ts-1757-      .filter(Boolean);
+artifacts/api-server/src/routes/mercado-pago.ts-1758-
+artifacts/api-server/src/routes/mercado-pago.ts-1759-    const pixelQuery = new URLSearchParams({
+artifacts/api-server/src/routes/mercado-pago.ts-1760-      select: "x,y,color,order_id",
+artifacts/api-server/src/routes/mercado-pago.ts-1761-      order_id: `in.(${orderIds.join(",")})`,
+artifacts/api-server/src/routes/mercado-pago.ts-1762-      status: "eq.purchased",
+artifacts/api-server/src/routes/mercado-pago.ts-1763-      order: "order_id.asc,y.asc,x.asc",
+artifacts/api-server/src/routes/mercado-pago.ts-1764-    });
+artifacts/api-server/src/routes/mercado-pago.ts-1765-
+artifacts/api-server/src/routes/mercado-pago.ts-1766-    const pixels = await serviceRoleGet<MyPurchasePixelRow[]>(
+artifacts/api-server/src/routes/mercado-pago.ts:1767:      `wall_pixel_claims?${pixelQuery.toString()}`,
+artifacts/api-server/src/routes/mercado-pago.ts-1768-    );
+artifacts/api-server/src/routes/mercado-pago.ts-1769-
+artifacts/api-server/src/routes/mercado-pago.ts-1770-    const pixelsByOrder = new Map<string, MyPurchasePixelRow[]>();
+artifacts/api-server/src/routes/mercado-pago.ts-1771-
+artifacts/api-server/src/routes/mercado-pago.ts-1772-    for (const pixel of pixels) {
+artifacts/api-server/src/routes/mercado-pago.ts-1773-      if (!pixel.order_id) continue;
+artifacts/api-server/src/routes/mercado-pago.ts-1774-
+artifacts/api-server/src/routes/mercado-pago.ts-1775-      const list = pixelsByOrder.get(pixel.order_id) ?? [];
+artifacts/api-server/src/routes/mercado-pago.ts-1776-      list.push(pixel);
+artifacts/api-server/src/routes/mercado-pago.ts-1777-      pixelsByOrder.set(pixel.order_id, list);
+artifacts/api-server/src/routes/mercado-pago.ts-1778-    }
+artifacts/api-server/src/routes/mercado-pago.ts-1779-
+artifacts/api-server/src/routes/mercado-pago.ts-1780-    const purchases = orders.map((order) => {
+artifacts/api-server/src/routes/mercado-pago.ts-1781-      const orderPixels = pixelsByOrder.get(order.id) ?? [];
+artifacts/api-server/src/routes/mercado-pago.ts-1782-
+artifacts/api-server/src/routes/mercado-pago.ts-1783-      const xs = orderPixels.map((pixel) => pixel.x);
+artifacts/api-server/src/routes/mercado-pago.ts-1784-      const ys = orderPixels.map((pixel) => pixel.y);
+artifacts/api-server/src/routes/mercado-pago.ts-1785-
+artifacts/api-server/src/routes/mercado-pago.ts-1786-      const bounds = orderPixels.length
+artifacts/api-server/src/routes/mercado-pago.ts-1787-        ? {
+artifacts/api-server/src/routes/mercado-pago.ts-1788-            min_x: Math.min(...xs),
+artifacts/api-server/src/routes/mercado-pago.ts-1789-            min_y: Math.min(...ys),
+artifacts/api-server/src/routes/mercado-pago.ts-1790-            max_x: Math.max(...xs),
+artifacts/api-server/src/routes/mercado-pago.ts-1791-            max_y: Math.max(...ys),
+artifacts/api-server/src/routes/mercado-pago.ts-1792-          }
+artifacts/api-server/src/routes/mercado-pago.ts-1793-        : null;
+artifacts/api-server/src/routes/mercado-pago.ts-1794-
+artifacts/api-server/src/routes/mercado-pago.ts-1795-      return {
+artifacts/api-server/src/routes/mercado-pago.ts-1796-        order_id: order.id,
+artifacts/api-server/src/routes/mercado-pago.ts-1797-        reservation_id: order.reservation_id,
+artifacts/api-server/src/routes/mercado-pago.ts-1798-        pixel_count: order.pixel_count,
+artifacts/api-server/src/routes/mercado-pago.ts-1799-        amount_cents: order.amount_cents,
+artifacts/api-server/src/routes/mercado-pago.ts-1800-        currency: order.currency,
+artifacts/api-server/src/routes/mercado-pago.ts-1801-        provider: order.provider,
+artifacts/api-server/src/routes/mercado-pago.ts-1802-        paid_at: order.paid_at,
+artifacts/api-server/src/routes/mercado-pago.ts-1803-        created_at: order.created_at,
+artifacts/api-server/src/routes/mercado-pago.ts-1804-        bounds,
+artifacts/api-server/src/routes/mercado-pago.ts-1805-      };
+artifacts/api-server/src/routes/mercado-pago.ts-1806-    });
+artifacts/api-server/src/routes/mercado-pago.ts-1807-
+artifacts/api-server/src/routes/mercado-pago.ts-1808-    res.status(200).json({
+artifacts/api-server/src/routes/mercado-pago.ts-1809-      total_pixels: orders.reduce((total, order) => total + order.pixel_count, 0),
+artifacts/api-server/src/routes/mercado-pago.ts-1810-      total_amount_cents: orders.reduce((total, order) => total + order.amount_cents, 0),
+artifacts/api-server/src/routes/mercado-pago.ts-1811-      purchase_count: orders.length,
+artifacts/api-server/src/routes/mercado-pago.ts-1812-      purchases,
