@@ -1984,6 +1984,28 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   ]);
 
   const cameraRef = useRef(camera);
+  const cameraFrameRef = useRef<number | null>(null);
+
+  const scheduleCameraRender = (
+    nextCamera: {
+      x: number;
+      y: number;
+      scale: number;
+    },
+  ) => {
+    cameraRef.current = nextCamera;
+
+    if (cameraFrameRef.current !== null) {
+      return;
+    }
+
+    cameraFrameRef.current =
+      window.requestAnimationFrame(() => {
+        cameraFrameRef.current = null;
+        setCamera(cameraRef.current);
+      });
+  };
+
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
   const paintRef = useRef<{ pointerId: number; lastX: number; lastY: number; action: 'add' | 'erase' | 'recolor' } | null>(null);
@@ -3038,8 +3060,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       scale: nextScale,
     });
 
-    cameraRef.current = nextCamera;
-    setCamera(nextCamera);
+    scheduleCameraRender(nextCamera);
   };
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
@@ -3348,8 +3369,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
         y: dragRef.current.originY + dy,
       });
 
-      cameraRef.current = nextCamera;
-      setCamera(nextCamera);
+      scheduleCameraRender(nextCamera);
       setIsDragging(true);
       return;
     }
