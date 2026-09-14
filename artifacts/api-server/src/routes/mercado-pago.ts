@@ -451,10 +451,25 @@ router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
   }
 
   try {
-    const user =
-      await loadAuthenticatedUser(
+    const checkoutStartedAt = Date.now();
+
+    /*
+     * Essas duas consultas não dependem uma da outra.
+     * Executá-las em paralelo reduz o tempo de abertura
+     * do checkout sem alterar nenhuma validação de segurança.
+     */
+    const supabaseStartedAt = Date.now();
+
+    const [user, reservation] = await Promise.all([
+      loadAuthenticatedUser(accessToken),
+      loadOwnActiveReservation(
+        reservationId,
         accessToken,
-      );
+      ),
+    ]);
+
+    const supabaseDurationMs =
+      Date.now() - supabaseStartedAt;
 
     if (!user) {
       res.status(401).json({
@@ -463,8 +478,6 @@ router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
       });
       return;
     }
-
-    const reservation = await loadOwnActiveReservation(reservationId, accessToken);
 
     if (!reservation) {
       res.status(409).json({
@@ -487,6 +500,8 @@ router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
       });
       return;
     }
+
+    const mercadoPagoStartedAt = Date.now();
 
     const preferenceResponse = await fetch("https://api.mercadopago.com/checkout/preferences", {
       method: "POST",
@@ -525,6 +540,9 @@ router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
 
     const payload = await preferenceResponse.json() as MercadoPagoPreferenceResponse;
 
+    const mercadoPagoDurationMs =
+      Date.now() - mercadoPagoStartedAt;
+
     if (!preferenceResponse.ok || !payload.id) {
       req.log?.error(
         { status: preferenceResponse.status, mpError: payload.error, mpMessage: payload.message },
@@ -546,6 +564,30 @@ router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
       res.status(502).json({ message: "O Mercado Pago não retornou o link de pagamento." });
       return;
     }
+
+    const totalDurationMs =
+      Date.now() - checkoutStartedAt;
+
+    req.log?.info(
+      {
+        reservationId: reservation.id,
+        checkoutTiming: {
+          supabase_ms: supabaseDurationMs,
+          mercado_pago_ms: mercadoPagoDurationMs,
+          total_ms: totalDurationMs,
+        },
+      },
+      "Mercado Pago checkout timing",
+    );
+
+    res.setHeader(
+      "Server-Timing",
+      [
+        `supabase;dur=${supabaseDurationMs}`,
+        `mercadopago;dur=${mercadoPagoDurationMs}`,
+        `total;dur=${totalDurationMs}`,
+      ].join(", "),
+    );
 
     res.status(201).json({
       preference_id: payload.id,
