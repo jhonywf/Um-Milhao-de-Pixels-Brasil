@@ -2186,7 +2186,10 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     };
   }, [refreshPublicPixels]);
 
-  const selectedList = Array.from(selectedPixels.values());
+  const selectedList = useMemo(
+    () => Array.from(selectedPixels.values()),
+    [selectedPixels],
+  );
   const selectedCount = selectedPixels.size;
 
   const selectedPixelKeys = useMemo(
