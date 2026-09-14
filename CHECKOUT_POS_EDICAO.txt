@@ -1,0 +1,1681 @@
+===== SALVAR EDICAO =====
+      setLoadingReservationEdit(false);
+    }
+  };
+
+
+  const handleSaveReservationEdit = async () => {
+    if (!lastReservation || !session || !editingReservation) return;
+
+    setReservationEditError(null);
+    setLoadingReservationEdit(true);
+
+    try {
+      const pixels = Array.from(selectedPixels.values());
+
+      if (pixels.length < 1) {
+        throw new Error(
+          'Mantenha pelo menos 1 pixel na reserva ou volte sem salvar.',
+        );
+      }
+
+      const updated = await updateWallReservation(
+        lastReservation.reservation_id,
+        pixels,
+        session.access_token,
+      );
+
+      if (!updated.ok) {
+        throw new Error(
+          'Um ou mais pixels ficaram indisponíveis. Atualize sua seleção e tente novamente.',
+        );
+      }
+
+      setLastReservation(updated);
+      setEditingReservation(false);
+      setOwnReservationPixelKeys(new Set());
+      setSelectionArmed(false);
+      setCustomizeOpen(false);
+      setRecolorMode(false);
+      setImageMoveMode(false);
+
+      window.sessionStorage.removeItem('pixel-wall-checkout-url');
+
+      await refreshPublicPixels();
+    } catch (caught) {
+      setReservationEditError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível salvar as alterações da reserva.',
+      );
+    } finally {
+      setLoadingReservationEdit(false);
+    }
+  };
+
+
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tutorialPosition, setTutorialPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
+  const wallTutorialSteps = [
+    {
+      title: 'Navegue e use o zoom',
+      text: 'Use Mover para explorar a parede. Arraste com um dedo para navegar e use dois dedos para dar zoom. Você também pode usar os botões + e −.',
+      target: '.floating-zoom',
+      placement: 'top-right',
+    },
+    {
+      title: 'Selecione seus pixels',
+      text: 'Toque em um pixel livre e escolha Selecionar pixel. Depois, toque ou arraste sobre a parede para montar a área que deseja comprar.',
+      target: '[data-testid="canvas-pixel-wall"]',
+      placement: 'bottom-right',
+    },
+    {
+
+===== MERCADO PAGO BACKEND =====
+1-import { createHmac, timingSafeEqual } from "node:crypto";
+2-import { Router, type IRouter, type Request, type Response } from "express";
+3-
+4-const router: IRouter = Router();
+5-
+6-const supabaseUrl = process.env.SUPABASE_URL || "https://cnyjodkusuikivdwbwcg.supabase.co";
+7-const supabasePublishableKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+8-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+9-const mercadoPagoAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN || "";
+10-const mercadoPagoWebhookSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET || "";
+11-const adminUserId = process.env.ADMIN_USER_ID || "";
+12-const appPublicUrl = (process.env.APP_PUBLIC_URL || "https://um-milhao-de-pixels-brasil--jhonymec2.replit.app").replace(/\/$/, "");
+13-
+14-type ReservationRow = {
+15-  id: string;
+16-  user_id: string;
+17-  status: "active" | "converted" | "expired" | "cancelled";
+18-  pixel_count: number;
+19:  amount_cents: number;
+20-  expires_at: string;
+21-};
+22-
+23-type MercadoPagoPreferenceResponse = {
+24-  id?: string;
+25-  init_point?: string;
+26-  sandbox_init_point?: string;
+27-  message?: string;
+28-  error?: string;
+29-};
+30-
+31-type MercadoPagoPayment = {
+32-  id: number;
+33-  status?: string;
+34-  currency_id?: string;
+35-  transaction_amount?: number;
+36-  external_reference?: string | null;
+37-  date_approved?: string | null;
+38-};
+39-
+40-type WallOrderRow = {
+41-  id: string;
+42-  status: string;
+43:  reservation_id: string;
+44:  provider_reference: string | null;
+45-};
+46-
+47-type SupabaseAuthUser = {
+48-  id: string;
+49-  email?: string;
+50-};
+51-
+52-type MyPurchaseOrderRow = {
+53-  id: string;
+54-  status: string;
+55:  reservation_id: string;
+56-  pixel_count: number;
+57:  amount_cents: number;
+58-  currency: string;
+59-  provider: string | null;
+60:  provider_reference: string | null;
+61-  paid_at: string | null;
+62-  created_at: string;
+63-};
+64-
+65-type MyPurchasePixelRow = {
+66-  x: number;
+67-  y: number;
+68-  color: string | null;
+69-  order_id: string | null;
+70-};
+71-
+72-function getBearerToken(req: Request) {
+73-  const authorization = req.header("authorization") || "";
+74-  const match = authorization.match(/^Bearer\s+(.+)$/i);
+75-  return match?.[1] ?? "";
+76-}
+77-
+78-async function loadAuthenticatedUser(accessToken: string) {
+79-  if (!supabasePublishableKey || !accessToken) return null;
+80-
+81-  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+82-    headers: {
+83-      Accept: "application/json",
+84-      apikey: supabasePublishableKey,
+85-      Authorization: `Bearer ${accessToken}`,
+86-    },
+87-    cache: "no-store",
+88-  });
+89-
+90-  if (!response.ok) return null;
+91-
+92-  const user = await response.json() as SupabaseAuthUser;
+93-
+94-  if (!user?.id) return null;
+95-
+96-  return user;
+97-}
+98-
+99-async function requireAdmin(req: Request, res: Response) {
+100-  const accessToken = getBearerToken(req);
+101-
+102-  if (!accessToken) {
+103-    res.status(401).json({
+104-      message: "Entre na sua conta para acessar o painel administrativo.",
+105-    });
+106-    return null;
+107-  }
+108-
+109-  const user = await loadAuthenticatedUser(accessToken);
+110-
+111-  if (!user) {
+112-    res.status(401).json({
+113-      message: "Sua sessão expirou. Entre novamente.",
+114-    });
+115-    return null;
+116-  }
+117-
+118-  if (!adminUserId) {
+119-    req.log?.error("ADMIN_USER_ID is not configured");
+120-    res.status(503).json({
+121-      message: "O painel administrativo ainda não está configurado.",
+122-    });
+123-    return null;
+124-  }
+125-
+126-  if (user.id !== adminUserId) {
+127-    req.log?.warn(
+128-      { userId: user.id },
+129-      "Unauthorized admin access attempt",
+130-    );
+131-
+132-    res.status(403).json({
+133-      message: "Você não tem permissão para acessar esta área.",
+134-    });
+135-    return null;
+136-  }
+137-
+138-  return user;
+139-}
+140-
+141-function readQueryString(value: unknown) {
+142-  if (typeof value === "string") return value.trim();
+143-  if (Array.isArray(value) && typeof value[0] === "string") return value[0].trim();
+144-  return "";
+145-}
+146-
+147-function isValidWebhookSignature(req: Request, dataId: string) {
+148-  const xSignature = req.header("x-signature") || "";
+149-  const xRequestId = req.header("x-request-id") || "";
+150-
+--
+161-
+162-  const ts = parts.ts;
+163-  const receivedV1 = parts.v1;
+164-
+165-  if (!ts || !receivedV1 || !/^[a-f0-9]{64}$/i.test(receivedV1)) {
+166-    return false;
+167-  }
+168-
+169-  const manifest = `id:${dataId.toLowerCase()};request-id:${xRequestId};ts:${ts};`;
+170-  const expectedV1 = createHmac("sha256", mercadoPagoWebhookSecret)
+171-    .update(manifest)
+172-    .digest("hex");
+173-
+174-  const expected = Buffer.from(expectedV1, "hex");
+175-  const received = Buffer.from(receivedV1, "hex");
+176-
+177-  return expected.length === received.length && timingSafeEqual(expected, received);
+178-}
+179-
+180-async function loadOwnActiveReservation(reservationId: string, accessToken: string) {
+181-  if (!supabasePublishableKey) {
+182-    throw new Error("SUPABASE_PUBLIC_KEY_MISSING");
+183-  }
+184-
+185-  const query = new URLSearchParams({
+186:    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
+187-    id: `eq.${reservationId}`,
+188-    limit: "1",
+189-  });
+190-
+191-  const response = await fetch(`${supabaseUrl}/rest/v1/wall_reservations?${query.toString()}`, {
+192-    headers: {
+193-      Accept: "application/json",
+194-      apikey: supabasePublishableKey,
+195-      Authorization: `Bearer ${accessToken}`,
+196-    },
+197-    cache: "no-store",
+198-  });
+199-
+200-  if (!response.ok) {
+201-    return null;
+202-  }
+203-
+204-  const rows = await response.json() as ReservationRow[];
+205-  const reservation = rows[0] ?? null;
+206-
+207-  if (!reservation) return null;
+208-  if (reservation.status !== "active") return null;
+209-  if (new Date(reservation.expires_at).getTime() <= Date.now()) return null;
+210-  if (!Number.isInteger(reservation.pixel_count) || reservation.pixel_count < 1) return null;
+211:  if (!Number.isInteger(reservation.amount_cents) || reservation.amount_cents < 1) return null;
+212-
+213-  return reservation;
+214-}
+215-
+216-async function loadOwnReservation(reservationId: string, accessToken: string) {
+217-  if (!supabasePublishableKey) {
+218-    throw new Error("SUPABASE_PUBLIC_KEY_MISSING");
+219-  }
+220-
+221-  const query = new URLSearchParams({
+222:    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
+223-    id: `eq.${reservationId}`,
+224-    limit: "1",
+225-  });
+226-
+227-  const response = await fetch(`${supabaseUrl}/rest/v1/wall_reservations?${query.toString()}`, {
+228-    headers: {
+229-      Accept: "application/json",
+230-      apikey: supabasePublishableKey,
+231-      Authorization: `Bearer ${accessToken}`,
+232-    },
+233-    cache: "no-store",
+234-  });
+235-
+236-  if (!response.ok) return null;
+237-
+238-  const rows = await response.json() as ReservationRow[];
+239-  return rows[0] ?? null;
+240-}
+241-
+242-async function serviceRoleGet<T>(path: string): Promise<T> {
+243-  if (!supabaseServiceRoleKey) {
+244-    throw new Error("SUPABASE_SERVICE_ROLE_KEY_MISSING");
+245-  }
+246-
+247-  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+248-    headers: {
+249-      Accept: "application/json",
+250-      apikey: supabaseServiceRoleKey,
+251-      ...(supabaseServiceRoleKey.startsWith("sb_secret_")
+252-        ? {}
+253-        : { Authorization: `Bearer ${supabaseServiceRoleKey}` }),
+254-    },
+255-    cache: "no-store",
+256-  });
+257-
+258-  if (!response.ok) {
+259-    throw new Error(`SUPABASE_SERVICE_ROLE_READ_FAILED:${response.status}`);
+260-  }
+261-
+262-  return await response.json() as T;
+263-}
+264-
+265-
+266-async function serviceRoleInsert(
+267-  table: string,
+268-  payload: Record<string, unknown>,
+269-) {
+270-  if (!supabaseServiceRoleKey) {
+271-    throw new Error("SUPABASE_SERVICE_ROLE_KEY_MISSING");
+272-  }
+273-
+274-  const response = await fetch(
+275-    `${supabaseUrl}/rest/v1/${table}`,
+276-    {
+277-      method: "POST",
+278-      headers: {
+279-        Accept: "application/json",
+280-        "Content-Type": "application/json",
+281-        Prefer: "return=minimal",
+282-        apikey: supabaseServiceRoleKey,
+283-        ...(supabaseServiceRoleKey.startsWith("sb_secret_")
+284-          ? {}
+285-          : {
+286-              Authorization:
+287-                `Bearer ${supabaseServiceRoleKey}`,
+288-            }),
+289-      },
+290-      body: JSON.stringify(payload),
+291-      cache: "no-store",
+292-    },
+293-  );
+294-
+295-  if (!response.ok) {
+296-    const details = await response.text().catch(() => "");
+297-    throw new Error(
+298-      `SUPABASE_SERVICE_ROLE_INSERT_FAILED:${response.status}:${details}`,
+299-    );
+300-  }
+301-}
+302-
+303-async function loadReservationForWebhook(reservationId: string) {
+304-  const query = new URLSearchParams({
+305:    select: "id,user_id,status,pixel_count,amount_cents,expires_at",
+306-    id: `eq.${reservationId}`,
+307-    limit: "1",
+308-  });
+309-
+310-  const rows = await serviceRoleGet<ReservationRow[]>(`wall_reservations?${query.toString()}`);
+311-  return rows[0] ?? null;
+312-}
+313-
+314-async function findExistingPaidOrder(paymentId: string) {
+315-  const query = new URLSearchParams({
+316:    select: "id,status,reservation_id,provider_reference",
+317-    provider: "eq.mercado_pago",
+318:    provider_reference: `eq.${paymentId}`,
+319-    limit: "1",
+320-  });
+321-
+322-  const rows = await serviceRoleGet<WallOrderRow[]>(`wall_orders?${query.toString()}`);
+323-  return rows[0] ?? null;
+324-}
+325-
+326-async function findOrderByReservation(reservationId: string) {
+327-  const query = new URLSearchParams({
+328:    select: "id,status,reservation_id,provider_reference",
+329:    reservation_id: `eq.${reservationId}`,
+330-    limit: "1",
+331-  });
+332-
+333-  const rows = await serviceRoleGet<WallOrderRow[]>(`wall_orders?${query.toString()}`);
+334-  return rows[0] ?? null;
+335-}
+336-
+337-async function findMercadoPagoPaymentByReservation(
+338-  reservationId: string,
+339-): Promise<MercadoPagoPayment | null> {
+340-  const params = new URLSearchParams({
+341-    external_reference: reservationId,
+342-    status: "approved",
+343-    sort: "date_created",
+344-    criteria: "desc",
+345-    limit: "10",
+346-    offset: "0",
+347-  });
+348-
+349-  const response = await fetch(
+350-    `https://api.mercadopago.com/v1/payments/search?${params.toString()}`,
+351-    {
+352-      headers: {
+353-        Accept: "application/json",
+354-        Authorization: `Bearer ${mercadoPagoAccessToken}`,
+355-      },
+356-      cache: "no-store",
+357-    },
+358-  );
+359-
+360-  if (!response.ok) {
+361-    throw new Error(`MERCADO_PAGO_PAYMENT_SEARCH_FAILED:${response.status}`);
+362-  }
+363-
+364-  const payload = (await response.json()) as {
+365-    results?: MercadoPagoPayment[];
+366-  };
+367-
+368-  const payments = Array.isArray(payload.results) ? payload.results : [];
+369-
+370-  return (
+371-    payments.find(
+372-      (payment) =>
+373-        String(payment.external_reference ?? "") === reservationId &&
+374-        payment.status === "approved",
+375-    ) ?? null
+376-  );
+377-}
+378-
+379-async function loadMercadoPagoPayment(paymentId: string) {
+380-  const response = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`, {
+381-    headers: {
+382-      Accept: "application/json",
+383-      Authorization: `Bearer ${mercadoPagoAccessToken}`,
+384-    },
+385-    cache: "no-store",
+386-  });
+387-
+388-  if (!response.ok) {
+389-    throw new Error(`MERCADO_PAGO_PAYMENT_READ_FAILED:${response.status}`);
+390-  }
+391-
+392-  return await response.json() as MercadoPagoPayment;
+393-}
+394-
+395-async function finalizeReservation(
+396-  reservationId: string,
+397-  paymentId: string,
+398-  amountCents: number,
+399-  approvedAt: string,
+400-) {
+401-  if (!supabaseServiceRoleKey) {
+402-    throw new Error("SUPABASE_SERVICE_ROLE_KEY_MISSING");
+403-  }
+404-
+405-  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/finalize_wall_reservation`, {
+406-    method: "POST",
+407-    headers: {
+408-      Accept: "application/json",
+409-      "Content-Type": "application/json",
+410-      apikey: supabaseServiceRoleKey,
+411-      ...(supabaseServiceRoleKey.startsWith("sb_secret_")
+412-        ? {}
+413-        : { Authorization: `Bearer ${supabaseServiceRoleKey}` }),
+414-    },
+415-    body: JSON.stringify({
+416:      p_reservation_id: reservationId,
+417-      p_provider: "mercado_pago",
+418:      p_provider_reference: paymentId,
+419:      p_amount_cents: amountCents,
+420-      p_approved_at: approvedAt,
+421-    }),
+422-  });
+423-
+424-  const payload = await response.text();
+425-
+426-  if (!response.ok) {
+427-    throw new Error(`FINALIZE_WALL_RESERVATION_FAILED:${response.status}:${payload.slice(0, 300)}`);
+428-  }
+429-
+430-  return payload;
+431-}
+432-
+433:router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
+434-  const accessToken = getBearerToken(req);
+435:  const reservationId = typeof req.body?.reservation_id === "string" ? req.body.reservation_id.trim() : "";
+436-
+437-  if (!accessToken) {
+438-    res.status(401).json({ message: "Entre na sua conta para continuar com o pagamento." });
+439-    return;
+440-  }
+441-
+442-  if (!reservationId) {
+443-    res.status(400).json({ message: "Reserva inválida." });
+444-    return;
+445-  }
+446-
+447-  if (!mercadoPagoAccessToken) {
+448-    req.log?.error("MERCADO_PAGO_ACCESS_TOKEN is not configured");
+449-    res.status(503).json({ message: "O pagamento ainda não está configurado no servidor." });
+450-    return;
+451-  }
+452-
+453-  try {
+454-    const user =
+455-      await loadAuthenticatedUser(
+456-        accessToken,
+457-      );
+458-
+459-    if (!user) {
+460-      res.status(401).json({
+461-        message:
+462-          "Sua sessão expirou. Entre novamente.",
+463-      });
+464-      return;
+465-    }
+466-
+467-    const reservation = await loadOwnActiveReservation(reservationId, accessToken);
+468-
+469-    if (!reservation) {
+470-      res.status(409).json({
+471-        message: "Essa reserva não está mais disponível. Volte à parede e faça uma nova seleção.",
+472-      });
+473-      return;
+474-    }
+475-
+476-    if (reservation.user_id !== user.id) {
+477-      req.log?.warn(
+478-        {
+479-          userId: user.id,
+480-          reservationId: reservation.id,
+481-        },
+482-        "User attempted to pay another user's reservation",
+483-      );
+484-
+485-      res.status(403).json({
+486-        message: "Essa reserva não pertence à sua conta.",
+487-      });
+488-      return;
+489-    }
+490-
+491:    const preferenceResponse = await fetch("https://api.mercadopago.com/checkout/preferences", {
+492-      method: "POST",
+493-      headers: {
+494-        Accept: "application/json",
+495-        "Content-Type": "application/json",
+496-        Authorization: `Bearer ${mercadoPagoAccessToken}`,
+497-      },
+498-      body: JSON.stringify({
+499-        items: [
+500-          {
+501-            id: `pixels-${reservation.id}`,
+502-            title: `${reservation.pixel_count} pixels — Um Milhão de Pixels Brasil`,
+503-            description: "Reserva de pixels na parede digital Um Milhão de Pixels Brasil",
+504-            quantity: 1,
+505-            currency_id: "BRL",
+506:            unit_price: reservation.amount_cents / 100,
+507-          },
+508-        ],
+509-        external_reference: reservation.id,
+510-        metadata: {
+511:          reservation_id: reservation.id,
+512-          pixel_count: reservation.pixel_count,
+513-        },
+514-        back_urls: {
+515-          success: `${appPublicUrl}/parede?payment=success`,
+516-          pending: `${appPublicUrl}/parede?payment=pending`,
+517-          failure: `${appPublicUrl}/parede?payment=failure`,
+518-        },
+519-        auto_return: "approved",
+520-        expires: true,
+521-        expiration_date_from: new Date().toISOString(),
+522-        expiration_date_to: new Date(reservation.expires_at).toISOString(),
+523-      }),
+524-    });
+525-
+526:    const payload = await preferenceResponse.json() as MercadoPagoPreferenceResponse;
+527-
+528:    if (!preferenceResponse.ok || !payload.id) {
+529-      req.log?.error(
+530:        { status: preferenceResponse.status, mpError: payload.error, mpMessage: payload.message },
+531:        "Mercado Pago preference creation failed",
+532-      );
+533-      res.status(502).json({ message: "Não foi possível abrir o Mercado Pago agora. Tente novamente." });
+534-      return;
+535-    }
+536-
+537-    const isMercadoPagoTestCredential =
+538-      mercadoPagoAccessToken.startsWith("TEST-");
+539-
+540:    const checkoutUrl = isMercadoPagoTestCredential
+541-      ? payload.sandbox_init_point || payload.init_point
+542-      : payload.init_point;
+543-
+544:    if (!checkoutUrl) {
+545:      req.log?.error({ preferenceId: payload.id }, "Mercado Pago preference returned no checkout URL");
+546-      res.status(502).json({ message: "O Mercado Pago não retornou o link de pagamento." });
+547-      return;
+548-    }
+549-
+550-    res.status(201).json({
+551:      preference_id: payload.id,
+552:      checkout_url: checkoutUrl,
+553:      reservation_id: reservation.id,
+554-      pixel_count: reservation.pixel_count,
+555:      amount_cents: reservation.amount_cents,
+556-      expires_at: reservation.expires_at,
+557-    });
+558-  } catch (error) {
+559:    req.log?.error({ err: error }, "Could not create Mercado Pago preference");
+560-    res.status(500).json({ message: "Não foi possível iniciar o pagamento agora." });
+561-  }
+562-});
+563-
+564-router.get("/mercado-pago/status", async (req: Request, res: Response) => {
+565-  const accessToken = getBearerToken(req);
+566:  const reservationId = readQueryString(req.query.reservation_id);
+567-
+568-  if (!accessToken) {
+569-    res.status(401).json({ message: "Entre na sua conta para confirmar o pagamento." });
+570-    return;
+571-  }
+572-
+573-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reservationId)) {
+574-    res.status(400).json({ message: "Reserva inválida." });
+575-    return;
+576-  }
+577-
+578-  try {
+579-    const user = await loadAuthenticatedUser(accessToken);
+580-
+581-    if (!user) {
+582-      res.status(401).json({
+583-        message: "Sua sessão expirou. Entre novamente.",
+584-      });
+585-      return;
+586-    }
+587-
+588-    const reservation = await loadOwnReservation(
+589-      reservationId,
+590-      accessToken,
+591-    );
+592-
+593-    if (!reservation) {
+594-      res.status(404).json({
+595-        message: "Reserva não encontrada para esta conta.",
+596-      });
+597-      return;
+598-    }
+599-
+600-    if (reservation.user_id !== user.id) {
+601-      req.log?.warn(
+602-        {
+603-          userId: user.id,
+604-          reservationId: reservation.id,
+605-        },
+606-        "User attempted to read another user's reservation",
+607-      );
+608-
+609-      res.status(403).json({
+610-        message: "Essa reserva não pertence à sua conta.",
+611-      });
+612-      return;
+613-    }
+614-
+615-    let order = await findOrderByReservation(
+616-      reservation.id,
+617-    );
+618-
+619-    if (
+620-      order?.status !== "paid" &&
+621-      (reservation.status === "active" || reservation.status === "expired")
+622-    ) {
+623-      const paymentCandidate =
+624-        await findMercadoPagoPaymentByReservation(reservation.id);
+625-
+626-      if (paymentCandidate?.id != null) {
+627-        const payment = await loadMercadoPagoPayment(
+628-          String(paymentCandidate.id),
+629-        );
+630-
+631-        const paymentReservationId = String(
+632-          payment.external_reference ?? "",
+633-        );
+634-
+635-        const paymentAmountCents = Math.round(
+636-          Number(payment.transaction_amount) * 100,
+637-        );
+638-
+639-        const approvedAt =
+640-          typeof payment.date_approved === "string"
+641-            ? payment.date_approved
+642-            : "";
+643-
+644-        const approvedAtMs = Date.parse(approvedAt);
+645-        const reservationExpiresAtMs = Date.parse(
+646-          reservation.expires_at,
+647-        );
+648-
+649-        const approvedBeforeReservationExpired =
+650-          Number.isFinite(approvedAtMs) &&
+651-          Number.isFinite(reservationExpiresAtMs) &&
+652-          approvedAtMs <= reservationExpiresAtMs;
+653-
+654-        const paymentIsValid =
+655-          payment.status === "approved" &&
+656-          paymentReservationId === reservation.id &&
+657-          payment.currency_id === "BRL" &&
+658-          Number.isFinite(paymentAmountCents) &&
+659:          paymentAmountCents === reservation.amount_cents &&
+660-          approvedAt.length > 0 &&
+661-          approvedBeforeReservationExpired;
+662-
+663-        if (paymentIsValid) {
+664-          req.log?.info(
+665-            {
+666-              reservationId: reservation.id,
+667-              paymentId: payment.id,
+668-            },
+669-            "Reconciling approved Mercado Pago payment from status endpoint",
+670-          );
+671-
+672-          await finalizeReservation(
+673-            reservation.id,
+674-            String(payment.id),
+675-            paymentAmountCents,
+676-            approvedAt,
+677-          );
+678-
+679-          order = await findOrderByReservation(
+680-            reservation.id,
+681-          );
+682-
+683-          res.status(200).json({
+684:            reservation_id: reservation.id,
+685-            reservation_status: "converted",
+686-            pixel_count: reservation.pixel_count,
+687:            amount_cents: reservation.amount_cents,
+688-            order_status: order?.status ?? "paid",
+689-            paid: true,
+690-            reconciled: true,
+691-          });
+692-          return;
+693-        }
+694-
+695-        req.log?.warn(
+696-          {
+697-            reservationId: reservation.id,
+698-            paymentId: payment.id,
+699-          },
+700-          "Mercado Pago payment found but failed reconciliation validation",
+701-        );
+702-      }
+703-    }
+704-
+705-    res.status(200).json({
+706:      reservation_id: reservation.id,
+707-      reservation_status: reservation.status,
+708-      pixel_count: reservation.pixel_count,
+709:      amount_cents: reservation.amount_cents,
+710-      order_status: order?.status ?? null,
+711-      paid: order?.status === "paid" && reservation.status === "converted",
+712-    });
+713-  } catch (error) {
+714-    req.log?.error({ err: error, reservationId }, "Could not read Mercado Pago payment status");
+715-    res.status(500).json({ message: "Não foi possível confirmar o pagamento agora." });
+716-  }
+717-});
+718-
+719-
+720-/*
+721- * ANALYTICS_V1
+722- *
+723- * Registra somente identificador aleatório da sessão,
+724- * caminho visitado e referenciador.
+725- * Não grava IP, nome ou e-mail.
+726- */
+727-router.post(
+728-  "/mercado-pago/analytics/visit",
+729-  async (req: Request, res: Response) => {
+730-    try {
+731-      const sessionId =
+732-        typeof req.body?.session_id === "string"
+733-          ? req.body.session_id.trim().slice(0, 100)
+734-          : "";
+735-
+736-      const path =
+737-        typeof req.body?.path === "string"
+738-          ? req.body.path.trim().slice(0, 500)
+739-          : "/";
+740-
+741-      const referrer =
+742-        typeof req.body?.referrer === "string"
+743-          ? req.body.referrer.trim().slice(0, 1000)
+744-          : "";
+745-
+746-      if (!sessionId) {
+747-        res.status(400).json({
+748-          message: "Identificador da visita ausente.",
+749-        });
+750-        return;
+751-      }
+752-
+753-      await serviceRoleInsert("site_visits", {
+754-        session_id: sessionId,
+755-        path: path || "/",
+756-        referrer: referrer || null,
+757-      });
+758-
+759-      res.status(204).end();
+760-    } catch (error) {
+761-      req.log?.error(
+762-        { err: error },
+763-        "Could not register site visit",
+764-      );
+765-
+766-      res.status(500).json({
+767-        message: "Não foi possível registrar a visita.",
+768-      });
+769-    }
+770-  },
+771-);
+772-
+773-
+774-/*
+775- * ADMIN_INSIGHTS_V1
+776- *
+777- * Retorna visitas e carrinhos abandonados.
+778- */
+779-router.get(
+780-  "/mercado-pago/admin/insights",
+781-  async (req: Request, res: Response) => {
+782-    try {
+783-      const admin = await requireAdmin(req, res);
+784-
+785-      if (!admin) return;
+786-
+787-      const now = new Date();
+788-
+789-      const thirtyDaysAgo = new Date(
+790-        now.getTime() - 30 * 24 * 60 * 60 * 1000,
+791-      );
+792-
+793-      const visitsQuery = new URLSearchParams({
+794-        select: "session_id,created_at",
+795-        created_at: `gte.${thirtyDaysAgo.toISOString()}`,
+796-        order: "created_at.desc",
+797-      });
+798-
+799-      const visits = await serviceRoleGet<
+--
+878-                Number.isFinite(time) &&
+879-                time <= endDate.getTime()
+880-              );
+881-            }).length;
+882-
+883-          customStart = rawStart;
+884-          customEnd = rawEnd;
+885-        }
+886-      }
+887-
+888-      /*
+889-       * Carrinho abandonado:
+890-       *
+891-       * - reserva expirada/cancelada;
+892-       * - OU reserva ainda marcada active,
+893-       *   mas cujo expires_at já passou;
+894-       * - sem pedido pago correspondente.
+895-       */
+896-      const reservations =
+897-        await serviceRoleGet<
+898-          Array<{
+899-            id: string;
+900-            user_id: string;
+901-            status: string;
+902-            pixel_count: number;
+903:            amount_cents: number;
+904-            expires_at: string;
+905-          }>
+906-        >(
+907:          "wall_reservations?select=id,user_id,status,pixel_count,amount_cents,expires_at&order=expires_at.desc",
+908-        );
+909-
+910-      const orders =
+911-        await serviceRoleGet<
+912-          Array<{
+913:            reservation_id: string;
+914-            status: string;
+915-          }>
+916-        >(
+917:          "wall_orders?select=reservation_id,status",
+918-        );
+919-
+920-      const paidReservationIds =
+921-        new Set(
+922-          orders
+923-            .filter(
+924-              (order) =>
+925-                order.status === "paid",
+926-            )
+927-            .map(
+928-              (order) =>
+929:                order.reservation_id,
+930-            ),
+931-        );
+932-
+933-      const abandoned =
+934-        reservations
+935-          .filter((reservation) => {
+936-            if (
+937-              paidReservationIds.has(
+938-                reservation.id,
+939-              )
+940-            ) {
+941-              return false;
+942-            }
+943-
+944-            const expiredByTime =
+945-              new Date(
+946-                reservation.expires_at,
+947-              ).getTime() < nowMs;
+948-
+949-            return (
+950-              reservation.status ===
+951-                "expired" ||
+952-              reservation.status ===
+953-                "cancelled" ||
+954-              (
+955-                reservation.status ===
+956-                  "active" &&
+957-                expiredByTime
+958-              )
+959-            );
+960-          })
+961-          .map((reservation) => ({
+962-            id: reservation.id,
+963-            user_id:
+964-              reservation.user_id,
+965-            status:
+966-              reservation.status ===
+967-                "active"
+968-                ? "expired"
+969-                : reservation.status,
+970-            pixel_count:
+971-              Number(
+972-                reservation.pixel_count ||
+973-                  0,
+974-              ),
+975:            amount_cents:
+976-              Number(
+977:                reservation.amount_cents ||
+978-                  0,
+979-              ),
+980-            expires_at:
+981-              reservation.expires_at,
+982-          }));
+983-
+984-      const abandonedValueCents =
+985-        abandoned.reduce(
+986-          (total, reservation) =>
+987-            total +
+988:            reservation.amount_cents,
+989-          0,
+990-        );
+991-
+992-      res.status(200).json({
+993-        admin_user_id: admin.id,
+994-
+995-        visits: {
+996-          last_24_hours: visits24h,
+997-          last_7_days: visits7d,
+998-          last_30_days: visits30d,
+999-
+1000-          custom: {
+1001-            start: customStart,
+1002-            end: customEnd,
+1003-            count: customVisits,
+1004-          },
+1005-        },
+1006-
+1007-        abandoned_carts: {
+1008-          count: abandoned.length,
+1009-          total_pixels:
+1010-            abandoned.reduce(
+1011-              (total, reservation) =>
+1012-                total +
+1013-                reservation.pixel_count,
+1014-              0,
+1015-            ),
+1016-          total_value_cents:
+1017-            abandonedValueCents,
+1018-
+1019-          items:
+1020-            abandoned.slice(0, 100),
+1021-        },
+1022-      });
+1023-    } catch (error) {
+1024-      req.log?.error(
+1025-        { err: error },
+1026-        "Could not load admin insights",
+1027-      );
+1028-
+1029-      res.status(500).json({
+1030-        message:
+1031-          "Não foi possível carregar as métricas administrativas agora.",
+1032-      });
+1033-    }
+1034-  },
+1035-);
+1036-
+1037-
+1038-router.get("/mercado-pago/admin/overview", async (req: Request, res: Response) => {
+1039-  try {
+1040-    const admin = await requireAdmin(req, res);
+1041-
+1042-    if (!admin) return;
+1043-
+1044-    const orders = await serviceRoleGet<Array<{
+1045-      id: string;
+1046-      user_id: string;
+1047-      status: string;
+1048:      reservation_id: string;
+1049-      pixel_count: number;
+1050:      amount_cents: number;
+1051-      currency: string;
+1052-      provider: string | null;
+1053:      provider_reference: string | null;
+1054-      paid_at: string | null;
+1055-      created_at: string;
+1056-    }>>(
+1057:      "wall_orders?select=id,user_id,status,reservation_id,pixel_count,amount_cents,currency,provider,provider_reference,paid_at,created_at&order=created_at.desc",
+1058-    );
+1059-
+1060-    const paidOrders = orders.filter(
+1061-      (order) => order.status === "paid",
+1062-    );
+1063-
+1064-    const totalRevenueCents = paidOrders.reduce(
+1065:      (sum, order) => sum + Number(order.amount_cents || 0),
+1066-      0,
+1067-    );
+1068-
+1069-    const soldPixels = paidOrders.reduce(
+1070-      (sum, order) => sum + Number(order.pixel_count || 0),
+1071-      0,
+1072-    );
+1073-
+1074-    const buyerIds = new Set(
+1075-      paidOrders
+1076-        .map((order) => order.user_id)
+1077-        .filter(Boolean),
+1078-    );
+1079-
+1080-    const averageTicketCents =
+1081-      paidOrders.length > 0
+1082-        ? Math.round(totalRevenueCents / paidOrders.length)
+1083-        : 0;
+1084-
+1085-    const largestPurchase =
+1086-      paidOrders.reduce<(typeof paidOrders)[number] | null>(
+1087-        (largest, order) => {
+1088-          if (
+1089-            !largest ||
+1090:            Number(order.amount_cents || 0) >
+1091:              Number(largest.amount_cents || 0)
+1092-          ) {
+1093-            return order;
+1094-          }
+1095-
+1096-          return largest;
+1097-        },
+1098-        null,
+1099-      );
+1100-
+1101-    const statusCounts = orders.reduce<Record<string, number>>(
+1102-      (counts, order) => {
+1103-        const status = order.status || "unknown";
+1104-        counts[status] = (counts[status] || 0) + 1;
+1105-        return counts;
+1106-      },
+1107-      {},
+1108-    );
+1109-
+1110-    res.status(200).json({
+1111-      admin_user_id: admin.id,
+1112-
+1113-      metrics: {
+1114-        revenue_cents: totalRevenueCents,
+1115-        sold_pixels: soldPixels,
+1116-        available_pixels: Math.max(0, 1_000_000 - soldPixels),
+1117-        occupied_percent: Number(
+1118-          ((soldPixels / 1_000_000) * 100).toFixed(4),
+1119-        ),
+1120-        buyer_count: buyerIds.size,
+1121-        purchase_count: paidOrders.length,
+1122-        average_ticket_cents: averageTicketCents,
+1123-      },
+1124-
+1125-      status_counts: statusCounts,
+1126-
+1127-      largest_purchase: largestPurchase
+1128-        ? {
+1129-            id: largestPurchase.id,
+1130-            user_id: largestPurchase.user_id,
+1131-            pixel_count: largestPurchase.pixel_count,
+1132:            amount_cents: largestPurchase.amount_cents,
+1133-            paid_at:
+1134-              largestPurchase.paid_at ??
+1135-              largestPurchase.created_at,
+1136-          }
+1137-        : null,
+1138-
+1139-      recent_orders: orders.slice(0, 50).map((order) => ({
+1140-        id: order.id,
+1141-        user_id: order.user_id,
+1142:        reservation_id: order.reservation_id,
+1143-        status: order.status,
+1144-        pixel_count: Number(order.pixel_count || 0),
+1145:        amount_cents: Number(order.amount_cents || 0),
+1146-        currency: order.currency,
+1147-        provider: order.provider,
+1148:        provider_reference: order.provider_reference,
+1149-        paid_at: order.paid_at,
+1150-        created_at: order.created_at,
+1151-      })),
+1152-    });
+1153-  } catch (error) {
+1154-    req.log?.error(
+1155-      { err: error },
+1156-      "Could not load admin overview",
+1157-    );
+1158-
+1159-    res.status(500).json({
+1160-      message:
+1161-        "Não foi possível carregar o painel administrativo agora.",
+1162-    });
+1163-  }
+1164-});
+1165-
+1166-router.get("/mercado-pago/public-stats", async (req: Request, res: Response) => {
+1167-  try {
+1168-    const orders = await serviceRoleGet<Array<{
+1169-      id: string;
+1170-      user_id: string;
+1171-      pixel_count: number;
+1172:      amount_cents: number;
+1173-      provider: string | null;
+1174-      paid_at: string | null;
+1175-      created_at: string;
+1176-    }>>(
+1177:      "wall_orders?select=id,user_id,pixel_count,amount_cents,provider,paid_at,created_at&status=eq.paid&order=paid_at.asc.nullslast,created_at.asc",
+1178-    );
+1179-
+1180-    const totalPixels = orders.reduce(
+1181-      (sum, order) => sum + Number(order.pixel_count || 0),
+1182-      0,
+1183-    );
+1184-
+1185-    const totalAmountCents = orders.reduce(
+1186:      (sum, order) => sum + Number(order.amount_cents || 0),
+1187-      0,
+1188-    );
+1189-
+1190-    const buyerIds = [...new Set(
+1191-      orders
+1192-        .map((order) => order.user_id)
+1193-        .filter(Boolean),
+1194-    )];
+1195-
+1196-    const buyerTotals = new Map<
+1197-      string,
+1198-      {
+1199-        pixels: number;
+1200:        amount_cents: number;
+1201-        purchases: number;
+1202-      }
+1203-    >();
+1204-
+1205-    for (const order of orders) {
+1206-      const current = buyerTotals.get(order.user_id) ?? {
+1207-        pixels: 0,
+1208:        amount_cents: 0,
+1209-        purchases: 0,
+1210-      };
+1211-
+1212-      current.pixels += Number(order.pixel_count || 0);
+1213:      current.amount_cents += Number(order.amount_cents || 0);
+1214-      current.purchases += 1;
+1215-
+1216-      buyerTotals.set(order.user_id, current);
+1217-    }
+1218-
+1219-    let profiles: Array<{
+1220-      id: string;
+1221-      username: string | null;
+1222-      display_name: string | null;
+1223-      avatar_emoji: string | null;
+1224-      avatar_path: string | null;
+1225-      consent_public_profile: boolean | null;
+1226-    }> = [];
+1227-
+1228-    if (buyerIds.length > 0) {
+1229-      const profileQuery = new URLSearchParams({
+1230-        select:
+1231-          "id,username,display_name,avatar_emoji,avatar_path,consent_public_profile",
+1232-        id: `in.(${buyerIds.join(",")})`,
+1233-      });
+1234-
+1235-      try {
+1236-        profiles = await serviceRoleGet<typeof profiles>(
+1237-          `profiles?${profileQuery.toString()}`,
+1238-        );
+1239-      } catch {
+1240-        // Estatísticas continuam funcionando mesmo se algum perfil
+1241-        // ainda não estiver preenchido.
+1242-      }
+1243-    }
+1244-
+1245-    const profileById = new Map(
+1246-      profiles.map((profile) => [profile.id, profile]),
+1247-    );
+1248-
+1249-    const ranking = [...buyerTotals.entries()]
+1250-      .map(([userId, totals]) => {
+1251-        const profile = profileById.get(userId);
+1252-        const canShowProfile = profile?.consent_public_profile === true;
+1253-
+1254-        return {
+1255-          name: canShowProfile
+1256-            ? profile?.display_name ||
+1257-              (profile?.username ? `@${profile.username}` : "Comprador")
+1258-            : "Comprador anônimo",
+1259-          username:
+1260-            canShowProfile && profile?.username
+1261-              ? profile.username
+1262-              : null,
+1263-          avatar_emoji:
+1264-            canShowProfile ? profile?.avatar_emoji ?? null : null,
+1265-          avatar_path:
+1266-            canShowProfile ? profile?.avatar_path ?? null : null,
+1267-          pixels: totals.pixels,
+1268-          purchases: totals.purchases,
+1269-        };
+1270-      })
+1271-      .sort((a, b) => b.pixels - a.pixels)
+1272-      .slice(0, 10);
+1273-
+1274-    const firstOrder = orders[0] ?? null;
+1275-    const latestOrder = orders.length
+1276-      ? orders[orders.length - 1]
+1277-      : null;
+1278-
+1279-    const largestOrder = orders.reduce<
+1280-      (typeof orders)[number] | null
+1281-    >((largest, order) => {
+1282-      if (!largest || order.pixel_count > largest.pixel_count) {
+1283-        return order;
+1284-      }
+1285-
+1286-      return largest;
+1287-    }, null);
+1288-
+1289-    const notableOrderIds = [
+1290-      firstOrder?.id,
+1291-      latestOrder?.id,
+1292-      largestOrder?.id,
+1293-    ].filter((value): value is string => Boolean(value));
+1294-
+1295-    const boundsByOrder = new Map<
+1296-      string,
+1297-      {
+1298-        min_x: number;
+1299-        min_y: number;
+1300-        max_x: number;
+1301-        max_y: number;
+1302-      }
+1303-    >();
+--
+1482-    const dailyOrders = orders.filter((order) => {
+1483-      const timestamp = new Date(
+1484-        order.paid_at ?? order.created_at,
+1485-      ).getTime();
+1486-
+1487-      return (
+1488-        Number.isFinite(timestamp) &&
+1489-        timestamp >= now - 24 * 60 * 60 * 1000
+1490-      );
+1491-    });
+1492-
+1493-    const correctedRanking = buildRankingForOrders(orders);
+1494-
+1495-    const rankings = {
+1496-      general: correctedRanking,
+1497-      weekly: buildRankingForOrders(weeklyOrders),
+1498-      daily: buildRankingForOrders(dailyOrders),
+1499-    };
+1500-
+1501-    res.status(200).json({
+1502-      total_pixels: totalPixels,
+1503-      available_pixels: Math.max(0, 1_000_000 - totalPixels),
+1504-      occupied_percent: Number(
+1505-        ((totalPixels / 1_000_000) * 100).toFixed(4),
+1506-      ),
+1507:      total_amount_cents: totalAmountCents,
+1508-      buyer_count: buyerTotals.size,
+1509-      purchase_count: orders.length,
+1510-      ranking: correctedRanking,
+1511-      rankings,
+1512-      recent_purchases: recentPurchases,
+1513-      records: {
+1514-        first_purchase: firstOrder
+1515-          ? {
+1516-              order_id: firstOrder.id,
+1517-              pixel_count: firstOrder.pixel_count,
+1518-              paid_at: firstOrder.paid_at ?? firstOrder.created_at,
+1519-              ...publicIdentityForOrder(firstOrder),
+1520-              bounds: boundsByOrder.get(firstOrder.id) ?? null,
+1521-            }
+1522-          : null,
+1523-
+1524-        latest_purchase: latestOrder
+1525-          ? {
+1526-              order_id: latestOrder.id,
+1527-              pixel_count: latestOrder.pixel_count,
+1528-              paid_at: latestOrder.paid_at ?? latestOrder.created_at,
+1529-              ...publicIdentityForOrder(latestOrder),
+1530-              bounds: boundsByOrder.get(latestOrder.id) ?? null,
+1531-            }
+1532-          : null,
+1533-
+1534-        largest_purchase: largestOrder
+1535-          ? {
+1536-              order_id: largestOrder.id,
+1537-              pixel_count: largestOrder.pixel_count,
+1538-              paid_at:
+1539-                largestOrder.paid_at ?? largestOrder.created_at,
+1540-              ...publicIdentityForOrder(largestOrder),
+1541-              bounds: boundsByOrder.get(largestOrder.id) ?? null,
+1542-            }
+1543-          : null,
+1544-
+1545-        largest_buyer: correctedRanking[0]
+1546-          ? {
+1547-              name: correctedRanking[0].name,
+1548-              username: correctedRanking[0].username,
+1549-              pixels: correctedRanking[0].pixels,
+1550-              purchases: correctedRanking[0].purchases,
+1551-            }
+1552-          : null,
+1553-      },
+1554-    });
+1555-  } catch (error) {
+1556-    req.log?.error(
+1557-      { err: error },
+1558-      "Could not load public wall statistics",
+1559-    );
+1560-
+1561-    res.status(500).json({
+1562-      message:
+1563-        "Não foi possível carregar as estatísticas da parede agora.",
+1564-    });
+1565-  }
+1566-});
+1567-
+1568-
+1569-router.get(
+1570-  "/mercado-pago/public-purchase/:orderId",
+1571-  async (req: Request, res: Response) => {
+1572-    const orderId =
+1573-      typeof req.params.orderId === "string"
+1574-        ? req.params.orderId.trim()
+1575-        : "";
+1576-
+1577-    if (
+1578-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+1579-        orderId,
+1580-      )
+1581-    ) {
+1582-      res.status(400).json({
+1583-        message: "Obra inválida.",
+1584-      });
+1585-      return;
+1586-    }
+1587-
+1588-    try {
+1589-      const orderQuery = new URLSearchParams({
+1590-        select:
+1591-          "id,user_id,status,pixel_count,paid_at,created_at",
+1592-        id: `eq.${orderId}`,
+1593-        status: "eq.paid",
+1594-        limit: "1",
+1595-      });
+1596-
+1597-      const orders = await serviceRoleGet<Array<{
+--
+1710-      res.status(500).json({
+1711-        message:
+1712-          "Não foi possível carregar essa obra agora.",
+1713-      });
+1714-    }
+1715-  },
+1716-);
+1717-
+1718-router.get("/mercado-pago/my-purchases", async (req: Request, res: Response) => {
+1719-  const accessToken = getBearerToken(req);
+1720-
+1721-  if (!accessToken) {
+1722-    res.status(401).json({ message: "Entre na sua conta para ver seus pixels." });
+1723-    return;
+1724-  }
+1725-
+1726-  try {
+1727-    const user = await loadAuthenticatedUser(accessToken);
+1728-
+1729-    if (!user) {
+1730-      res.status(401).json({ message: "Sua sessão expirou. Entre novamente." });
+1731-      return;
+1732-    }
+1733-
+1734-    const orderQuery = new URLSearchParams({
+1735:      select: "id,status,reservation_id,pixel_count,amount_cents,currency,provider,provider_reference,paid_at,created_at",
+1736-      user_id: `eq.${user.id}`,
+1737-      status: "eq.paid",
+1738-      order: "paid_at.desc.nullslast,created_at.desc",
+1739-    });
+1740-
+1741-    const orders = await serviceRoleGet<MyPurchaseOrderRow[]>(
+1742-      `wall_orders?${orderQuery.toString()}`,
+1743-    );
+1744-
+1745-    if (orders.length === 0) {
+1746-      res.status(200).json({
+1747-        total_pixels: 0,
+1748:        total_amount_cents: 0,
+1749-        purchase_count: 0,
+1750-        purchases: [],
+1751-      });
+1752-      return;
+1753-    }
+1754-
+1755-    const orderIds = orders
+1756-      .map((order) => order.id)
+1757-      .filter(Boolean);
+1758-
+1759-    const pixelQuery = new URLSearchParams({
+1760-      select: "x,y,color,order_id",
+1761-      order_id: `in.(${orderIds.join(",")})`,
+1762-      status: "eq.purchased",
+1763-      order: "order_id.asc,y.asc,x.asc",
+1764-    });
+1765-
+1766-    const pixels = await serviceRoleGet<MyPurchasePixelRow[]>(
+1767-      `wall_pixel_claims?${pixelQuery.toString()}`,
+1768-    );
+1769-
+1770-    const pixelsByOrder = new Map<string, MyPurchasePixelRow[]>();
+1771-
+1772-    for (const pixel of pixels) {
+1773-      if (!pixel.order_id) continue;
+1774-
+1775-      const list = pixelsByOrder.get(pixel.order_id) ?? [];
+1776-      list.push(pixel);
+1777-      pixelsByOrder.set(pixel.order_id, list);
+1778-    }
+1779-
+1780-    const purchases = orders.map((order) => {
+1781-      const orderPixels = pixelsByOrder.get(order.id) ?? [];
+1782-
+1783-      const xs = orderPixels.map((pixel) => pixel.x);
+1784-      const ys = orderPixels.map((pixel) => pixel.y);
+1785-
+1786-      const bounds = orderPixels.length
+1787-        ? {
+1788-            min_x: Math.min(...xs),
+1789-            min_y: Math.min(...ys),
+1790-            max_x: Math.max(...xs),
+1791-            max_y: Math.max(...ys),
+1792-          }
+1793-        : null;
+1794-
+1795-      return {
+1796-        order_id: order.id,
+1797:        reservation_id: order.reservation_id,
+1798-        pixel_count: order.pixel_count,
+1799:        amount_cents: order.amount_cents,
+1800-        currency: order.currency,
+1801-        provider: order.provider,
+1802-        paid_at: order.paid_at,
+1803-        created_at: order.created_at,
+1804-        bounds,
+1805-      };
+1806-    });
+1807-
+1808-    res.status(200).json({
+1809-      total_pixels: orders.reduce((total, order) => total + order.pixel_count, 0),
+1810:      total_amount_cents: orders.reduce((total, order) => total + order.amount_cents, 0),
+1811-      purchase_count: orders.length,
+1812-      purchases,
+1813-    });
+1814-  } catch (error) {
+1815-    req.log?.error(
+1816-      { err: error },
+1817-      "Could not load authenticated user purchases",
+1818-    );
+1819-
+1820-    res.status(500).json({
+1821-      message: "Não foi possível carregar seus pixels agora.",
+1822-    });
+1823-  }
+1824-});
+1825-
+1826-router.post("/mercado-pago/webhook", async (req: Request, res: Response) => {
+1827-  const dataId = readQueryString(req.query["data.id"]);
+1828-  const type = readQueryString(req.query.type) || (typeof req.body?.type === "string" ? req.body.type : "");
+1829-
+1830-  if (!mercadoPagoWebhookSecret || !supabaseServiceRoleKey || !mercadoPagoAccessToken) {
+1831-    req.log?.error("Mercado Pago webhook server credentials are incomplete");
+1832-    res.status(503).json({ message: "Webhook não configurado." });
+1833-    return;
+1834-  }
+1835-
+1836-  if (!isValidWebhookSignature(req, dataId)) {
+1837-    req.log?.warn({ dataId, type }, "Rejected Mercado Pago webhook with invalid signature");
+1838-    res.sendStatus(401);
+1839-    return;
+1840-  }
+1841-
+1842-  if (type && type !== "payment") {
+1843-    res.sendStatus(200);
+1844-    return;
+1845-  }
+1846-
+1847-  if (!/^\d+$/.test(dataId)) {
+1848-    res.sendStatus(400);
+1849-    return;
+1850-  }
+1851-
+1852-  try {
+1853-    const existingOrder = await findExistingPaidOrder(dataId);
+1854-
+1855-    if (existingOrder?.status === "paid") {
+1856-      res.status(200).json({ ok: true, duplicate: true });
+1857-      return;
+1858-    }
+1859-
+1860-    const payment = await loadMercadoPagoPayment(dataId);
+1861-
+1862-    if (String(payment.id) !== dataId) {
+1863-      req.log?.warn({ dataId, paymentId: payment.id }, "Mercado Pago payment ID mismatch");
+1864-      res.sendStatus(409);
+1865-      return;
+1866-    }
+1867-
+1868-    if (payment.status !== "approved") {
+1869-      res.status(200).json({ ok: true, ignored: `payment_${payment.status || "unknown"}` });
+1870-      return;
+1871-    }
+1872-
+1873-    const reservationId = typeof payment.external_reference === "string"
+1874-      ? payment.external_reference.trim()
+1875-      : "";
+1876-
+1877-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reservationId)) {
+1878-      req.log?.warn({ dataId }, "Approved Mercado Pago payment has invalid external reference");
+1879-      res.sendStatus(409);
+1880-      return;
+1881-    }
+1882-
+1883-    const reservation = await loadReservationForWebhook(reservationId);
+1884-
+1885-    if (!reservation) {
+1886-      req.log?.error({ dataId, reservationId }, "Reservation for approved Mercado Pago payment was not found");
+1887-      res.sendStatus(409);
+1888-      return;
+1889-    }
+1890-
+1891-    const paidAmountCents = Number.isFinite(payment.transaction_amount)
+1892-      ? Math.round(Number(payment.transaction_amount) * 100)
+1893-      : -1;
+1894-
+1895:    if (payment.currency_id !== "BRL" || paidAmountCents !== reservation.amount_cents) {
+1896-      req.log?.error(
+1897-        {
+1898-          dataId,
+1899-          reservationId,
+1900-          currency: payment.currency_id,
+1901-          paidAmountCents,
+1902:          expectedAmountCents: reservation.amount_cents,
+1903-        },
+1904-        "Approved Mercado Pago payment does not match reservation amount",
+1905-      );
+1906-      res.sendStatus(409);
+1907-      return;
+1908-    }
+1909-
+1910-    const approvedAt = typeof payment.date_approved === "string"
+1911-      ? payment.date_approved.trim()
+1912-      : "";
+1913-
+1914-    if (!approvedAt || Number.isNaN(Date.parse(approvedAt))) {
+1915-      req.log?.error({ dataId, reservationId }, "Approved Mercado Pago payment has no valid approval date");
+1916-      res.sendStatus(409);
+1917-      return;
+1918-    }
+1919-
+1920-    if (reservation.status === "converted") {
+1921-      const order = await findExistingPaidOrder(dataId);
+1922:      if (order?.status === "paid" && order.reservation_id === reservation.id) {
+1923-        res.status(200).json({ ok: true, duplicate: true });
+1924-        return;
+1925-      }
+1926-
+1927-      req.log?.error({ dataId, reservationId }, "Converted reservation has no matching paid order");
+1928-      res.sendStatus(409);
+1929-      return;
+1930-    }
+1931-
+1932-    const approvedAtMs = Date.parse(approvedAt);
+1933-    const reservationExpiresAtMs = Date.parse(reservation.expires_at);
+1934-
+1935-    const approvedBeforeReservationExpired =
+1936-      Number.isFinite(approvedAtMs) &&
+1937-      Number.isFinite(reservationExpiresAtMs) &&
+1938-      approvedAtMs <= reservationExpiresAtMs;
+1939-
+1940-    const reservationCanBeFinalized =
+1941-      reservation.status === "active" ||
+1942-      (
+1943-        reservation.status === "expired" &&
+1944-        approvedBeforeReservationExpired
+1945-      );
+1946-
+1947-    if (!reservationCanBeFinalized) {
+1948-      req.log?.error(
+1949-        {
+1950-          dataId,
+1951-          reservationId,
+1952-          reservationStatus: reservation.status,
+1953-          approvedAt,
+1954-          reservationExpiresAt: reservation.expires_at,
+1955-        },
+1956-        "Approved Mercado Pago payment cannot finalize reservation",
+1957-      );
+1958-      res.sendStatus(409);
+1959-      return;
+1960-    }
+1961-
+1962:    await finalizeReservation(reservation.id, dataId, reservation.amount_cents, approvedAt);
+1963-
+1964-    req.log?.info(
+1965:      { dataId, reservationId, pixelCount: reservation.pixel_count, amountCents: reservation.amount_cents },
+1966-      "Mercado Pago payment finalized wall reservation",
+1967-    );
+1968-
+1969-    res.status(200).json({ ok: true });
+1970-  } catch (error) {
+1971-    req.log?.error({ err: error, dataId }, "Could not process Mercado Pago webhook");
+1972-    res.sendStatus(500);
+1973-  }
+1974-});
+1975-
+1976-export default router;
