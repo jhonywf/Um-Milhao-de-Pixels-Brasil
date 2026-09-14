@@ -1842,6 +1842,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
   );
   const [reservationEditError, setReservationEditError] = useState<string | null>(null);
   const [loadingReservationEdit, setLoadingReservationEdit] = useState(false);
+  const [checkoutAfterReservationEdit, setCheckoutAfterReservationEdit] =
+    useState<WallReservationSuccess | null>(null);
   const [publicPixels, setPublicPixels] = useState<Map<string, PublicWallPixel>>(() => new Map());
   const publicPixelBucketsRef = useRef(
     new Map<string, PublicWallPixel[]>(),
@@ -3957,9 +3959,16 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       setRecolorMode(false);
       setImageMoveMode(false);
 
+      /*
+       * A preferência anterior pode conter o valor antigo.
+       * Removemos a URL e solicitamos ao painel que crie
+       * imediatamente um novo checkout com a reserva atualizada.
+       */
       window.sessionStorage.removeItem('pixel-wall-checkout-url');
 
       await refreshPublicPixels();
+
+      setCheckoutAfterReservationEdit(updated);
     } catch (caught) {
       setReservationEditError(
         caught instanceof Error
@@ -5156,21 +5165,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
               <div className="recolor-banner"><span><Paintbrush size={14} /> Pintando pixels individualmente</span><button onClick={() => setRecolorMode(false)}>Concluir</button></div>
             )}
           </section>
-          {editingReservation && (
-            <div
-              style={{
-                background: '#ff681d',
-                color: '#000',
-                padding: '8px 12px',
-                fontFamily: 'monospace',
-                fontWeight: 700,
-                fontSize: '12px',
-              }}
-            >
-              DEBUG EDIÇÃO — selectedCount: {selectedCount} | ownKeys: {ownReservationPixelKeys.size} | armed: {String(selectionArmed)} | tool: {tool}
-            </div>
-          )}
-
           <SelectionPanel
             selectedPixels={selectedList}
             selectedBlock={selectedBlock}
@@ -5179,6 +5173,10 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
             editingReservation={editingReservation}
             loadingReservationEdit={loadingReservationEdit}
             reservationEditError={reservationEditError}
+            checkoutAfterReservationEdit={checkoutAfterReservationEdit}
+            onCheckoutAfterReservationEditHandled={() =>
+              setCheckoutAfterReservationEdit(null)
+            }
             onEditReservation={handleEditReservation}
             onSaveReservationEdit={handleSaveReservationEdit}
             onReserved={handleReserved}
@@ -5204,6 +5202,8 @@ function SelectionPanel({
   editingReservation,
   loadingReservationEdit,
   reservationEditError,
+  checkoutAfterReservationEdit,
+  onCheckoutAfterReservationEditHandled,
   onEditReservation,
   onSaveReservationEdit,
   onReserved,
@@ -5217,6 +5217,8 @@ function SelectionPanel({
   editingReservation: boolean;
   loadingReservationEdit: boolean;
   reservationEditError: string | null;
+  checkoutAfterReservationEdit: WallReservationSuccess | null;
+  onCheckoutAfterReservationEditHandled: () => void;
   onEditReservation: () => Promise<void>;
   onSaveReservationEdit: () => Promise<void>;
   onReserved: (reservation: WallReservationSuccess) => void;
@@ -5302,6 +5304,34 @@ function SelectionPanel({
       setOpeningCheckout(false);
     }
   };
+
+  useEffect(() => {
+    if (
+      !checkoutAfterReservationEdit ||
+      !session ||
+      openingCheckout
+    ) {
+      return;
+    }
+
+    /*
+     * A reserva já foi atualizada no Supabase.
+     * Criamos uma preferência NOVA no Mercado Pago para que
+     * quantidade e valor correspondam à edição recém-salva.
+     */
+    const reservation = checkoutAfterReservationEdit;
+
+    onCheckoutAfterReservationEditHandled();
+
+    void openMercadoPagoCheckout(
+      reservation,
+      session.access_token,
+    );
+  }, [
+    checkoutAfterReservationEdit,
+    session,
+    openingCheckout,
+  ]);
 
   const reserveAndOpenCheckout = async () => {
     setReservationError(null);
