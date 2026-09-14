@@ -3960,15 +3960,32 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
       setImageMoveMode(false);
 
       /*
-       * A preferência anterior pode conter o valor antigo.
-       * Removemos a URL e solicitamos ao painel que crie
-       * imediatamente um novo checkout com a reserva atualizada.
+       * A preferência anterior contém o valor antigo.
+       * Criamos uma NOVA preferência imediatamente após salvar,
+       * usando a reserva já atualizada no Supabase.
        */
       window.sessionStorage.removeItem('pixel-wall-checkout-url');
 
-      await refreshPublicPixels();
+      const checkout = await createMercadoPagoCheckout(
+        updated.reservation_id,
+        session.access_token,
+      );
 
-      setCheckoutAfterReservationEdit(updated);
+      window.localStorage.setItem(
+        'pixel-wall-checkout-reservation',
+        updated.reservation_id,
+      );
+
+      window.sessionStorage.setItem(
+        'pixel-wall-checkout-url',
+        checkout.checkout_url,
+      );
+
+      clearPendingCheckoutIntent();
+      clearPendingPixelSelection();
+
+      window.location.assign(checkout.checkout_url);
+      return;
     } catch (caught) {
       setReservationEditError(
         caught instanceof Error
