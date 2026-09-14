@@ -32,9 +32,15 @@ export type PublicWallPixel = {
   status: 'reserved' | 'purchased';
 };
 
-export async function loadPublicWallPixels(): Promise<PublicWallPixel[]> {
+let publicWallPixelsRequest:
+  Promise<PublicWallPixel[]> | null = null;
+
+async function fetchPublicWallPixels():
+  Promise<PublicWallPixel[]> {
   if (!supabasePublishableKey) {
-    throw new Error('A chave pública do Supabase não está configurada.');
+    throw new Error(
+      'A chave pública do Supabase não está configurada.',
+    );
   }
 
   const pageSize = 1000;
@@ -54,16 +60,40 @@ export async function loadPublicWallPixels(): Promise<PublicWallPixel[]> {
     );
 
     if (!response.ok) {
-      throw new Error('Não foi possível atualizar a disponibilidade da parede.');
+      throw new Error(
+        'Não foi possível atualizar a disponibilidade da parede.',
+      );
     }
 
-    const page = await response.json() as PublicWallPixel[];
+    const page =
+      await response.json() as PublicWallPixel[];
+
     pixels.push(...page);
 
-    if (page.length < pageSize) break;
+    if (page.length < pageSize) {
+      break;
+    }
   }
 
   return pixels;
+}
+
+export function loadPublicWallPixels():
+  Promise<PublicWallPixel[]> {
+  if (publicWallPixelsRequest) {
+    return publicWallPixelsRequest;
+  }
+
+  const request = fetchPublicWallPixels()
+    .finally(() => {
+      if (publicWallPixelsRequest === request) {
+        publicWallPixelsRequest = null;
+      }
+    });
+
+  publicWallPixelsRequest = request;
+
+  return request;
 }
 
 function readableReservationError(payload: unknown) {
