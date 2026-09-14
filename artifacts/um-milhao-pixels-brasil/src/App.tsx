@@ -2173,13 +2173,24 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     if (!canvas || !stage) return;
     const rect = stage.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
+
+    const targetWidth = Math.round(rect.width * dpr);
+    const targetHeight = Math.round(rect.height * dpr);
+
+    if (
+      canvas.width !== targetWidth ||
+      canvas.height !== targetHeight
+    ) {
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+    }
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.scale(dpr, dpr);
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#090909';
     ctx.fillRect(0, 0, rect.width, rect.height);
     const originX = rect.width / 2 - 500 * camera.scale + camera.x;
