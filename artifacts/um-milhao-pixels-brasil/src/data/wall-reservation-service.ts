@@ -229,3 +229,74 @@ export async function loadOwnReservedPixels(
       color: pixel.color,
     }));
 }
+
+
+export async function loadOwnActiveWallReservation(
+  reservationId: string,
+  accessToken: string,
+): Promise<WallReservationSuccess | null> {
+  if (!supabasePublishableKey) {
+    throw new Error(
+      'A chave pública do Supabase não está configurada.',
+    );
+  }
+
+  const params = new URLSearchParams({
+    select: 'id,status,pixel_count,amount_cents,expires_at',
+    id: `eq.${reservationId}`,
+    limit: '1',
+  });
+
+  const response = await fetch(
+    `${supabasePublicUrl}/rest/v1/wall_reservations?${params.toString()}`,
+    {
+      headers: {
+        Accept: 'application/json',
+        apikey: supabasePublishableKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: 'no-store',
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      'Não foi possível restaurar sua reserva.',
+    );
+  }
+
+  const payload = await response.json();
+
+  if (!Array.isArray(payload) || !payload.length) {
+    return null;
+  }
+
+  const reservation = payload[0];
+
+  if (
+    !reservation ||
+    reservation.status !== 'active' ||
+    typeof reservation.id !== 'string' ||
+    !Number.isInteger(reservation.pixel_count) ||
+    !Number.isInteger(reservation.amount_cents) ||
+    typeof reservation.expires_at !== 'string'
+  ) {
+    return null;
+  }
+
+  if (
+    new Date(reservation.expires_at).getTime() <=
+    Date.now()
+  ) {
+    return null;
+  }
+
+  return {
+    ok: true,
+    reservation_id: reservation.id,
+    pixel_count: reservation.pixel_count,
+    amount_cents: reservation.amount_cents,
+    currency: 'BRL',
+    expires_at: reservation.expires_at,
+  };
+}

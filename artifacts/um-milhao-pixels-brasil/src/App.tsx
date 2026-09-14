@@ -36,6 +36,7 @@ import { supabasePublicStorageUrl } from '@/auth/auth-service';
 import {
   loadPublicWallPixels,
   loadOwnReservedPixels,
+  loadOwnActiveWallReservation,
   reserveWallPixels,
   updateWallReservation,
   type PublicWallPixel,
@@ -1853,6 +1854,73 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
   const wallSyncInFlightRef = useRef(false);
   const wallLastSyncAtRef = useRef(0);
+
+  /*
+   * Ao sair para o Mercado Pago, o Safari pode descarregar
+   * completamente a aplicação.
+   *
+   * O ID da reserva continua salvo no navegador. Quando o
+   * usuário volta, reconstruímos lastReservation diretamente
+   * do Supabase para que a compra não desapareça.
+   */
+  useEffect(() => {
+    if (!session?.access_token || lastReservation) {
+      return;
+    }
+
+    const reservationId =
+      window.localStorage.getItem(
+        'pixel-wall-checkout-reservation',
+      );
+
+    if (!reservationId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void loadOwnActiveWallReservation(
+      reservationId,
+      session.access_token,
+    )
+      .then((reservation) => {
+        if (cancelled) return;
+
+        if (!reservation) {
+          window.localStorage.removeItem(
+            'pixel-wall-checkout-reservation',
+          );
+
+          window.sessionStorage.removeItem(
+            'pixel-wall-checkout-url',
+          );
+
+          return;
+        }
+
+        setLastReservation(reservation);
+
+        setEditingReservation(false);
+        setOwnReservationPixelKeys(new Set());
+        setReservationEditError(null);
+      })
+      .catch((caught) => {
+        if (cancelled) return;
+
+        setWallSyncError(
+          caught instanceof Error
+            ? caught.message
+            : 'Não foi possível restaurar sua reserva.',
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    session?.access_token,
+    lastReservation,
+  ]);
 
   const cameraRef = useRef(camera);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
