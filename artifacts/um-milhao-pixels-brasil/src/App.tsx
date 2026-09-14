@@ -607,20 +607,62 @@ type PublicWallStats = {
   };
 };
 
-async function loadPublicWallStats(): Promise<PublicWallStats> {
-  const response = await fetch(
-    '/api/payments/mercado-pago/public-stats',
-    {
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-    },
-  );
+let publicWallStatsCache: {
+  value: PublicWallStats;
+  loadedAt: number;
+} | null = null;
 
-  if (!response.ok) {
-    throw new Error('Não foi possível carregar as estatísticas.');
+let publicWallStatsRequest:
+  Promise<PublicWallStats> | null = null;
+
+const PUBLIC_WALL_STATS_CACHE_MS = 15000;
+
+async function loadPublicWallStats(): Promise<PublicWallStats> {
+  const now = Date.now();
+
+  if (
+    publicWallStatsCache &&
+    now - publicWallStatsCache.loadedAt <
+      PUBLIC_WALL_STATS_CACHE_MS
+  ) {
+    return publicWallStatsCache.value;
   }
 
-  return await response.json() as PublicWallStats;
+  if (publicWallStatsRequest) {
+    return publicWallStatsRequest;
+  }
+
+  publicWallStatsRequest = (async () => {
+    const response = await fetch(
+      '/api/payments/mercado-pago/public-stats',
+      {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        'Não foi possível carregar as estatísticas.',
+      );
+    }
+
+    const value =
+      await response.json() as PublicWallStats;
+
+    publicWallStatsCache = {
+      value,
+      loadedAt: Date.now(),
+    };
+
+    return value;
+  })();
+
+  try {
+    return await publicWallStatsRequest;
+  } finally {
+    publicWallStatsRequest = null;
+  }
 }
 
 function usePublicWallStats() {
