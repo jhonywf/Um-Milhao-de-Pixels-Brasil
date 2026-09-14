@@ -1,4 +1,4 @@
-import { type PointerEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type PointerEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   ArrowDownRight,
@@ -2188,6 +2188,11 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
 
   const selectedList = Array.from(selectedPixels.values());
   const selectedCount = selectedPixels.size;
+
+  const selectedPixelKeys = useMemo(
+    () => new Set(selectedPixels.keys()),
+    [selectedPixels],
+  );
   const firstSelected = selectedList[0] ?? null;
   const coordinateText = firstSelected ? `${String(firstSelected.x).padStart(3, '0')}, ${String(firstSelected.y).padStart(3, '0')}` : selectedBlock ? `${String(selectedBlock.x).padStart(3, '0')}, ${String(selectedBlock.y).padStart(3, '0')}` : '—';
 
@@ -2549,8 +2554,6 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
      * As linhas entre pixels vizinhos não são desenhadas.
      */
     if (selectionCustomized && selectedPixels.size > 0) {
-      const selectedKeys = new Set(selectedPixels.keys());
-
       ctx.save();
       ctx.beginPath();
       ctx.strokeStyle = 'rgba(22, 135, 255, 0.92)';
@@ -2582,22 +2585,22 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
         const left =
           `${pixel.x - 1}:${pixel.y}`;
 
-        if (!selectedKeys.has(top)) {
+        if (!selectedPixelKeys.has(top)) {
           ctx.moveTo(x, y);
           ctx.lineTo(x + size, y);
         }
 
-        if (!selectedKeys.has(right)) {
+        if (!selectedPixelKeys.has(right)) {
           ctx.moveTo(x + size, y);
           ctx.lineTo(x + size, y + size);
         }
 
-        if (!selectedKeys.has(bottom)) {
+        if (!selectedPixelKeys.has(bottom)) {
           ctx.moveTo(x + size, y + size);
           ctx.lineTo(x, y + size);
         }
 
-        if (!selectedKeys.has(left)) {
+        if (!selectedPixelKeys.has(left)) {
           ctx.moveTo(x, y + size);
           ctx.lineTo(x, y);
         }
@@ -2656,6 +2659,7 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     publicPixels,
     selectedBlock,
     selectedPixels,
+    selectedPixelKeys,
     availablePixelPrompt,
     selectionCustomized,
   ]);
