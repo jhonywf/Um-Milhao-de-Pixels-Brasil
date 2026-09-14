@@ -1,0 +1,279 @@
+393-}
+394-
+395-async function finalizeReservation(
+396-  reservationId: string,
+397-  paymentId: string,
+398-  amountCents: number,
+399-  approvedAt: string,
+400-) {
+401-  if (!supabaseServiceRoleKey) {
+402-    throw new Error("SUPABASE_SERVICE_ROLE_KEY_MISSING");
+403-  }
+404-
+405-  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/finalize_wall_reservation`, {
+406-    method: "POST",
+407-    headers: {
+408-      Accept: "application/json",
+409-      "Content-Type": "application/json",
+410-      apikey: supabaseServiceRoleKey,
+411-      ...(supabaseServiceRoleKey.startsWith("sb_secret_")
+412-        ? {}
+413-        : { Authorization: `Bearer ${supabaseServiceRoleKey}` }),
+414-    },
+415-    body: JSON.stringify({
+416-      p_reservation_id: reservationId,
+417-      p_provider: "mercado_pago",
+418-      p_provider_reference: paymentId,
+419-      p_amount_cents: amountCents,
+420-      p_approved_at: approvedAt,
+421-    }),
+422-  });
+423-
+424-  const payload = await response.text();
+425-
+426-  if (!response.ok) {
+427-    throw new Error(`FINALIZE_WALL_RESERVATION_FAILED:${response.status}:${payload.slice(0, 300)}`);
+428-  }
+429-
+430-  return payload;
+431-}
+432-
+433:router.post("/mercado-pago/preference", async (req: Request, res: Response) => {
+434-  const accessToken = getBearerToken(req);
+435-  const reservationId = typeof req.body?.reservation_id === "string" ? req.body.reservation_id.trim() : "";
+436-
+437-  if (!accessToken) {
+438-    res.status(401).json({ message: "Entre na sua conta para continuar com o pagamento." });
+439-    return;
+440-  }
+441-
+442-  if (!reservationId) {
+443-    res.status(400).json({ message: "Reserva inválida." });
+444-    return;
+445-  }
+446-
+447-  if (!mercadoPagoAccessToken) {
+448-    req.log?.error("MERCADO_PAGO_ACCESS_TOKEN is not configured");
+449-    res.status(503).json({ message: "O pagamento ainda não está configurado no servidor." });
+450-    return;
+451-  }
+452-
+453-  try {
+454-    const user =
+455-      await loadAuthenticatedUser(
+456-        accessToken,
+457-      );
+458-
+459-    if (!user) {
+460-      res.status(401).json({
+461-        message:
+462-          "Sua sessão expirou. Entre novamente.",
+463-      });
+464-      return;
+465-    }
+466-
+467-    const reservation = await loadOwnActiveReservation(reservationId, accessToken);
+468-
+469-    if (!reservation) {
+470-      res.status(409).json({
+471-        message: "Essa reserva não está mais disponível. Volte à parede e faça uma nova seleção.",
+472-      });
+473-      return;
+474-    }
+475-
+476-    if (reservation.user_id !== user.id) {
+477-      req.log?.warn(
+478-        {
+479-          userId: user.id,
+480-          reservationId: reservation.id,
+481-        },
+482-        "User attempted to pay another user's reservation",
+483-      );
+484-
+485-      res.status(403).json({
+486-        message: "Essa reserva não pertence à sua conta.",
+487-      });
+488-      return;
+489-    }
+490-
+491:    const preferenceResponse = await fetch("https://api.mercadopago.com/checkout/preferences", {
+492-      method: "POST",
+493-      headers: {
+494-        Accept: "application/json",
+495-        "Content-Type": "application/json",
+496-        Authorization: `Bearer ${mercadoPagoAccessToken}`,
+497-      },
+498-      body: JSON.stringify({
+499-        items: [
+500-          {
+501-            id: `pixels-${reservation.id}`,
+502-            title: `${reservation.pixel_count} pixels — Um Milhão de Pixels Brasil`,
+503-            description: "Reserva de pixels na parede digital Um Milhão de Pixels Brasil",
+504-            quantity: 1,
+505-            currency_id: "BRL",
+506-            unit_price: reservation.amount_cents / 100,
+507-          },
+508-        ],
+509-        external_reference: reservation.id,
+510-        metadata: {
+511-          reservation_id: reservation.id,
+512-          pixel_count: reservation.pixel_count,
+513-        },
+514-        back_urls: {
+515-          success: `${appPublicUrl}/parede?payment=success`,
+516-          pending: `${appPublicUrl}/parede?payment=pending`,
+517-          failure: `${appPublicUrl}/parede?payment=failure`,
+518-        },
+519-        auto_return: "approved",
+520-        expires: true,
+521-        expiration_date_from: new Date().toISOString(),
+522-        expiration_date_to: new Date(reservation.expires_at).toISOString(),
+523-      }),
+524-    });
+525-
+526-    const payload = await preferenceResponse.json() as MercadoPagoPreferenceResponse;
+527-
+528-    if (!preferenceResponse.ok || !payload.id) {
+529-      req.log?.error(
+530-        { status: preferenceResponse.status, mpError: payload.error, mpMessage: payload.message },
+531-        "Mercado Pago preference creation failed",
+532-      );
+533-      res.status(502).json({ message: "Não foi possível abrir o Mercado Pago agora. Tente novamente." });
+534-      return;
+535-    }
+536-
+537-    const isMercadoPagoTestCredential =
+538-      mercadoPagoAccessToken.startsWith("TEST-");
+539-
+540-    const checkoutUrl = isMercadoPagoTestCredential
+541-      ? payload.sandbox_init_point || payload.init_point
+542-      : payload.init_point;
+543-
+544-    if (!checkoutUrl) {
+545-      req.log?.error({ preferenceId: payload.id }, "Mercado Pago preference returned no checkout URL");
+546-      res.status(502).json({ message: "O Mercado Pago não retornou o link de pagamento." });
+547-      return;
+548-    }
+549-
+550-    res.status(201).json({
+551-      preference_id: payload.id,
+552-      checkout_url: checkoutUrl,
+553-      reservation_id: reservation.id,
+554-      pixel_count: reservation.pixel_count,
+555-      amount_cents: reservation.amount_cents,
+556-      expires_at: reservation.expires_at,
+557-    });
+558-  } catch (error) {
+559-    req.log?.error({ err: error }, "Could not create Mercado Pago preference");
+560-    res.status(500).json({ message: "Não foi possível iniciar o pagamento agora." });
+561-  }
+562-});
+563-
+564-router.get("/mercado-pago/status", async (req: Request, res: Response) => {
+565-  const accessToken = getBearerToken(req);
+566-  const reservationId = readQueryString(req.query.reservation_id);
+567-
+568-  if (!accessToken) {
+569-    res.status(401).json({ message: "Entre na sua conta para confirmar o pagamento." });
+570-    return;
+571-  }
+572-
+573-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reservationId)) {
+574-    res.status(400).json({ message: "Reserva inválida." });
+575-    return;
+576-  }
+577-
+578-  try {
+579-    const user = await loadAuthenticatedUser(accessToken);
+580-
+581-    if (!user) {
+582-      res.status(401).json({
+583-        message: "Sua sessão expirou. Entre novamente.",
+584-      });
+585-      return;
+586-    }
+587-
+588-    const reservation = await loadOwnReservation(
+589-      reservationId,
+590-      accessToken,
+591-    );
+592-
+593-    if (!reservation) {
+594-      res.status(404).json({
+595-        message: "Reserva não encontrada para esta conta.",
+596-      });
+597-      return;
+598-    }
+599-
+600-    if (reservation.user_id !== user.id) {
+601-      req.log?.warn(
+602-        {
+603-          userId: user.id,
+604-          reservationId: reservation.id,
+605-        },
+606-        "User attempted to read another user's reservation",
+607-      );
+608-
+609-      res.status(403).json({
+610-        message: "Essa reserva não pertence à sua conta.",
+611-      });
+612-      return;
+613-    }
+614-
+615-    let order = await findOrderByReservation(
+616-      reservation.id,
+617-    );
+618-
+619-    if (
+620-      order?.status !== "paid" &&
+621-      (reservation.status === "active" || reservation.status === "expired")
+622-    ) {
+623-      const paymentCandidate =
+624-        await findMercadoPagoPaymentByReservation(reservation.id);
+625-
+626-      if (paymentCandidate?.id != null) {
+627-        const payment = await loadMercadoPagoPayment(
+628-          String(paymentCandidate.id),
+629-        );
+630-
+631-        const paymentReservationId = String(
+632-          payment.external_reference ?? "",
+633-        );
+634-
+635-        const paymentAmountCents = Math.round(
+636-          Number(payment.transaction_amount) * 100,
+637-        );
+638-
+639-        const approvedAt =
+640-          typeof payment.date_approved === "string"
+641-            ? payment.date_approved
+642-            : "";
+643-
+644-        const approvedAtMs = Date.parse(approvedAt);
+645-        const reservationExpiresAtMs = Date.parse(
+646-          reservation.expires_at,
+647-        );
+648-
+649-        const approvedBeforeReservationExpired =
+650-          Number.isFinite(approvedAtMs) &&
+651-          Number.isFinite(reservationExpiresAtMs) &&
+652-          approvedAtMs <= reservationExpiresAtMs;
+653-
+654-        const paymentIsValid =
+655-          payment.status === "approved" &&
+656-          paymentReservationId === reservation.id &&
+657-          payment.currency_id === "BRL" &&
+658-          Number.isFinite(paymentAmountCents) &&
+659-          paymentAmountCents === reservation.amount_cents &&
+660-          approvedAt.length > 0 &&
+661-          approvedBeforeReservationExpired;
+662-
+663-        if (paymentIsValid) {
+664-          req.log?.info(
+665-            {
+666-              reservationId: reservation.id,
+667-              paymentId: payment.id,
+668-            },
+669-            "Reconciling approved Mercado Pago payment from status endpoint",
+670-          );
+671-
