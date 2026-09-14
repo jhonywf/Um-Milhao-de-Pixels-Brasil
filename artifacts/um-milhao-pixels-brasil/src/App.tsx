@@ -2013,6 +2013,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
     pointerId: number;
     startX: number;
     startY: number;
+    lastEndX: number;
+    lastEndY: number;
     base: Map<string, SelectedPixel>;
   } | null>(null);
 
@@ -3139,6 +3141,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
         pointerId: event.pointerId,
         startX: x,
         startY: y,
+        lastEndX: x,
+        lastEndY: y,
         base,
       };
 
@@ -3188,6 +3192,8 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
           pointerId: event.pointerId,
           startX: x,
           startY: y,
+          lastEndX: x,
+          lastEndY: y,
           base,
         };
 
@@ -3395,6 +3401,16 @@ function WallCanvas({ blocks }: { blocks: PixelBlock[] }) {
         0,
         Math.min(999, Math.floor(world.y)),
       );
+
+      if (
+        endX === rectangleSelection.lastEndX &&
+        endY === rectangleSelection.lastEndY
+      ) {
+        return;
+      }
+
+      rectangleSelection.lastEndX = endX;
+      rectangleSelection.lastEndY = endY;
 
       if (eraseAreaMode) {
         applyRectangleErase(
