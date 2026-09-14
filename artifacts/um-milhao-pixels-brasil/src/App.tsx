@@ -7416,9 +7416,29 @@ function PrivacyPage() {
   );
 }
 
+function CheckoutReturnGuard() {
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (location !== '/') return;
+
+    const reservationId =
+      window.localStorage.getItem(
+        'pixel-wall-checkout-reservation',
+      );
+
+    if (!reservationId) return;
+
+    setLocation('/parede');
+  }, [location, setLocation]);
+
+  return null;
+}
+
 function Router() {
   return (
     <RoutedErrorBoundary>
+      <CheckoutReturnGuard />
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/parede" component={WallPage} />
