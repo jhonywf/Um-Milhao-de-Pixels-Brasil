@@ -309,11 +309,19 @@ function RealWallMiniMap() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [pixels, setPixels] = useState<PublicWallPixel[]>([]);
   const [loadFailed, setLoadFailed] = useState(false);
+  const loadInFlightRef = useRef(false);
+  const lastLoadAtRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
+      if (loadInFlightRef.current) {
+        return;
+      }
+
+      loadInFlightRef.current = true;
+
       try {
         const result = await loadPublicWallPixels();
 
@@ -331,6 +339,17 @@ function RealWallMiniMap() {
         if (!cancelled) {
           setLoadFailed(true);
         }
+      } finally {
+        lastLoadAtRef.current = Date.now();
+        loadInFlightRef.current = false;
+      }
+    };
+
+    const refreshIfStale = () => {
+      if (
+        Date.now() - lastLoadAtRef.current >= 10000
+      ) {
+        void load();
       }
     };
 
@@ -343,12 +362,12 @@ function RealWallMiniMap() {
 
     const refreshWhenVisible = () => {
       if (document.visibilityState === 'visible') {
-        void load();
+        refreshIfStale();
       }
     };
 
     const refreshOnPageShow = () => {
-      void load();
+      refreshIfStale();
     };
 
     document.addEventListener(
